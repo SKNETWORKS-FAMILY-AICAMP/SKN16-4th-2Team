@@ -17,7 +17,7 @@ from app.models.user import User, TokenData
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # OAuth2 스키마
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -134,5 +134,6 @@ async def get_current_active_mentor(current_user: User = Depends(get_current_use
             detail="Mentor privileges required"
         )
     return current_user
+
 
 

@@ -29,7 +29,6 @@ def create_initial_users(session: Session):
             name="관리자",
             role=UserRole.ADMIN,
             team="운영팀",
-            mbti="ENTJ",
             phone="010-1111-1111"
         ),
         # 멘토
@@ -39,7 +38,6 @@ def create_initial_users(session: Session):
             name="김멘토",
             role=UserRole.MENTOR,
             team="영업1팀",
-            mbti="ENFJ",
             phone="010-2222-2222",
             interests="금융투자, 리더십",
             hobbies="독서, 테니스",
@@ -51,7 +49,6 @@ def create_initial_users(session: Session):
             name="이멘토",
             role=UserRole.MENTOR,
             team="영업2팀",
-            mbti="ISTJ",
             phone="010-2222-3333",
             interests="재무분석, 컨설팅",
             hobbies="골프, 영화감상",
@@ -64,7 +61,6 @@ def create_initial_users(session: Session):
             name="박신입",
             role=UserRole.MENTEE,
             team="영업1팀",
-            mbti="ENFP",
             phone="010-3333-3333",
             interests="디지털금융, 마케팅",
             hobbies="운동, 여행"
@@ -75,7 +71,6 @@ def create_initial_users(session: Session):
             name="최신입",
             role=UserRole.MENTEE,
             team="영업2팀",
-            mbti="ISFP",
             phone="010-3333-4444",
             interests="고객관리, 상품기획",
             hobbies="그림그리기, 음악감상"

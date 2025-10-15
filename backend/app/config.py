@@ -12,8 +12,8 @@ class Settings(BaseSettings):
     # 데이터베이스 설정
     DATABASE_URL: str = "postgresql://mentoruser:mentorpass@localhost:5432/mentordb"
     
-    # OpenAI API 설정
-    OPENAI_API_KEY: str
+    # OpenAI API 설정 (개발 환경에서는 선택적)
+    OPENAI_API_KEY: Optional[str] = None
     
     # JWT 설정
     SECRET_KEY: str = "your-secret-key-change-this-in-production-min-32-chars"

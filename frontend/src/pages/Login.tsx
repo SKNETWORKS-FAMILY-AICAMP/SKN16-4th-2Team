@@ -43,7 +43,17 @@ export default function Login() {
       navigate('/home')
     } catch (err: any) {
       console.error('Login error:', err)
-      setError(err.response?.data?.detail || '로그인에 실패했습니다.')
+      let errorMessage = '로그인에 실패했습니다.'
+      
+      if (err.response?.data?.detail) {
+        errorMessage = err.response.data.detail
+      } else if (err.message) {
+        errorMessage = err.message
+      } else if (err.code === 'NETWORK_ERROR' || err.code === 'ECONNREFUSED') {
+        errorMessage = '서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.'
+      }
+      
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }

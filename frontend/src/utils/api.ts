@@ -35,11 +35,17 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
+    console.error('API Error:', error)
+    
     if (error.response?.status === 401) {
       // 토큰 만료 시 로그아웃
       useAuthStore.getState().logout()
       window.location.href = '/login'
+    } else if (error.code === 'ECONNREFUSED' || error.code === 'NETWORK_ERROR') {
+      // 네트워크 에러 처리
+      console.error('Network error - server may be down')
     }
+    
     return Promise.reject(error)
   }
 )
