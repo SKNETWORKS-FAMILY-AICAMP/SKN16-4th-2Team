@@ -1,0 +1,31 @@
+# Git 연동 완료를 위한 명령어 (순서대로 실행하세요)
+
+# 1. 원격 저장소의 내용 가져오기 (충돌 허용)
+git pull origin main --allow-unrelated-histories
+
+# 만약 충돌이 발생하면:
+# - 충돌 파일을 열어서 수동으로 수정
+# - git add .
+# - git commit -m "충돌 해결"
+
+# 2. README 변경사항 커밋 (아직 안 했다면)
+git add README.md
+git commit -m "docs: README에 Git 저장소 정보 추가"
+
+# 3. 모든 변경사항 GitHub에 푸시
+git push origin main
+
+# 4. 성공 확인
+git log --oneline -3
+git remote -v
+
+# ===================================
+# 만약 위 방법이 안 되면 (플랜 B):
+# ===================================
+
+# 원격 저장소 강제 덮어쓰기 (주의: 원격의 내용이 사라짐)
+# git push origin main --force
+
+# 하지만 이 방법은 팀 프로젝트에서는 비추천!
+# 다른 팀원이 작업한 내용이 있으면 날아갑니다.
+

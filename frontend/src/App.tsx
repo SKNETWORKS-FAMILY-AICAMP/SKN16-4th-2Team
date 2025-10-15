@@ -1,0 +1,46 @@
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { useAuthStore } from './store/authStore'
+import Layout from './components/Layout'
+import Landing from './pages/Landing'
+import Login from './pages/Login'
+import Register from './pages/Register'
+import Home from './pages/Home'
+import Documents from './pages/Documents'
+import AnonymousBoard from './pages/AnonymousBoard'
+import PostDetail from './pages/PostDetail'
+import Dashboard from './pages/Dashboard'
+import ChatBot from './components/ChatBot'
+
+function App() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+
+  return (
+    <>
+      <Routes>
+        {/* Public routes */}
+        <Route path="/" element={!isAuthenticated ? <Landing /> : <Navigate to="/home" />} />
+        <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/home" />} />
+        <Route path="/register" element={!isAuthenticated ? <Register /> : <Navigate to="/home" />} />
+
+        {/* Protected routes */}
+        <Route element={<Layout />}>
+          <Route path="/home" element={isAuthenticated ? <Home /> : <Navigate to="/login" />} />
+          <Route path="/documents" element={isAuthenticated ? <Documents /> : <Navigate to="/login" />} />
+          <Route path="/board" element={isAuthenticated ? <AnonymousBoard /> : <Navigate to="/login" />} />
+          <Route path="/board/:postId" element={isAuthenticated ? <PostDetail /> : <Navigate to="/login" />} />
+          <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />} />
+        </Route>
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+
+      {/* Floating chatbot - only show when authenticated */}
+      {isAuthenticated && <ChatBot />}
+    </>
+  )
+}
+
+export default App
+
+
