@@ -4,11 +4,13 @@ import Layout from './components/Layout'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Register from './pages/Register'
+
 import Home from './pages/Home'
 import Documents from './pages/Documents'
 import AnonymousBoard from './pages/AnonymousBoard'
 import PostDetail from './pages/PostDetail'
 import Dashboard from './pages/Dashboard'
+import MyPage from './pages/MyPage'
 import ChatBot from './components/ChatBot'
 
 function App() {
@@ -29,6 +31,7 @@ function App() {
           <Route path="/board" element={isAuthenticated ? <AnonymousBoard /> : <Navigate to="/login" />} />
           <Route path="/board/:postId" element={isAuthenticated ? <PostDetail /> : <Navigate to="/login" />} />
           <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />} />
+          <Route path="/mypage" element={isAuthenticated ? <MyPage /> : <Navigate to="/login" />} />
         </Route>
 
         {/* Fallback */}
