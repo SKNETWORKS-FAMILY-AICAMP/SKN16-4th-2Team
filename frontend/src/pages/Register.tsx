@@ -7,6 +7,21 @@ import { authAPI } from '../utils/api'
 import { UserPlusIcon } from '@heroicons/react/24/solid'
 
 export default function Register() {
+  const interestOptions = [
+    '마케팅',
+    'IT/테크',
+    '디자인/예술',
+    '공연/전시',
+    '주식',
+    '부동산',
+    '스포츠',
+    '음악',
+    '자기계발',
+    '독서',
+    '사내 소모임',
+    '노동 조합'
+  ]
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -14,8 +29,14 @@ export default function Register() {
     name: '',
     role: 'mentee',
     phone: '',
-    mbti: '',
+    extension: '',
+    emergency_contact: '',
+    interests: [],
     team: '',
+    team_number: '',
+    employee_number: '',
+    join_year: '',
+    position: '',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -29,6 +50,15 @@ export default function Register() {
     })
   }
 
+  const handleInterestToggle = (interest: string) => {
+    setFormData(prev => ({
+      ...prev,
+      interests: prev.interests.includes(interest)
+        ? prev.interests.filter(i => i !== interest)
+        : [...prev.interests, interest]
+    }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -36,6 +66,12 @@ export default function Register() {
     // 비밀번호 확인
     if (formData.password !== formData.confirmPassword) {
       setError('비밀번호가 일치하지 않습니다.')
+      return
+    }
+
+    // 관심사 3개 이상 선택 확인
+    if (formData.interests.length < 3) {
+      setError('관심사를 3개 이상 선택해주세요.')
       return
     }
 
@@ -49,8 +85,14 @@ export default function Register() {
         name: formData.name,
         role: formData.role,
         phone: formData.phone || undefined,
-        mbti: formData.mbti || undefined,
+        extension: formData.extension || undefined,
+        emergency_contact: formData.emergency_contact || undefined,
+        interests: JSON.stringify(formData.interests),
         team: formData.team || undefined,
+        team_number: formData.team_number || undefined,
+        employee_number: formData.employee_number || undefined,
+        join_year: formData.join_year ? parseInt(formData.join_year) : undefined,
+        position: formData.position || undefined,
       })
       
       // 성공 시 로그인 페이지로 이동
@@ -102,40 +144,6 @@ export default function Register() {
                 />
               </div>
 
-              {/* Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  이름 *
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  autoComplete="name"
-                  required
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="홍길동"
-                />
-              </div>
-
-              {/* Role */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  역할 *
-                </label>
-                <select
-                  name="role"
-                  value={formData.role}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="mentee">멘티 (신입사원)</option>
-                  <option value="mentor">멘토</option>
-                  <option value="admin">관리자</option>
-                </select>
-              </div>
-
               {/* Password */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -170,51 +178,206 @@ export default function Register() {
                 />
               </div>
 
-              {/* Phone */}
+              {/* Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  연락처
+                  이름 *
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  autoComplete="name"
+                  required
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="홍길동"
+                />
+              </div>
+
+              {/* Role */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  역할 *
+                </label>
+                <select
+                  name="role"
+                  value={formData.role}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="mentee">멘티 (신입사원)</option>
+                  <option value="mentor">멘토</option>
+                  <option value="admin">관리자</option>
+                </select>
+              </div>
+
+              {/* 사원번호 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  사원번호 *
+                </label>
+                <input
+                  type="text"
+                  name="employee_number"
+                  required
+                  value={formData.employee_number}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="2024001"
+                />
+              </div>
+
+              {/* 입사년도 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  입사년도
+                </label>
+                <input
+                  type="text"
+                  name="join_year"
+                  value={formData.join_year}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="2024"
+                />
+              </div>
+
+              {/* 직책 */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  직책
+                </label>
+                <input
+                  type="text"
+                  name="position"
+                  value={formData.position}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="사원, 대리, 과장 등"
+                />
+              </div>
+
+              {/* 내선번호 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  내선번호 *
+                </label>
+                <input
+                  type="text"
+                  name="extension"
+                  required
+                  value={formData.extension}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="1234"
+                />
+              </div>
+
+              {/* 비상 연락망 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  비상 연락망 *
                 </label>
                 <input
                   type="tel"
-                  name="phone"
+                  name="emergency_contact"
                   autoComplete="tel"
-                  value={formData.phone}
+                  required
+                  value={formData.emergency_contact}
                   onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="010-1234-5678"
                 />
               </div>
 
-              {/* Team */}
+              {/* 부서 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  팀
+                  부서
                 </label>
-                <input
-                  type="text"
+                <select
                   name="team"
                   value={formData.team}
                   onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="영업1팀"
-                />
+                >
+                  <option value="">선택하세요</option>
+                  <option value="영업부">영업부</option>
+                  <option value="기업금융 / 기업영업부">기업금융 / 기업영업부</option>
+                  <option value="리스크관리부">리스크관리부</option>
+                  <option value="여신심사 / 여신관리부">여신심사 / 여신관리부</option>
+                  <option value="자금부 / 자금시장부">자금부 / 자금시장부</option>
+                  <option value="재무 / 회계부">재무 / 회계부</option>
+                  <option value="기획 / 전략부">기획 / 전략부</option>
+                  <option value="IT / 정보기술부">IT / 정보기술부</option>
+                  <option value="디지털 / 혁신부서">디지털 / 혁신부서</option>
+                  <option value="마케팅 / 홍보부">마케팅 / 홍보부</option>
+                  <option value="고객지원 / 고객센터 / 민원부">고객지원 / 고객센터 / 민원부</option>
+                  <option value="법무부">법무부</option>
+                  <option value="감사 / 내부감사부">감사 / 내부감사부</option>
+                  <option value="보안 / 정보보호부">보안 / 정보보호부</option>
+                  <option value="소비자보호부">소비자보호부</option>
+                  <option value="상품 / 금융상품개발부">상품 / 금융상품개발부</option>
+                  <option value="자산관리 / WM (Wealth Management)부">자산관리 / WM (Wealth Management)부</option>
+                  <option value="외환 / 무역금융부">외환 / 무역금융부</option>
+                  <option value="투자은행부">투자은행부</option>
+                  <option value="지속가능경영(ESG)부">지속가능경영(ESG)부</option>
+                  <option value="인사부">인사부</option>
+                  <option value="총무부">총무부</option>
+                  <option value="CRM부">CRM부</option>
+                </select>
               </div>
 
-              {/* MBTI */}
-              <div className="md:col-span-2">
+              {/* 팀 */}
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  MBTI
+                  팀
                 </label>
-                <input
-                  type="text"
-                  name="mbti"
-                  value={formData.mbti}
+                <select
+                  name="team_number"
+                  value={formData.team_number}
                   onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="ENFP"
-                  maxLength={4}
-                />
+                >
+                  <option value="">선택하세요</option>
+                  <option value="1팀">1팀</option>
+                  <option value="2팀">2팀</option>
+                  <option value="3팀">3팀</option>
+                  <option value="4팀">4팀</option>
+                  <option value="5팀">5팀</option>
+                  <option value="6팀">6팀</option>
+                  <option value="7팀">7팀</option>
+                  <option value="8팀">8팀</option>
+                  <option value="9팀">9팀</option>
+                  <option value="10팀">10팀</option>
+                </select>
+              </div>
+
+              {/* 관심사 */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  관심사 <span className="text-red-500">*</span> (3개 이상 선택)
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {interestOptions.map((interest) => (
+                    <button
+                      key={interest}
+                      type="button"
+                      onClick={() => handleInterestToggle(interest)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        formData.interests.includes(interest)
+                          ? 'bg-primary-600 text-white border-primary-600'
+                          : 'bg-white text-gray-700 border-gray-300 hover:border-primary-500'
+                      } border`}
+                    >
+                      {interest}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-sm text-gray-500 mt-2">
+                  선택된 관심사: {formData.interests.length}개
+                </p>
               </div>
             </div>
 

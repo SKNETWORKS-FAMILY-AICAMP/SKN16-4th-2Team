@@ -29,11 +29,18 @@ class User(SQLModel, table=True):
     # 프로필 정보
     photo_url: Optional[str] = None
     phone: Optional[str] = None
-    mbti: Optional[str] = None
     interests: Optional[str] = None  # JSON 문자열로 저장
     hobbies: Optional[str] = None
     specialties: Optional[str] = None
-    team: Optional[str] = None  # 팀 배정
+    team: Optional[str] = None  # 부서
+    team_number: Optional[str] = None  # 팀 번호
+    
+    # 회사 정보
+    employee_number: Optional[str] = None  # 사원번호
+    join_year: Optional[int] = None  # 입사년도
+    position: Optional[str] = None  # 직책
+    extension: Optional[str] = None  # 내선번호
+    emergency_contact: Optional[str] = None  # 비상 연락망
     
     # 멘토 전용 필드
     encouragement_message: Optional[str] = None  # 응원 메시지
@@ -52,11 +59,16 @@ class UserCreate(SQLModel):
     role: UserRole = UserRole.MENTEE
     photo_url: Optional[str] = None
     phone: Optional[str] = None
-    mbti: Optional[str] = None
     interests: Optional[str] = None
     hobbies: Optional[str] = None
     specialties: Optional[str] = None
     team: Optional[str] = None
+    team_number: Optional[str] = None
+    employee_number: Optional[str] = None
+    join_year: Optional[int] = None
+    position: Optional[str] = None
+    extension: Optional[str] = None
+    emergency_contact: Optional[str] = None
     encouragement_message: Optional[str] = None
 
 
@@ -68,11 +80,16 @@ class UserRead(SQLModel):
     role: UserRole
     photo_url: Optional[str] = None
     phone: Optional[str] = None
-    mbti: Optional[str] = None
     interests: Optional[str] = None
     hobbies: Optional[str] = None
     specialties: Optional[str] = None
     team: Optional[str] = None
+    team_number: Optional[str] = None
+    employee_number: Optional[str] = None
+    join_year: Optional[int] = None
+    position: Optional[str] = None
+    extension: Optional[str] = None
+    emergency_contact: Optional[str] = None
     encouragement_message: Optional[str] = None
     is_active: bool
     created_at: datetime
@@ -83,11 +100,16 @@ class UserUpdate(SQLModel):
     name: Optional[str] = None
     photo_url: Optional[str] = None
     phone: Optional[str] = None
-    mbti: Optional[str] = None
     interests: Optional[str] = None
     hobbies: Optional[str] = None
     specialties: Optional[str] = None
     team: Optional[str] = None
+    team_number: Optional[str] = None
+    employee_number: Optional[str] = None
+    join_year: Optional[int] = None
+    position: Optional[str] = None
+    extension: Optional[str] = None
+    emergency_contact: Optional[str] = None
     encouragement_message: Optional[str] = None
     password: Optional[str] = None
 
