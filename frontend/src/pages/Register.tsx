@@ -8,18 +8,18 @@ import { UserPlusIcon } from '@heroicons/react/24/solid'
 
 export default function Register() {
   const interestOptions = [
-    '마케팅',
     'IT/테크',
-    '디자인/예술',
-    '공연/전시',
     '주식',
     '부동산',
+    '디자인/예술',
+    '공연/전시',
+    '마케팅',
     '스포츠',
     '음악',
-    '자기계발',
     '독서',
+    '게임',
     '사내 소모임',
-    '노동 조합'
+    '자기계발'
   ]
 
   const [formData, setFormData] = useState({
@@ -40,6 +40,7 @@ export default function Register() {
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showInterests, setShowInterests] = useState(false)
   
   const navigate = useNavigate()
 
@@ -248,14 +249,22 @@ export default function Register() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   직책
                 </label>
-                <input
-                  type="text"
+                <select
                   name="position"
                   value={formData.position}
                   onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="사원, 대리, 과장 등"
-                />
+                >
+                  <option value="">선택하세요</option>
+                  <option value="사원">사원</option>
+                  <option value="주임">주임</option>
+                  <option value="대리">대리</option>
+                  <option value="과장">과장</option>
+                  <option value="차장">차장</option>
+                  <option value="부장">부장</option>
+                  <option value="임원">임원</option>
+                  <option value="기타">기타</option>
+                </select>
               </div>
 
               {/* 내선번호 */}
@@ -359,25 +368,52 @@ export default function Register() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   관심사 <span className="text-red-500">*</span> (3개 이상 선택)
                 </label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {interestOptions.map((interest) => (
-                    <button
-                      key={interest}
-                      type="button"
-                      onClick={() => handleInterestToggle(interest)}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        formData.interests.includes(interest)
-                          ? 'bg-primary-600 text-white border-primary-600'
-                          : 'bg-white text-gray-700 border-gray-300 hover:border-primary-500'
-                      } border`}
-                    >
-                      {interest}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-sm text-gray-500 mt-2">
-                  선택된 관심사: {formData.interests.length}개
-                </p>
+                
+                {/* 관심사 선택 버튼 */}
+                <button
+                  type="button"
+                  onClick={() => setShowInterests(!showInterests)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-gray-700 hover:border-primary-500 transition-colors"
+                >
+                  {formData.interests.length > 0 
+                    ? `${formData.interests.length}개 선택됨` 
+                    : '관심사를 선택하세요'
+                  }
+                </button>
+                
+                {/* 관심사 목록 (숨겨짐/보임) */}
+                {showInterests && (
+                  <div className="mt-3 p-4 border border-gray-300 rounded-lg bg-white">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {interestOptions.map((interest) => (
+                        <button
+                          key={interest}
+                          type="button"
+                          onClick={() => handleInterestToggle(interest)}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            formData.interests.includes(interest)
+                              ? 'bg-primary-600 text-white border-primary-600'
+                              : 'bg-white text-gray-700 border-gray-300 hover:border-primary-500'
+                          } border`}
+                        >
+                          {interest}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-3 flex justify-between items-center">
+                      <p className="text-sm text-gray-500">
+                        선택된 관심사: {formData.interests.length}개
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setShowInterests(false)}
+                        className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
+                      >
+                        닫기
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
