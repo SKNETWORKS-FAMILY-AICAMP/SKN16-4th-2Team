@@ -53,11 +53,16 @@ async def register(
         role=user_data.role,
         photo_url=user_data.photo_url,
         phone=user_data.phone,
-        mbti=user_data.mbti,
         interests=user_data.interests,
         hobbies=user_data.hobbies,
         specialties=user_data.specialties,
         team=user_data.team,
+        team_number=user_data.team_number,
+        employee_number=user_data.employee_number,
+        join_year=user_data.join_year,
+        position=user_data.position,
+        extension=user_data.extension,
+        emergency_contact=user_data.emergency_contact,
         encouragement_message=user_data.encouragement_message
     )
     
