@@ -32,8 +32,8 @@ export default function Register() {
     extension: '',
     emergency_contact: '',
     interests: [],
-    team: '',
-    team_number: '',
+    team: '', // 부서
+    team_number: '', // 팀
     employee_number: '',
     join_year: '',
     position: '',
@@ -89,8 +89,8 @@ export default function Register() {
         extension: formData.extension || undefined,
         emergency_contact: formData.emergency_contact || undefined,
         interests: JSON.stringify(formData.interests),
-        team: formData.team || undefined,
-        team_number: formData.team_number || undefined,
+        team: formData.team || undefined, // 부서
+        team_number: formData.team_number || undefined, // 팀
         employee_number: formData.employee_number || undefined,
         join_year: formData.join_year ? parseInt(formData.join_year) : undefined,
         position: formData.position || undefined,
@@ -299,6 +299,8 @@ export default function Register() {
                   placeholder="010-1234-5678"
                 />
               </div>
+
+              {/* 부서 */}
 
               {/* 부서 */}
               <div>

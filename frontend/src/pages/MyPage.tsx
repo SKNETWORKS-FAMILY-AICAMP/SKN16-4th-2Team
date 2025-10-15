@@ -76,7 +76,11 @@ export default function MyPage() {
         </div>
         <div className="flex flex-row justify-between items-center">
           <span className="text-gray-500 font-medium">부서/팀</span>
-          <span className="text-lg font-semibold text-gray-800">{user.team || '-'}</span>
+          <span className="text-lg font-semibold text-gray-800">
+            {user.team && user.team_number
+              ? `${user.team} ${user.team_number}`
+              : user.team || user.team_number || '-'}
+          </span>
         </div>
         <div className="flex flex-row justify-between items-center">
           <span className="text-gray-500 font-medium">관심사</span>
