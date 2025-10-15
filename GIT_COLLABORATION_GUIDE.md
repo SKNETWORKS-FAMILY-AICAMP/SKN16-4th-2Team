@@ -163,6 +163,19 @@ git pull
 git push
 ```
 
+### Git Graph 명령어
+
+```bash
+# 그래프로 히스토리 보기 (간단)
+git lg
+
+# 그래프로 히스토리 보기 (상세)
+git log --oneline --graph --all --decorate
+
+# 최근 10개 커밋만 그래프로 보기
+git log --oneline --graph --all --decorate -10
+```
+
 ### 실수했을 때
 
 ```bash
@@ -265,6 +278,36 @@ git checkout 올바른브랜치
 # 변경사항 복원
 git stash pop
 ```
+
+---
+
+## 📊 Git Graph 사용법
+
+### VS Code에서 Git Graph 보기
+
+1. **VS Code 좌측 사이드바** → **Source Control** (또는 `Ctrl+Shift+G`)
+2. **"Git Graph"** 버튼 클릭
+3. 브랜치와 커밋이 시각적으로 표시됩니다!
+
+### 터미널에서 Git Graph 보기
+
+```bash
+# 간단한 그래프 (별칭 사용)
+git lg
+
+# 상세한 그래프
+git log --oneline --graph --all --decorate
+
+# 최근 10개 커밋만
+git log --oneline --graph --all --decorate -10
+```
+
+### Git Graph의 장점
+
+- ✅ **브랜치 분기/병합** 한눈에 파악
+- ✅ **팀원들의 작업 진행상황** 추적
+- ✅ **충돌 지점** 쉽게 찾기
+- ✅ **커밋 히스토리** 시각적 확인
 
 ---
 
