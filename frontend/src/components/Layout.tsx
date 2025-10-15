@@ -48,13 +48,18 @@ export default function Layout() {
 
             {/* User Menu */}
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
+
+              <button
+                className="flex items-center space-x-2 focus:outline-none"
+                onClick={() => navigate('/mypage')}
+                title="마이페이지로 이동"
+              >
                 {user?.photo_url ? (
                   <img src={user.photo_url} alt={user.name} className="w-8 h-8 rounded-full" />
                 ) : (
                   <UserCircleIcon className="w-8 h-8 text-gray-400" />
                 )}
-                <div className="hidden md:block text-sm">
+                <div className="hidden md:block text-sm text-left">
                   <div className="font-medium text-gray-900">{user?.name}</div>
                   <div className="text-gray-500 text-xs">
                     {user?.role === 'admin' && '관리자'}
@@ -62,7 +67,7 @@ export default function Layout() {
                     {user?.role === 'mentee' && '멘티'}
                   </div>
                 </div>
-              </div>
+              </button>
               
               <button
                 onClick={handleLogout}
