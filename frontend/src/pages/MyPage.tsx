@@ -260,7 +260,9 @@ export default function MyPage() {
           </button>
           {photoUrl && (
             <button
-              className="absolute bottom-2 left-2 z-10 bg-white/95 backdrop-blur text-gray-800 rounded-full px-3 py-1 shadow hover:bg-white focus:outline-none transition-all border border-gray-200 flex items-center space-x-1 whitespace-nowrap"
+              className="absolute bottom-2 left-2 z-10 bg-white/95 backdrop-blur text-gray-800 rounded-full p-2 shadow hover:bg-white focus:outline-none transition-all border border-gray-200"
+              aria-label="기본 이미지로 되돌리기"
+              title="기본 이미지로 되돌리기"
               onClick={async (e) => {
                 e.stopPropagation()
                 try {
@@ -272,7 +274,6 @@ export default function MyPage() {
                   alert('기본 상태로 되돌리기에 실패했습니다.')
                 }
               }}
-              title="기본 이미지로 되돌리기"
               type="button"
             >
               <ArrowPathIcon className="w-4 h-4" />
