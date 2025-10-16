@@ -25,7 +25,7 @@ async def create_post(
 ):
     """
     게시글 작성
-    - 완전 익명 처리
+    - 작성자는 "글쓴이"로 표시
     """
     post = Post(
         title=post_data.title,
@@ -45,7 +45,7 @@ async def create_post(
         comment_count=post.comment_count,
         created_at=post.created_at,
         updated_at=post.updated_at,
-        author_alias="익명1"
+        author_alias="글쓴이"
     )
 
 
@@ -60,6 +60,7 @@ async def get_posts(
     게시글 목록 조회
     - 삭제되지 않은 게시글만
     - 최신순 정렬
+    - 목록에서는 작성자 정보 숨김
     """
     statement = (
         select(Post)
@@ -71,8 +72,10 @@ async def get_posts(
     
     posts = session.exec(statement).all()
     
-    return [
-        PostRead(
+    result = []
+    
+    for post in posts:
+        result.append(PostRead(
             id=post.id,
             title=post.title,
             content=post.content,
@@ -80,10 +83,10 @@ async def get_posts(
             comment_count=post.comment_count,
             created_at=post.created_at,
             updated_at=post.updated_at,
-            author_alias="익명1"
-        )
-        for post in posts
-    ]
+            author_alias=""  # 목록에서는 작성자 정보 숨김
+        ))
+    
+    return result
 
 
 @router.get("/{post_id}", response_model=PostDetail)
@@ -96,6 +99,8 @@ async def get_post(
     게시글 상세 조회
     - 조회수 증가
     - 댓글 목록 포함
+    - 게시글 작성자는 모든 사용자에게 "글쓴이"로 표시
+    - 댓글 작성자는 게시글 작성자인 경우 "글쓴이", 다른 사람은 "익명1", "익명2" 순으로 표시
     """
     statement = select(Post).where(Post.id == post_id, Post.is_deleted == False)
     post = session.exec(statement).first()
@@ -116,15 +121,30 @@ async def get_post(
     )
     comments = session.exec(comment_statement).all()
     
-    # 댓글에 익명 번호 부여 (익명2, 익명3...)
+    # 게시글 작성자 표시 (모든 사용자에게 "글쓴이"로 표시)
+    post_author_alias = "글쓴이"
+    
+    # 댓글에 익명 번호 부여
     comment_reads = []
-    for idx, comment in enumerate(comments, start=2):
+    anonymous_counter = 1
+    
+    for comment in comments:
+        if comment.author_id == post.author_id:
+            # 게시글 작성자가 댓글을 쓴 경우 "글쓴이"로 표시
+            author_alias = "글쓴이"
+        else:
+            # 다른 사람이 댓글을 쓴 경우 익명1, 익명2... 순으로 표시
+            author_alias = f"익명{anonymous_counter}"
+            anonymous_counter += 1
+        
         comment_reads.append(CommentRead(
             id=comment.id,
             post_id=comment.post_id,
             content=comment.content,
             created_at=comment.created_at,
-            author_alias=f"익명{idx}"
+            author_alias=author_alias,
+            is_author=comment.author_id == current_user.id,
+            is_admin=current_user.role.value == "admin"
         ))
     
     return PostDetail(
@@ -136,9 +156,11 @@ async def get_post(
             comment_count=post.comment_count,
             created_at=post.created_at,
             updated_at=post.updated_at,
-            author_alias="익명1"
+            author_alias=post_author_alias
         ),
-        comments=comment_reads
+        comments=comment_reads,
+        is_author=post.author_id == current_user.id,
+        is_admin=current_user.role.value == "admin"
     )
 
 
@@ -150,7 +172,7 @@ async def create_comment(
 ):
     """
     댓글 작성
-    - 익명 처리
+    - 작성자는 "글쓴이"로 표시
     - 게시글 댓글 수 증가
     """
     # 게시글 존재 확인
@@ -166,7 +188,7 @@ async def create_comment(
         Comment.is_deleted == False
     )
     existing_comments = session.exec(comment_count_statement).all()
-    comment_order = len(existing_comments) + 2  # 익명1은 게시글 작성자
+    comment_order = len(existing_comments) + 1  # 순서는 1부터 시작
     
     # 댓글 생성
     comment = Comment(
@@ -185,12 +207,27 @@ async def create_comment(
     session.commit()
     session.refresh(comment)
     
+    # 게시글 작성자 확인
+    post_statement = select(Post).where(Post.id == comment_data.post_id)
+    post = session.exec(post_statement).first()
+    
+    if comment.author_id == post.author_id:
+        # 게시글 작성자가 댓글을 쓴 경우 "글쓴이"로 표시
+        author_alias = "글쓴이"
+    else:
+        # 다른 사람이 댓글을 쓴 경우 익명 번호 할당
+        existing_comments_count = len(existing_comments)
+        comment_anonymous_number = existing_comments_count + 1
+        author_alias = f"익명{comment_anonymous_number}"
+    
     return CommentRead(
         id=comment.id,
         post_id=comment.post_id,
         content=comment.content,
         created_at=comment.created_at,
-        author_alias=f"익명{comment_order}"
+        author_alias=author_alias,
+        is_author=True,  # 댓글 작성자는 본인이므로 항상 True
+        is_admin=current_user.role.value == "admin"
     )
 
 
@@ -202,7 +239,7 @@ async def delete_post(
 ):
     """
     게시글 삭제
-    - 작성자 본인만 삭제 가능
+    - 작성자 본인 또는 관리자만 삭제 가능
     - 소프트 삭제 (is_deleted = True)
     """
     statement = select(Post).where(Post.id == post_id)
@@ -211,8 +248,8 @@ async def delete_post(
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
     
-    # 작성자 확인
-    if post.author_id != current_user.id:
+    # 작성자 또는 관리자 확인
+    if post.author_id != current_user.id and current_user.role.value != "admin":
         raise HTTPException(status_code=403, detail="Not authorized to delete this post")
     
     post.is_deleted = True
@@ -230,7 +267,7 @@ async def delete_comment(
 ):
     """
     댓글 삭제
-    - 작성자 본인만 삭제 가능
+    - 작성자 본인 또는 관리자만 삭제 가능
     """
     statement = select(Comment).where(Comment.id == comment_id)
     comment = session.exec(statement).first()
@@ -238,8 +275,8 @@ async def delete_comment(
     if not comment:
         raise HTTPException(status_code=404, detail="Comment not found")
     
-    # 작성자 확인
-    if comment.author_id != current_user.id:
+    # 작성자 또는 관리자 확인
+    if comment.author_id != current_user.id and current_user.role.value != "admin":
         raise HTTPException(status_code=403, detail="Not authorized to delete this comment")
     
     comment.is_deleted = True
