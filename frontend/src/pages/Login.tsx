@@ -1,20 +1,118 @@
 /**
  * 로그인 페이지
  */
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { authAPI } from '../utils/api'
-import { LockClosedIcon } from '@heroicons/react/24/solid'
+import { LockClosedIcon, QrCodeIcon } from '@heroicons/react/24/solid'
+import { Html5Qrcode } from 'html5-qrcode'
 
 export default function Login() {
+  const [loginMode, setLoginMode] = useState<'normal' | 'qr'>('normal')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [qrScanning, setQrScanning] = useState(false)
+  const [qrScanned, setQrScanned] = useState(false)
+  const qrCodeRef = useRef<Html5Qrcode | null>(null)
   
   const { login } = useAuthStore()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (loginMode === 'qr' && !qrScanned && !qrScanning) {
+      setQrScanning(true)
+      
+      // DOM이 렌더링될 때까지 대기
+      setTimeout(() => {
+        const element = document.getElementById("qr-reader")
+        if (!element) {
+          console.error("qr-reader element not found")
+          setQrScanning(false)
+          return
+        }
+        
+        const html5QrCode = new Html5Qrcode("qr-reader")
+        qrCodeRef.current = html5QrCode
+        
+        html5QrCode.start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 }
+          },
+          async (decodedText) => {
+            // QR 코드 스캔 성공 - 바로 로그인 시도
+            setQrScanning(false)
+            setLoading(true)
+            
+            // 스캐너 중지
+            if (qrCodeRef.current) {
+              await qrCodeRef.current.stop().catch(() => {})
+              qrCodeRef.current = null
+            }
+            
+            try {
+              // 1. QR 로그인 API 호출하여 토큰 받기
+              const data = await authAPI.qrLogin(decodedText)
+              
+              // 2. 이메일 추출 (qr-login:email)
+              const parts = decodedText.split(':', 2)
+              const email = parts.length >= 2 ? parts[1] : ''
+              
+              // 3. 토큰을 먼저 임시로 스토어에 저장
+              login(data.access_token, data.refresh_token, {
+                id: 0,
+                email: email,
+                name: '',
+                role: 'mentee' as any,
+              })
+              
+              // 4. 사용자 정보 가져오기
+              const userData = await authAPI.getCurrentUser()
+              
+              // 5. 완전한 사용자 정보로 업데이트
+              login(data.access_token, data.refresh_token, userData)
+              
+              // 6. 홈으로 이동
+              navigate('/home')
+            } catch (err: any) {
+              console.error('QR Login error:', err)
+              let errorMessage = 'QR 로그인에 실패했습니다.'
+              
+              if (err.response?.data?.detail) {
+                errorMessage = err.response.data.detail
+              } else if (err.message) {
+                errorMessage = err.message
+              }
+              
+              setError(errorMessage)
+              setLoading(false)
+              setQrScanned(false)
+            }
+          },
+          (errorMessage) => {
+            // 스캔 실패는 무시 (계속 시도)
+          }
+        ).catch((err) => {
+          console.error("QR Scanner error:", err)
+          setError('카메라에 접근할 수 없습니다. 권한을 확인해주세요.')
+          setQrScanning(false)
+          qrCodeRef.current = null
+        })
+      }, 100) // DOM 렌더링 대기
+    }
+
+    return () => {
+      // cleanup: 스캐너가 실행 중인 경우에만 중지
+      if (qrCodeRef.current) {
+        qrCodeRef.current.stop().catch(() => {})
+        qrCodeRef.current = null
+      }
+    }
+  }, [loginMode, qrScanned, qrScanning, login, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -22,6 +120,13 @@ export default function Login() {
     setLoading(true)
 
     try {
+      // QR 스캐너가 실행 중이면 먼저 정리
+      if (qrCodeRef.current && qrScanning) {
+        await qrCodeRef.current.stop().catch(() => {})
+        qrCodeRef.current = null
+        setQrScanning(false)
+      }
+
       // 1. 로그인 API 호출하여 토큰 받기
       const data = await authAPI.login(email, password)
       
@@ -59,16 +164,71 @@ export default function Login() {
     }
   }
 
+  const switchToNormalLogin = () => {
+    // QR 스캐너 정리
+    if (qrCodeRef.current && qrScanning) {
+      qrCodeRef.current.stop().catch(() => {})
+      qrCodeRef.current = null
+    }
+    setLoginMode('normal')
+    setEmail('')
+    setPassword('')
+    setQrScanned(false)
+    setQrScanning(false)
+    setError('')
+  }
+
+  const switchToQRLogin = () => {
+    setLoginMode('qr')
+    setEmail('')
+    setPassword('')
+    setQrScanned(false)
+    setQrScanning(false)
+    setError('')
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 px-4 py-8">
       <div className="max-w-md w-full">
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl mb-4">
+            {loginMode === 'normal' ? (
             <LockClosedIcon className="w-8 h-8 text-white" />
+            ) : (
+              <QrCodeIcon className="w-8 h-8 text-white" />
+            )}
           </div>
           <h2 className="text-3xl font-bold text-gray-900">로그인</h2>
-          <p className="text-gray-600 mt-2">멘토 시스템에 오신 것을 환영합니다</p>
+          <p className="text-gray-600 mt-2">
+            {loginMode === 'normal' ? '멘토 시스템에 오신 것을 환영합니다' : '사원증 QR 코드로 빠르게 로그인하세요'}
+          </p>
+        </div>
+
+        {/* Login Mode Tabs */}
+        <div className="flex gap-2 mb-6">
+          <button
+            onClick={switchToNormalLogin}
+            className={`flex-1 py-3 rounded-lg font-semibold transition-colors ${
+              loginMode === 'normal'
+                ? 'bg-white text-primary-600 shadow-lg'
+                : 'bg-white/50 text-gray-600 hover:bg-white/70'
+            }`}
+          >
+            <LockClosedIcon className="w-5 h-5 inline mr-2" />
+            일반 로그인
+          </button>
+          <button
+            onClick={switchToQRLogin}
+            className={`flex-1 py-3 rounded-lg font-semibold transition-colors ${
+              loginMode === 'qr'
+                ? 'bg-white text-primary-600 shadow-lg'
+                : 'bg-white/50 text-gray-600 hover:bg-white/70'
+            }`}
+          >
+            <QrCodeIcon className="w-5 h-5 inline mr-2" />
+            사원증 QR 로그인
+          </button>
         </div>
 
         {/* Login Form */}
@@ -79,6 +239,8 @@ export default function Login() {
             </div>
           )}
 
+          {loginMode === 'normal' ? (
+            // 일반 로그인 폼
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -122,6 +284,34 @@ export default function Login() {
               {loading ? '로그인 중...' : '로그인'}
             </button>
           </form>
+          ) : (
+            // QR 로그인 폼
+            <div className="space-y-6">
+              {qrScanning && (
+                <div>
+                  <div className="text-center mb-4">
+                    <p className="text-sm text-gray-600">
+                      마이페이지에서 생성한 사원증 QR 코드를 스캔하세요
+                    </p>
+                    <p className="text-xs text-primary-600 mt-1 font-medium">
+                      스캔 후 자동으로 로그인됩니다
+                    </p>
+                  </div>
+                  <div id="qr-reader" className="rounded-lg overflow-hidden border-2 border-gray-200"></div>
+                  <p className="text-center text-sm text-gray-500 mt-3">
+                    카메라로 사원증 QR 코드를 비춰주세요...
+                  </p>
+                </div>
+              )}
+
+              {loading && !qrScanning && (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-600 mb-4"></div>
+                  <p className="text-gray-600 font-medium">로그인 중...</p>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="mt-6 text-center space-y-3">
             <div className="flex justify-center gap-4 text-sm">
@@ -155,4 +345,3 @@ export default function Login() {
     </div>
   )
 }
-
