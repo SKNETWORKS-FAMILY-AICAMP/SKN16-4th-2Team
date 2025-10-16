@@ -8,6 +8,9 @@ import { dashboardAPI } from '../utils/api'
 import { 
   UserIcon,
   AcademicCapIcon,
+  ChatBubbleLeftRightIcon,
+  PaperAirplaneIcon,
+  TrashIcon,
   ChatBubbleBottomCenterTextIcon,
   TrophyIcon,
   EyeIcon,
@@ -671,8 +674,14 @@ function PerformanceModal({ mentee, onClose }: any) {
   )
 }
 
-// 피드백 카드 컴포넌트
+// 피드백 카드 컴포넌트 (댓글 기능 포함)
 function FeedbackCard({ feedback, index, currentTime }: any) {
+  const { user } = useAuthStore()
+  const [showComments, setShowComments] = useState(false)
+  const [comments, setComments] = useState<any[]>([])
+  const [newComment, setNewComment] = useState('')
+  const [isLoadingComments, setIsLoadingComments] = useState(false)
+  
   const getDateBasedColor = (createdAt: string, colorSection?: string) => {
     // DB에 저장된 색상 섹션을 우선 사용
     if (colorSection) {
@@ -774,6 +783,55 @@ function FeedbackCard({ feedback, index, currentTime }: any) {
     const diffInHours = (now.getTime() - feedbackDate.getTime()) / (1000 * 60 * 60)
     return diffInHours <= 24
   }
+  
+  const loadComments = async () => {
+    if (showComments && comments.length === 0) {
+      setIsLoadingComments(true)
+      try {
+        const response = await dashboardAPI.getComments(feedback.id)
+        setComments(response.comments || [])
+      } catch (error) {
+        console.error('댓글 로드 실패:', error)
+      } finally {
+        setIsLoadingComments(false)
+      }
+    }
+  }
+  
+  const handleAddComment = async () => {
+    if (!newComment.trim()) return
+    
+    try {
+      await dashboardAPI.createComment(feedback.id, newComment)
+      setNewComment('')
+      // 댓글 목록 새로고침
+      const response = await dashboardAPI.getComments(feedback.id)
+      setComments(response.comments || [])
+    } catch (error) {
+      console.error('댓글 작성 실패:', error)
+      alert('댓글 작성에 실패했습니다.')
+    }
+  }
+  
+  const handleDeleteComment = async (commentId: number) => {
+    if (!confirm('댓글을 삭제하시겠습니까?')) return
+    
+    try {
+      await dashboardAPI.deleteComment(commentId)
+      // 댓글 목록 새로고침
+      const response = await dashboardAPI.getComments(feedback.id)
+      setComments(response.comments || [])
+    } catch (error) {
+      console.error('댓글 삭제 실패:', error)
+      alert('댓글 삭제에 실패했습니다.')
+    }
+  }
+  
+  useEffect(() => {
+    if (showComments) {
+      loadComments()
+    }
+  }, [showComments])
 
   return (
     <motion.div
@@ -806,14 +864,88 @@ function FeedbackCard({ feedback, index, currentTime }: any) {
               최신 피드백
             </span>
           )}
-          {!feedback.is_read && !isRecent() && (
-            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-              새 피드백
-            </span>
-          )}
         </div>
       </div>
-      <p className="text-gray-800 leading-relaxed text-sm">{feedback.feedback_text}</p>
+      <p className="text-gray-800 leading-relaxed text-sm mb-3">{feedback.feedback_text}</p>
+      
+      {/* 댓글 토글 버튼 */}
+      <button
+        onClick={() => setShowComments(!showComments)}
+        className="flex items-center space-x-2 text-sm text-blue-600 hover:text-blue-800 transition-colors"
+      >
+        <ChatBubbleLeftRightIcon className="w-4 h-4" />
+        <span>{showComments ? '댓글 숨기기' : '댓글 보기'}</span>
+        {comments.length > 0 && (
+          <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs">
+            {comments.length}
+          </span>
+        )}
+      </button>
+      
+      {/* 댓글 영역 */}
+      {showComments && (
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          {isLoadingComments ? (
+            <div className="text-center text-gray-500 text-sm py-4">댓글 로딩 중...</div>
+          ) : (
+            <>
+              {/* 댓글 목록 */}
+              <div className="space-y-3 mb-4">
+                {comments.map((comment: any) => (
+                  <div key={comment.id} className="bg-white p-3 rounded-lg border border-gray-200">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <span className={`text-xs font-semibold ${
+                          comment.user_role === 'MENTOR' ? 'text-blue-600' : 'text-green-600'
+                        }`}>
+                          {comment.user_name}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {getTimeLabel(comment.created_at)}
+                        </span>
+                      </div>
+                      {comment.user_id === user?.id && (
+                        <button
+                          onClick={() => handleDeleteComment(comment.id)}
+                          className="text-gray-400 hover:text-red-600 transition-colors"
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-700">{comment.comment_text}</p>
+                  </div>
+                ))}
+                
+                {comments.length === 0 && (
+                  <p className="text-center text-gray-500 text-sm py-4">
+                    아직 댓글이 없습니다. 첫 댓글을 남겨보세요!
+                  </p>
+                )}
+              </div>
+              
+              {/* 댓글 작성 폼 */}
+              <div className="flex items-start space-x-2">
+                <textarea
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="댓글을 입력하세요..."
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows={2}
+                />
+                <button
+                  onClick={handleAddComment}
+                  disabled={!newComment.trim()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center space-x-1"
+                >
+                  <PaperAirplaneIcon className="w-4 h-4" />
+                  <span>전송</span>
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </motion.div>
   )
 }

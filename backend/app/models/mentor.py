@@ -104,6 +104,23 @@ class Feedback(SQLModel, table=True):
     read_at: Optional[datetime] = None
 
 
+class FeedbackComment(SQLModel, table=True):
+    """피드백 댓글 테이블"""
+    __tablename__ = "feedback_comments"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    feedback_id: int = Field(foreign_key="feedbacks.id")
+    user_id: int = Field(foreign_key="users.id")  # 댓글 작성자 (멘토 또는 멘티)
+    
+    # 댓글 내용
+    comment_text: str = Field(sa_column=Column(Text))
+    
+    # 댓글 상태
+    is_deleted: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class MenteeDashboard(SQLModel):
     """멘티 대시보드 데이터"""
     mentee_id: int

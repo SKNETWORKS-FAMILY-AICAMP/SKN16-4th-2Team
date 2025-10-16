@@ -12,7 +12,7 @@ from app.database import get_session
 from app.models.user import User, UserRead
 from app.models.mentor import (
     MentorMenteeRelation, ExamScore, ChatHistory,
-    MentorDashboard, MenteeDashboard, LearningProgress, Feedback
+    MentorDashboard, MenteeDashboard, LearningProgress, Feedback, FeedbackComment
 )
 from app.utils.auth import get_current_user, get_current_active_mentor
 
@@ -515,4 +515,152 @@ async def mark_feedback_as_read(
     session.commit()
     
     return {"message": "피드백을 읽음으로 표시했습니다."}
+
+
+# ============ 피드백 댓글 API ============
+
+@router.post("/feedback/{feedback_id}/comments")
+async def create_comment(
+    feedback_id: int,
+    request: dict,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    피드백에 댓글 작성 (멘토 또는 멘티)
+    """
+    comment_text = request.get("comment_text")
+    
+    if not comment_text:
+        raise HTTPException(
+            status_code=400,
+            detail="comment_text는 필수입니다."
+        )
+    
+    # 피드백 존재 여부 확인
+    feedback_statement = select(Feedback).where(Feedback.id == feedback_id)
+    feedback = session.exec(feedback_statement).first()
+    
+    if not feedback:
+        raise HTTPException(
+            status_code=404,
+            detail="피드백을 찾을 수 없습니다."
+        )
+    
+    # 권한 확인: 피드백의 멘토 또는 멘티만 댓글 작성 가능
+    if current_user.id not in [feedback.mentor_id, feedback.mentee_id]:
+        raise HTTPException(
+            status_code=403,
+            detail="이 피드백에 댓글을 작성할 권한이 없습니다."
+        )
+    
+    # 댓글 생성
+    comment = FeedbackComment(
+        feedback_id=feedback_id,
+        user_id=current_user.id,
+        comment_text=comment_text
+    )
+    
+    session.add(comment)
+    session.commit()
+    session.refresh(comment)
+    
+    return {
+        "message": "댓글이 성공적으로 작성되었습니다.",
+        "comment_id": comment.id
+    }
+
+
+@router.get("/feedback/{feedback_id}/comments")
+async def get_comments(
+    feedback_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    특정 피드백의 댓글 목록 조회
+    """
+    # 피드백 존재 및 권한 확인
+    feedback_statement = select(Feedback).where(Feedback.id == feedback_id)
+    feedback = session.exec(feedback_statement).first()
+    
+    if not feedback:
+        raise HTTPException(
+            status_code=404,
+            detail="피드백을 찾을 수 없습니다."
+        )
+    
+    # 권한 확인
+    if current_user.id not in [feedback.mentor_id, feedback.mentee_id]:
+        raise HTTPException(
+            status_code=403,
+            detail="이 피드백의 댓글을 볼 권한이 없습니다."
+        )
+    
+    # 댓글 조회
+    comments_statement = (
+        select(FeedbackComment)
+        .where(
+            FeedbackComment.feedback_id == feedback_id,
+            FeedbackComment.is_deleted == False
+        )
+        .order_by(FeedbackComment.created_at.asc())
+    )
+    comments = session.exec(comments_statement).all()
+    
+    comment_list = []
+    for comment in comments:
+        # 작성자 정보 조회
+        user_statement = select(User).where(User.id == comment.user_id)
+        user = session.exec(user_statement).first()
+        
+        comment_list.append({
+            "id": comment.id,
+            "user_id": comment.user_id,
+            "user_name": user.name if user else "알 수 없음",
+            "user_role": user.role if user else None,
+            "comment_text": comment.comment_text,
+            "created_at": comment.created_at.isoformat(),
+            "updated_at": comment.updated_at.isoformat()
+        })
+    
+    return {
+        "feedback_id": feedback_id,
+        "comments": comment_list
+    }
+
+
+@router.delete("/feedback/comments/{comment_id}")
+async def delete_comment(
+    comment_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    댓글 삭제 (작성자만 가능)
+    """
+    comment_statement = select(FeedbackComment).where(
+        FeedbackComment.id == comment_id
+    )
+    comment = session.exec(comment_statement).first()
+    
+    if not comment:
+        raise HTTPException(
+            status_code=404,
+            detail="댓글을 찾을 수 없습니다."
+        )
+    
+    # 권한 확인: 작성자만 삭제 가능
+    if comment.user_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="댓글을 삭제할 권한이 없습니다."
+        )
+    
+    # Soft delete
+    comment.is_deleted = True
+    session.add(comment)
+    session.commit()
+    
+    return {"message": "댓글이 성공적으로 삭제되었습니다."}
 

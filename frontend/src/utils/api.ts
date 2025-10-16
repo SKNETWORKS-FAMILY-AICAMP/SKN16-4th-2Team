@@ -227,6 +227,24 @@ export const dashboardAPI = {
     const response = await api.put(`/dashboard/feedback/${feedbackId}/read`)
     return response.data
   },
+  
+  // 댓글 관련 API
+  getComments: async (feedbackId: number) => {
+    const response = await api.get(`/dashboard/feedback/${feedbackId}/comments`)
+    return response.data
+  },
+  
+  createComment: async (feedbackId: number, commentText: string) => {
+    const response = await api.post(`/dashboard/feedback/${feedbackId}/comments`, {
+      comment_text: commentText
+    })
+    return response.data
+  },
+  
+  deleteComment: async (commentId: number) => {
+    const response = await api.delete(`/dashboard/feedback/comments/${commentId}`)
+    return response.data
+  },
 }
 
 export default api
