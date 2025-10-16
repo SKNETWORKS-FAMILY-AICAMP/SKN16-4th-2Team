@@ -198,13 +198,13 @@ function MenteeDashboard({ data, currentTime }: any) {
       </motion.div>
 
       {/* Mentor Info */}
-      {data?.mentor_info && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-md p-6"
-        >
-          <h2 className="text-xl font-bold text-gray-900 mb-4">담당 멘토</h2>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-xl shadow-md p-6"
+      >
+        <h2 className="text-xl font-bold text-gray-900 mb-4">담당 멘토</h2>
+        {data?.mentor_info ? (
           <div className="flex items-start space-x-4">
             {data.mentor_info.photo_url ? (
               <img
@@ -234,18 +234,24 @@ function MenteeDashboard({ data, currentTime }: any) {
               )}
             </div>
           </div>
-        </motion.div>
-      )}
+        ) : (
+          <div className="text-center py-8">
+            <UserIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500 text-lg mb-2">아직 담당 멘토가 배정되지 않았습니다</p>
+            <p className="text-gray-400 text-sm">관리자에게 멘토 배정을 요청해보세요</p>
+          </div>
+        )}
+      </motion.div>
 
       {/* Recent Feedbacks */}
-      {data?.recent_feedbacks && data.recent_feedbacks.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-md p-6"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900">멘토 피드백</h2>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-xl shadow-md p-6"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-gray-900">멘토 피드백</h2>
+          {data?.recent_feedbacks && data.recent_feedbacks.length > 0 && (
             <div className="flex items-center space-x-2">
               <span className="text-sm text-gray-500">총 {data.recent_feedbacks.length}개</span>
               {(() => {
@@ -271,9 +277,10 @@ function MenteeDashboard({ data, currentTime }: any) {
                 return null
               })()}
             </div>
-          </div>
-          
-          {/* 피드백 목록 - 최신 3개만 표시하고 나머지는 접기 */}
+          )}
+        </div>
+        
+        {data?.recent_feedbacks && data.recent_feedbacks.length > 0 ? (
           <div className="space-y-3">
             {data.recent_feedbacks.slice(0, 3).map((feedback: any, idx: number) => (
               <FeedbackCard key={idx} feedback={feedback} index={idx} currentTime={currentTime} />
@@ -288,17 +295,23 @@ function MenteeDashboard({ data, currentTime }: any) {
               />
             )}
           </div>
-        </motion.div>
-      )}
+        ) : (
+          <div className="text-center py-8">
+            <ChatBubbleLeftRightIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500 text-lg mb-2">아직 받은 피드백이 없습니다</p>
+            <p className="text-gray-400 text-sm">멘토가 피드백을 보내면 여기에 표시됩니다</p>
+          </div>
+        )}
+      </motion.div>
 
       {/* Recent Chats */}
-      {data?.recent_chats && data.recent_chats.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-md p-6"
-        >
-          <h2 className="text-xl font-bold text-gray-900 mb-4">최근 대화</h2>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-xl shadow-md p-6"
+      >
+        <h2 className="text-xl font-bold text-gray-900 mb-4">최근 대화</h2>
+        {data?.recent_chats && data.recent_chats.length > 0 ? (
           <div className="space-y-4">
             {data.recent_chats.slice(0, 5).map((chat: any, idx: number) => (
               <div key={idx} className="p-4 bg-gray-50 rounded-lg">
@@ -307,8 +320,14 @@ function MenteeDashboard({ data, currentTime }: any) {
               </div>
             ))}
           </div>
-        </motion.div>
-      )}
+        ) : (
+          <div className="text-center py-8">
+            <ChatBubbleBottomCenterTextIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500 text-lg mb-2">아직 대화 기록이 없습니다</p>
+            <p className="text-gray-400 text-sm">챗봇과 대화를 시작해보세요</p>
+          </div>
+        )}
+      </motion.div>
     </div>
   )
 }
