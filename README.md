@@ -30,7 +30,67 @@ RAG 기반 LLM 챗봇을 중심으로 한 종합적인 온보딩 플랫폼입니
 - Recharts (데이터 시각화)
 - Framer Motion (애니메이션)
 
+## 👥 팀원들을 위한 빠른 시작
+
+### 🎯 처음 설정하는 팀원
+
+```bash
+# 1. 프로젝트 클론
+git clone https://github.com/SKNETWORKS-FAMILY-AICAMP/SKN16-4th-2Team.git
+cd SKN16-4th-2Team
+
+# 2. 시스템 시작 (모든 것이 자동으로 설정됩니다!)
+docker-compose up -d
+
+# 3. 잠시 기다린 후 브라우저에서 접속
+# - 프론트엔드: http://localhost:3000
+# - API 문서: http://localhost:8000/docs
+
+# 4. 테스트 계정으로 로그인
+# - 관리자: admin@bank.com / admin123
+# - 멘토: mentor@bank.com / mentor123
+# - 멘티: mentee@bank.com / mentee123
+```
+
+### 🔄 기존 환경 업데이트하는 팀원
+
+```bash
+# 1. 기존 컨테이너 정리
+docker-compose down -v
+
+# 2. 최신 코드 가져오기
+git pull origin main
+
+# 3. 새로운 설정으로 시작
+docker-compose up -d
+```
+
+### 🚨 문제가 발생한 경우
+
+```bash
+# 자동 진단 도구 실행
+.\diagnose.bat
+
+# 또는 수동으로 초기 데이터 재생성
+docker-compose exec backend python -m app.init_data
+```
+
 ## 🚀 빠른 시작
+
+### ⚡ 가장 빠른 방법 (Docker 사용)
+
+```bash
+# 1. 프로젝트 클론
+git clone https://github.com/SKNETWORKS-FAMILY-AICAMP/SKN16-4th-2Team.git
+cd SKN16-4th-2Team
+
+# 2. 시스템 시작 (자동으로 초기 데이터 생성됨!)
+docker-compose up -d
+
+# 3. 브라우저에서 접속
+# - 프론트엔드: http://localhost:3000
+# - API 문서: http://localhost:8000/docs
+```
 
 ### 자동 설정 (권장)
 
@@ -65,16 +125,15 @@ cp backend/env.example backend/.env
 docker-compose up -d --build
 ```
 
-#### 3. 초기 데이터 생성
-```bash
-docker exec cant-backend-1 python -c "from app.init_data import init_all_data; init_all_data()"
-```
+#### 3. 자동 초기화
+시스템이 자동으로 초기 데이터를 생성합니다! 별도 실행 불필요.
 
 ## 🌐 서비스 접속
 
 - **프론트엔드**: http://localhost:3000
 - **백엔드 API**: http://localhost:8000
 - **API 문서**: http://localhost:8000/docs
+- **pgAdmin** (개발환경): http://localhost:5050
 
 ## 🔑 테스트 계정
 
@@ -106,8 +165,11 @@ mentor-system/
 │   ├── package.json
 │   └── Dockerfile
 ├── docker-compose.yml
+├── init-db.sql            # PostgreSQL 초기화 스크립트
 ├── setup.sh               # Linux/Mac 설정 스크립트
-└── setup.bat              # Windows 설정 스크립트
+├── setup.bat              # Windows 설정 스크립트
+├── diagnose.bat           # 시스템 진단 도구
+└── CHANGELOG.md           # 변경사항 기록
 ```
 
 ## 🔧 개발 가이드
@@ -133,6 +195,14 @@ mentor-system/
 
 ## 🛠️ 문제 해결
 
+### 자동 진단 도구
+```bash
+# Windows
+.\diagnose.bat
+
+# 시스템 상태를 자동으로 진단하고 해결방안을 제시합니다
+```
+
 ### 자주 발생하는 문제
 
 1. **CSP 오류**: 브라우저에서 `unsafe-eval` 오류가 발생하는 경우
@@ -142,7 +212,10 @@ mentor-system/
    - 해결: `docker-compose down -v && docker-compose up -d --build`
 
 3. **로그인 실패**: 테스트 계정으로 로그인이 안 되는 경우
-   - 해결: 초기 데이터 재생성 `docker exec cant-backend-1 python -c "from app.init_data import init_all_data; init_all_data()"`
+   - 해결: `docker-compose exec backend python -m app.init_data`
+
+4. **포트 충돌**: 5432 포트가 이미 사용 중인 경우
+   - 해결: `docker-compose down -v` 후 재시작
 
 ### 로그 확인
 
@@ -154,7 +227,50 @@ docker-compose logs -f backend
 docker-compose logs -f frontend
 
 # 데이터베이스 로그
-docker-compose logs -f db
+docker-compose logs -f postgres
+```
+
+### 개발 환경 도구
+
+```bash
+# pgAdmin 실행 (데이터베이스 관리 UI)
+docker-compose --profile dev up -d
+
+# 접속: http://localhost:5050
+# 이메일: admin@admin.com
+# 비밀번호: admin
+```
+
+## 🆕 최신 업데이트 (v2.0)
+
+### ✨ 새로운 기능들
+
+- **자동 초기화 시스템**: 컨테이너 시작 시 자동으로 초기 데이터 생성
+- **데이터 지속성 보장**: 컨테이너 재시작 시에도 데이터 유지
+- **진단 도구**: `diagnose.bat`으로 시스템 상태 자동 진단
+- **개발 환경 도구**: pgAdmin 추가로 데이터베이스 관리 편의성 향상
+- **포트 최적화**: PostgreSQL 포트를 표준 5432로 변경
+
+### 🔧 주요 개선사항
+
+- **관리자 로그인 문제 완전 해결**
+- **중복 생성 방지 로직 강화**
+- **데이터 무결성 검증 추가**
+- **사용자 친화적 에러 메시지**
+
+### 📋 마이그레이션 가이드
+
+기존 환경에서 업데이트하는 경우:
+
+```bash
+# 1. 기존 컨테이너 정리
+docker-compose down -v
+
+# 2. 최신 코드 가져오기
+git pull origin main
+
+# 3. 새로운 설정으로 시작
+docker-compose up -d
 ```
 
 ## 📚 추가 문서
@@ -162,6 +278,7 @@ docker-compose logs -f db
 - [협업 가이드](./GIT_COLLABORATION_GUIDE.md)
 - [보안 가이드](./SECURITY.md)
 - [시작 가이드](./START_HERE.md)
+- [변경사항 기록](./CHANGELOG.md)
 
 ## 라이선스
 
