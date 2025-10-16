@@ -33,14 +33,7 @@ def init_db():
             print(f"❌ Error enabling pgvector: {e}")
             session.rollback()
     
-    # 기존 테이블 삭제 후 재생성 (개발 환경에서만)
-    try:
-        SQLModel.metadata.drop_all(engine)
-        print("✅ Existing tables dropped")
-    except Exception as e:
-        print(f"⚠️ Error dropping tables: {e}")
-    
-    # 모든 테이블 생성
+    # 모든 테이블 생성 (기존 테이블이 있으면 건너뜀)
     SQLModel.metadata.create_all(engine)
     print("✅ Database tables created")
 

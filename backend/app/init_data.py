@@ -189,6 +189,16 @@ def init_all_data():
     init_db()
     
     with Session(engine) as session:
+        # 기존 사용자 확인
+        existing_admin = session.exec(select(User).where(User.email == "admin@bank.com")).first()
+        if existing_admin:
+            print("✅ Data already exists. Skipping initialization...")
+            print("\nTest accounts:")
+            print("  Admin:  admin@bank.com / admin123")
+            print("  Mentor: mentor@bank.com / mentor123")
+            print("  Mentee: mentee@bank.com / mentee123")
+            return
+        
         create_initial_users(session)
         create_mentor_relations(session)
         create_exam_scores(session)

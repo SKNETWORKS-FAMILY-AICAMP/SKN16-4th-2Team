@@ -117,7 +117,6 @@ function PostCard({ post, formatDate }: any) {
         <p className="text-gray-600 mb-4 line-clamp-2">{post.content}</p>
         <div className="flex items-center justify-between text-sm text-gray-500">
           <div className="flex items-center space-x-4">
-            <span className="font-medium text-green-600">{post.author_alias}</span>
             <div className="flex items-center space-x-1">
               <ClockIcon className="w-4 h-4" />
               <span>{formatDate(post.created_at)}</span>
@@ -188,11 +187,6 @@ function CreatePostModal({ onClose, onSuccess }: any) {
               rows={10}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
             />
-          </div>
-          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-            <p className="text-green-800 text-sm">
-              🔒 작성자는 '익명1'로 표시되며, 댓글은 순서대로 '익명2', '익명3'... 으로 표시됩니다.
-            </p>
           </div>
           <div className="flex space-x-3 pt-4">
             <button
