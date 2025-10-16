@@ -12,9 +12,10 @@ interface User {
   team?: string
   team_number?: string
   employee_number?: string
-  interests?: string
+  interests?: string | string[]
   photo_url?: string
   phone?: string
+  extension?: string
   hobbies?: string
   mbti?: string
 }
