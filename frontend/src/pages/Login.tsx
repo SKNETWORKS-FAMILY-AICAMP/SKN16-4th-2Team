@@ -43,7 +43,17 @@ export default function Login() {
       navigate('/home')
     } catch (err: any) {
       console.error('Login error:', err)
-      setError(err.response?.data?.detail || '로그인에 실패했습니다.')
+      let errorMessage = '로그인에 실패했습니다.'
+      
+      if (err.response?.data?.detail) {
+        errorMessage = err.response.data.detail
+      } else if (err.message) {
+        errorMessage = err.message
+      } else if (err.code === 'NETWORK_ERROR' || err.code === 'ECONNREFUSED') {
+        errorMessage = '서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.'
+      }
+      
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -113,7 +123,16 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center space-y-3">
+            <div className="flex justify-center gap-4 text-sm">
+              <Link to="/find-id" className="text-gray-600 hover:text-primary-600">
+                아이디 찾기
+              </Link>
+              <span className="text-gray-300">|</span>
+              <Link to="/find-password" className="text-gray-600 hover:text-primary-600">
+                비밀번호 찾기
+              </Link>
+            </div>
             <p className="text-gray-600">
               계정이 없으신가요?{' '}
               <Link to="/register" className="text-primary-600 font-semibold hover:text-primary-700">

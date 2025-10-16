@@ -9,7 +9,9 @@ import {
   ArrowDownTrayIcon, 
   PlusIcon,
   MagnifyingGlassIcon,
-  FolderIcon
+  FolderIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon
 } from '@heroicons/react/24/outline'
 import { motion } from 'framer-motion'
 
@@ -21,11 +23,18 @@ export default function Documents() {
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   useEffect(() => {
     loadDocuments()
     loadCategories()
+    setCurrentPage(1) // 카테고리 변경 시 첫 페이지로 리셋
   }, [selectedCategory])
+
+  useEffect(() => {
+    setCurrentPage(1) // 검색어 변경 시 첫 페이지로 리셋
+  }, [searchTerm])
 
   const loadDocuments = async () => {
     try {
@@ -65,10 +74,20 @@ export default function Documents() {
     }
   }
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
   const filteredDocuments = documents.filter((doc) =>
     doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     doc.description?.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  // 페이지네이션 계산
+  const totalPages = Math.ceil(filteredDocuments.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const currentDocuments = filteredDocuments.slice(startIndex, endIndex)
 
   return (
     <div className="space-y-6">
@@ -120,27 +139,39 @@ export default function Documents() {
         </div>
       </div>
 
-      {/* Documents Grid */}
+      {/* Documents List */}
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredDocuments.map((doc) => (
-            <DocumentCard
-              key={doc.id}
-              document={doc}
-              onDownload={handleDownload}
-            />
-          ))}
-          {filteredDocuments.length === 0 && (
-            <div className="col-span-full text-center py-12">
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          {filteredDocuments.length === 0 ? (
+            <div className="text-center py-12">
               <FolderIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
               <p className="text-gray-600">문서가 없습니다</p>
             </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {currentDocuments.map((doc) => (
+                <DocumentListItem
+                  key={doc.id}
+                  document={doc}
+                  onDownload={handleDownload}
+                />
+              ))}
+            </div>
           )}
         </div>
+      )}
+
+      {/* Pagination */}
+      {filteredDocuments.length > itemsPerPage && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+        />
       )}
 
       {/* Upload Modal */}
@@ -158,36 +189,57 @@ export default function Documents() {
   )
 }
 
-function DocumentCard({ document, onDownload }: any) {
+function DocumentListItem({ document, onDownload }: any) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="p-6 hover:bg-gray-50 transition-colors"
     >
-      <div className="flex items-start space-x-4">
-        <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
-          <DocumentTextIcon className="w-6 h-6 text-primary-600" />
+      <div className="flex items-center space-x-6">
+        {/* 문서 아이콘 */}
+        <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
+          <DocumentTextIcon className="w-5 h-5 text-primary-600" />
         </div>
+        
+        {/* 제목 */}
+        <div className="flex-shrink-0 w-48">
+          <h3 className="font-semibold text-gray-900 truncate">{document.title}</h3>
+        </div>
+        
+        {/* 설명 */}
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-gray-900 mb-1 truncate">{document.title}</h3>
-          <p className="text-sm text-gray-600 mb-2">{document.category}</p>
-          {document.description && (
-            <p className="text-sm text-gray-500 mb-3 line-clamp-2">{document.description}</p>
+          {document.description ? (
+            <p className="text-sm text-gray-500 truncate">{document.description}</p>
+          ) : (
+            <p className="text-sm text-gray-400">설명 없음</p>
           )}
-          <div className="flex items-center justify-between text-xs text-gray-500">
-            <span>{document.file_type}</span>
-            <span>다운로드: {document.download_count}</span>
-          </div>
+        </div>
+        
+        {/* 카테고리 */}
+        <div className="flex-shrink-0 w-24">
+          <span className="inline-flex items-center space-x-1 text-sm text-gray-600">
+            <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+            <span className="truncate">{document.category}</span>
+          </span>
+        </div>
+        
+        {/* 다운로드 수 */}
+        <div className="flex-shrink-0 w-20 text-center">
+          <span className="text-sm text-gray-600">{document.download_count}</span>
+        </div>
+        
+        {/* 다운로드 버튼 */}
+        <div className="flex-shrink-0">
+          <button
+            onClick={() => onDownload(document.id, document.title + document.file_type)}
+            className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            <ArrowDownTrayIcon className="w-4 h-4" />
+            <span>다운로드</span>
+          </button>
         </div>
       </div>
-      <button
-        onClick={() => onDownload(document.id, document.title + document.file_type)}
-        className="mt-4 w-full flex items-center justify-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-      >
-        <ArrowDownTrayIcon className="w-4 h-4" />
-        <span>다운로드</span>
-      </button>
     </motion.div>
   )
 }
@@ -288,5 +340,84 @@ function UploadModal({ categories, onClose, onSuccess }: any) {
     </div>
   )
 }
+
+function Pagination({ currentPage, totalPages, onPageChange }: any) {
+  const getVisiblePages = () => {
+    const delta = 2
+    const range = []
+    const rangeWithDots = []
+
+    for (
+      let i = Math.max(2, currentPage - delta);
+      i <= Math.min(totalPages - 1, currentPage + delta);
+      i++
+    ) {
+      range.push(i)
+    }
+
+    if (currentPage - delta > 2) {
+      rangeWithDots.push(1, '...')
+    } else {
+      rangeWithDots.push(1)
+    }
+
+    rangeWithDots.push(...range)
+
+    if (currentPage + delta < totalPages - 1) {
+      rangeWithDots.push('...', totalPages)
+    } else if (totalPages > 1) {
+      rangeWithDots.push(totalPages)
+    }
+
+    return rangeWithDots
+  }
+
+  const visiblePages = getVisiblePages()
+
+  return (
+    <div className="flex items-center justify-center space-x-2 py-6">
+      {/* 이전 버튼 */}
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <ChevronLeftIcon className="w-4 h-4" />
+        <span>이전</span>
+      </button>
+
+      {/* 페이지 번호들 */}
+      <div className="flex space-x-1">
+        {visiblePages.map((page, index) => (
+          <button
+            key={index}
+            onClick={() => typeof page === 'number' && onPageChange(page)}
+            disabled={page === '...'}
+            className={`px-3 py-2 text-sm font-medium rounded-lg ${
+              page === currentPage
+                ? 'bg-primary-600 text-white'
+                : page === '...'
+                ? 'text-gray-500 cursor-default'
+                : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            {page}
+          </button>
+        ))}
+      </div>
+
+      {/* 다음 버튼 */}
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <span>다음</span>
+        <ChevronRightIcon className="w-4 h-4" />
+      </button>
+    </div>
+  )
+}
+
 
 
