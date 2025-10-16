@@ -120,24 +120,27 @@ export default function Documents() {
         </div>
       </div>
 
-      {/* Documents Grid */}
+      {/* Documents List */}
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredDocuments.map((doc) => (
-            <DocumentCard
-              key={doc.id}
-              document={doc}
-              onDownload={handleDownload}
-            />
-          ))}
-          {filteredDocuments.length === 0 && (
-            <div className="col-span-full text-center py-12">
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          {filteredDocuments.length === 0 ? (
+            <div className="text-center py-12">
               <FolderIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
               <p className="text-gray-600">문서가 없습니다</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {filteredDocuments.map((doc) => (
+                <DocumentListItem
+                  key={doc.id}
+                  document={doc}
+                  onDownload={handleDownload}
+                />
+              ))}
             </div>
           )}
         </div>
@@ -158,36 +161,48 @@ export default function Documents() {
   )
 }
 
-function DocumentCard({ document, onDownload }: any) {
+function DocumentListItem({ document, onDownload }: any) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="p-6 hover:bg-gray-50 transition-colors"
     >
-      <div className="flex items-start space-x-4">
-        <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
-          <DocumentTextIcon className="w-6 h-6 text-primary-600" />
+      <div className="flex items-center space-x-4">
+        {/* 문서 아이콘 */}
+        <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
+          <DocumentTextIcon className="w-5 h-5 text-primary-600" />
         </div>
+        
+        {/* 문서 정보 */}
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-gray-900 mb-1 truncate">{document.title}</h3>
-          <p className="text-sm text-gray-600 mb-2">{document.category}</p>
-          {document.description && (
-            <p className="text-sm text-gray-500 mb-3 line-clamp-2">{document.description}</p>
-          )}
-          <div className="flex items-center justify-between text-xs text-gray-500">
-            <span>{document.file_type}</span>
-            <span>다운로드: {document.download_count}</span>
+          <div className="flex items-center space-x-4">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-gray-900 truncate">{document.title}</h3>
+              <div className="flex items-center space-x-4 mt-1 text-sm text-gray-600">
+                <span className="flex items-center space-x-1">
+                  <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+                  <span>{document.category}</span>
+                </span>
+                <span>{document.file_type}</span>
+                <span>다운로드: {document.download_count}</span>
+              </div>
+              {document.description && (
+                <p className="text-sm text-gray-500 mt-1 truncate">{document.description}</p>
+              )}
+            </div>
+            
+            {/* 다운로드 버튼 */}
+            <button
+              onClick={() => onDownload(document.id, document.title + document.file_type)}
+              className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex-shrink-0"
+            >
+              <ArrowDownTrayIcon className="w-4 h-4" />
+              <span>다운로드</span>
+            </button>
           </div>
         </div>
       </div>
-      <button
-        onClick={() => onDownload(document.id, document.title + document.file_type)}
-        className="mt-4 w-full flex items-center justify-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-      >
-        <ArrowDownTrayIcon className="w-4 h-4" />
-        <span>다운로드</span>
-      </button>
     </motion.div>
   )
 }
