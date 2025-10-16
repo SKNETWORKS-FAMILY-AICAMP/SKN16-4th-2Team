@@ -16,10 +16,8 @@
 docker-compose up --build
 ```
 
-### 3. 초기 데이터 생성 (새 터미널에서)
-```bash
-docker-compose exec backend python -m app.init_data
-```
+### 3. 자동 초기화
+시스템이 자동으로 초기 데이터를 생성합니다. 별도 실행 불필요!
 
 ### 4. 브라우저로 접속
 - 🌐 프론트엔드: http://localhost:3000
