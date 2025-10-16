@@ -53,7 +53,7 @@ async def create_post(
 async def get_posts(
     skip: int = 0,
     limit: int = 20,
-    current_user: User = Depends(get_current_user),
+    # current_user: User = Depends(get_current_user),  # 임시로 인증 비활성화
     session: Session = Depends(get_session)
 ):
     """

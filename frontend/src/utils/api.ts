@@ -21,9 +21,15 @@ export const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = useAuthStore.getState().token
+    console.log('API request interceptor - token:', token ? 'present' : 'missing')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+    console.log('API request config:', {
+      url: config.url,
+      method: config.method,
+      headers: config.headers
+    })
     return config
   },
   (error) => {
@@ -163,7 +169,10 @@ export const documentAPI = {
 // 게시판
 export const postAPI = {
   getPosts: async (skip: number = 0, limit: number = 20) => {
+    console.log('postAPI.getPosts called with:', { skip, limit })
+    console.log('API base URL:', API_URL)
     const response = await api.get(`/posts/?skip=${skip}&limit=${limit}`)
+    console.log('postAPI.getPosts response:', response.data)
     return response.data
   },
   

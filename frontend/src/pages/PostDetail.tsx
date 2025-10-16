@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { postAPI } from '../utils/api'
+import { useAuthStore } from '../store/authStore'
 import { 
   ArrowLeftIcon,
   ChatBubbleLeftIcon,
@@ -16,6 +17,7 @@ import { motion } from 'framer-motion'
 export default function PostDetail() {
   const { postId } = useParams<{ postId: string }>()
   const navigate = useNavigate()
+  const { user } = useAuthStore()
   const [post, setPost] = useState<any>(null)
   const [comments, setComments] = useState<any[]>([])
   const [commentText, setCommentText] = useState('')

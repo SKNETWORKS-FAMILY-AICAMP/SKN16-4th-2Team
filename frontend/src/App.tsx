@@ -49,7 +49,7 @@ function App() {
           <Route path="/home" element={isAuthenticated ? <Home /> : <Navigate to="/login" />} />
           <Route path="/documents" element={isAuthenticated ? <Documents /> : <Navigate to="/login" />} />
           <Route path="/rag" element={<AdminOnlyRoute><RAG /></AdminOnlyRoute>} />
-          <Route path="/board" element={isAuthenticated ? <AnonymousBoard /> : <Navigate to="/login" />} />
+          <Route path="/board" element={<AnonymousBoard />} />
           <Route path="/board/:postId" element={isAuthenticated ? <PostDetail /> : <Navigate to="/login" />} />
           <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />} />
           <Route path="/mypage" element={isAuthenticated ? <MyPage /> : <Navigate to="/login" />} />

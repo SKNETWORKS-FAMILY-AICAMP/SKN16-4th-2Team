@@ -15,6 +15,7 @@ import { motion } from 'framer-motion'
 export default function AnonymousBoard() {
   const [posts, setPosts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [createModalOpen, setCreateModalOpen] = useState(false)
 
   useEffect(() => {
@@ -24,10 +25,20 @@ export default function AnonymousBoard() {
   const loadPosts = async () => {
     try {
       setLoading(true)
+      setError(null)
+      console.log('Loading posts...')
       const data = await postAPI.getPosts()
+      console.log('Posts loaded successfully:', data)
       setPosts(data)
     } catch (error) {
       console.error('Failed to load posts:', error)
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      })
+      setError(`게시글을 불러올 수 없습니다. (${error.response?.status || 'Unknown'}) 로그인 상태를 확인해주세요.`)
     } finally {
       setLoading(false)
     }
@@ -76,6 +87,16 @@ export default function AnonymousBoard() {
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+        </div>
+      ) : error ? (
+        <div className="text-center py-12 bg-red-50 border border-red-200 rounded-xl">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={loadPosts}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            다시 시도
+          </button>
         </div>
       ) : (
         <div className="space-y-4">

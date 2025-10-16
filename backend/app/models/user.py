@@ -71,6 +71,7 @@ class UserCreate(SQLModel):
     extension: Optional[str] = None
     emergency_contact: Optional[str] = None
     encouragement_message: Optional[str] = None
+    mbti: Optional[str] = None
 
 
 class UserRead(SQLModel):
