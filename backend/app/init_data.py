@@ -43,8 +43,8 @@ def create_initial_users(session: Session):
             phone="010-2222-2222",
             interests="금융투자, 리더십",
             hobbies="독서, 테니스",
-            encouragement_message="함께 성장해나가요! 언제든 편하게 질문하세요.",
-            is_active=True
+            mbti="ENFJ",
+            encouragement_message="함께 성장해나가요! 언제든 편하게 질문하세요."
         ),
         User(
             email="mentor2@bank.com",
@@ -55,8 +55,8 @@ def create_initial_users(session: Session):
             phone="010-2222-3333",
             interests="재무분석, 컨설팅",
             hobbies="골프, 영화감상",
-            encouragement_message="체계적으로 배워나가면 반드시 성공할 수 있어요!",
-            is_active=True
+            mbti="ISTJ",
+            encouragement_message="체계적으로 배워나가면 반드시 성공할 수 있어요!"
         ),
         # 멘티
         User(

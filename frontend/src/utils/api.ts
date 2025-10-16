@@ -220,6 +220,49 @@ export const dashboardAPI = {
     })
     return response.data
   },
+  
+  // 피드백 관련 API
+  createFeedback: async (menteeId: number, feedbackText: string, feedbackType: string = 'general') => {
+    const response = await api.post('/dashboard/feedback', {
+      mentee_id: menteeId,
+      feedback_text: feedbackText,
+      feedback_type: feedbackType
+    })
+    return response.data
+  },
+  
+  getFeedbacksForMentee: async (menteeId: number) => {
+    const response = await api.get(`/dashboard/feedback/${menteeId}`)
+    return response.data
+  },
+  
+  getMenteeFeedbacks: async () => {
+    const response = await api.get('/dashboard/mentee/feedbacks')
+    return response.data
+  },
+  
+  markFeedbackAsRead: async (feedbackId: number) => {
+    const response = await api.put(`/dashboard/feedback/${feedbackId}/read`)
+    return response.data
+  },
+  
+  // 댓글 관련 API
+  getComments: async (feedbackId: number) => {
+    const response = await api.get(`/dashboard/feedback/${feedbackId}/comments`)
+    return response.data
+  },
+  
+  createComment: async (feedbackId: number, commentText: string) => {
+    const response = await api.post(`/dashboard/feedback/${feedbackId}/comments`, {
+      comment_text: commentText
+    })
+    return response.data
+  },
+  
+  deleteComment: async (commentId: number) => {
+    const response = await api.delete(`/dashboard/feedback/comments/${commentId}`)
+    return response.data
+  },
 }
 
 export default api

@@ -12,7 +12,7 @@ from app.database import get_session
 from app.models.user import User, UserRead
 from app.models.mentor import (
     MentorMenteeRelation, ExamScore, ChatHistory,
-    MentorDashboard, MenteeDashboard, LearningProgress
+    MentorDashboard, MenteeDashboard, LearningProgress, Feedback, FeedbackComment
 )
 from app.utils.auth import get_current_user, get_current_active_mentor
 
@@ -112,12 +112,48 @@ async def get_mentee_dashboard(
         progress_percentage=min(100, total_chats * 5)  # 간단한 진행도 계산
     )
     
+    # 6가지 지표 성적 데이터 (샘플 데이터 - 추후 실제 데이터로 대체)
+    performance_scores = {
+        "banking": 85,  # 은행업무
+        "product_knowledge": 78,  # 상품지식
+        "customer_service": 92,  # 고객응대
+        "compliance": 88,  # 법규준수
+        "it_usage": 75,  # IT활용
+        "sales_performance": 80  # 영업실적
+    }
+    
+    # 최근 피드백 조회
+    feedbacks_statement = (
+        select(Feedback)
+        .where(Feedback.mentee_id == current_user.id)
+        .order_by(Feedback.created_at.desc())
+        .limit(5)
+    )
+    recent_feedbacks = session.exec(feedbacks_statement).all()
+    
+    feedback_list = []
+    for feedback in recent_feedbacks:
+        mentor_statement = select(User).where(User.id == feedback.mentor_id)
+        mentor = session.exec(mentor_statement).first()
+        
+        feedback_list.append({
+            "id": feedback.id,
+            "feedback_text": feedback.feedback_text,
+            "feedback_type": feedback.feedback_type,
+            "color_section": feedback.color_section,
+            "is_read": feedback.is_read,
+            "created_at": feedback.created_at.isoformat(),
+            "mentor_name": mentor.name if mentor else "알 수 없음"
+        })
+    
     return MenteeDashboard(
         mentee_id=current_user.id,
         mentor_info=mentor_info,
         exam_scores=exam_scores,
         learning_progress=learning_progress,
-        recent_chats=recent_chats
+        recent_chats=recent_chats,
+        performance_scores=performance_scores,
+        recent_feedbacks=feedback_list
     )
 
 
@@ -175,6 +211,17 @@ async def get_mentor_dashboard(
                 mentee_scores[mentee.name] = {
                     "total_score": recent_exam.total_score,
                     "score_data": json.loads(recent_exam.score_data) if recent_exam.score_data else {}
+                }
+                
+                # 개별 성과 지표 추가 (멘토 대시보드용)
+                score_data = json.loads(recent_exam.score_data) if recent_exam.score_data else {}
+                mentee_info["performance_scores"] = {
+                    "banking": score_data.get("은행업무", recent_exam.total_score),
+                    "product_knowledge": score_data.get("상품지식", recent_exam.total_score),
+                    "customer_service": score_data.get("고객응대", recent_exam.total_score),
+                    "compliance": score_data.get("법규준수", recent_exam.total_score),
+                    "it_usage": score_data.get("IT활용", recent_exam.total_score),
+                    "sales_performance": score_data.get("영업실적", recent_exam.total_score)
                 }
             
             # 멘티의 채팅 통계
@@ -307,4 +354,313 @@ def _extract_keywords(questions: List[str], top_k: int = 20) -> List[Dict]:
         {"word": word, "count": count}
         for word, count in frequent_words
     ]
+
+
+@router.post("/feedback")
+async def create_feedback(
+    request: dict,
+    current_user: User = Depends(get_current_active_mentor),
+    session: Session = Depends(get_session)
+):
+    """
+    멘토가 멘티에게 피드백 전송
+    """
+    mentee_id = request.get("mentee_id")
+    feedback_text = request.get("feedback_text")
+    feedback_type = request.get("feedback_type", "general")
+    
+    if not mentee_id or not feedback_text:
+        raise HTTPException(
+            status_code=400,
+            detail="mentee_id와 feedback_text는 필수입니다."
+        )
+    # 멘토-멘티 관계 확인
+    relation_statement = select(MentorMenteeRelation).where(
+        MentorMenteeRelation.mentor_id == current_user.id,
+        MentorMenteeRelation.mentee_id == mentee_id,
+        MentorMenteeRelation.is_active == True
+    )
+    relation = session.exec(relation_statement).first()
+    
+    if not relation:
+        raise HTTPException(
+            status_code=403,
+            detail="해당 멘티와의 관계가 없거나 비활성화되어 있습니다."
+        )
+    
+    # 피드백 생성
+    feedback = Feedback(
+        mentor_id=current_user.id,
+        mentee_id=mentee_id,
+        feedback_text=feedback_text,
+        feedback_type=feedback_type
+    )
+    
+    session.add(feedback)
+    session.commit()
+    session.refresh(feedback)
+    
+    return {
+        "message": "피드백이 성공적으로 전송되었습니다.",
+        "feedback_id": feedback.id
+    }
+
+
+@router.get("/feedback/{mentee_id}")
+async def get_feedbacks_for_mentee(
+    mentee_id: int,
+    current_user: User = Depends(get_current_active_mentor),
+    session: Session = Depends(get_session)
+):
+    """
+    특정 멘티에 대한 피드백 목록 조회 (멘토용)
+    """
+    # 멘토-멘티 관계 확인
+    relation_statement = select(MentorMenteeRelation).where(
+        MentorMenteeRelation.mentor_id == current_user.id,
+        MentorMenteeRelation.mentee_id == mentee_id,
+        MentorMenteeRelation.is_active == True
+    )
+    relation = session.exec(relation_statement).first()
+    
+    if not relation:
+        raise HTTPException(
+            status_code=403,
+            detail="해당 멘티와의 관계가 없거나 비활성화되어 있습니다."
+        )
+    
+    # 피드백 목록 조회
+    feedbacks_statement = (
+        select(Feedback)
+        .where(Feedback.mentee_id == mentee_id)
+        .order_by(Feedback.created_at.desc())
+    )
+    feedbacks = session.exec(feedbacks_statement).all()
+    
+    return [
+        {
+            "id": feedback.id,
+            "feedback_text": feedback.feedback_text,
+            "feedback_type": feedback.feedback_type,
+            "is_read": feedback.is_read,
+            "created_at": feedback.created_at.isoformat(),
+            "read_at": feedback.read_at.isoformat() if feedback.read_at else None
+        }
+        for feedback in feedbacks
+    ]
+
+
+@router.get("/mentee/feedbacks")
+async def get_mentee_feedbacks(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    멘티가 받은 피드백 목록 조회
+    """
+    # 멘티가 받은 피드백 조회
+    feedbacks_statement = (
+        select(Feedback)
+        .where(Feedback.mentee_id == current_user.id)
+        .order_by(Feedback.created_at.desc())
+        .limit(10)
+    )
+    feedbacks = session.exec(feedbacks_statement).all()
+    
+    # 멘토 정보도 함께 조회
+    feedback_list = []
+    for feedback in feedbacks:
+        mentor_statement = select(User).where(User.id == feedback.mentor_id)
+        mentor = session.exec(mentor_statement).first()
+        
+        feedback_list.append({
+            "id": feedback.id,
+            "feedback_text": feedback.feedback_text,
+            "feedback_type": feedback.feedback_type,
+            "color_section": feedback.color_section,
+            "is_read": feedback.is_read,
+            "created_at": feedback.created_at.isoformat(),
+            "mentor_name": mentor.name if mentor else "알 수 없음",
+            "mentor_team": mentor.team if mentor else None
+        })
+    
+    return feedback_list
+
+
+@router.put("/feedback/{feedback_id}/read")
+async def mark_feedback_as_read(
+    feedback_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    피드백을 읽음으로 표시
+    """
+    feedback_statement = select(Feedback).where(
+        Feedback.id == feedback_id,
+        Feedback.mentee_id == current_user.id
+    )
+    feedback = session.exec(feedback_statement).first()
+    
+    if not feedback:
+        raise HTTPException(
+            status_code=404,
+            detail="피드백을 찾을 수 없습니다."
+        )
+    
+    feedback.is_read = True
+    feedback.read_at = datetime.utcnow()
+    
+    session.add(feedback)
+    session.commit()
+    
+    return {"message": "피드백을 읽음으로 표시했습니다."}
+
+
+# ============ 피드백 댓글 API ============
+
+@router.post("/feedback/{feedback_id}/comments")
+async def create_comment(
+    feedback_id: int,
+    request: dict,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    피드백에 댓글 작성 (멘토 또는 멘티)
+    """
+    comment_text = request.get("comment_text")
+    
+    if not comment_text:
+        raise HTTPException(
+            status_code=400,
+            detail="comment_text는 필수입니다."
+        )
+    
+    # 피드백 존재 여부 확인
+    feedback_statement = select(Feedback).where(Feedback.id == feedback_id)
+    feedback = session.exec(feedback_statement).first()
+    
+    if not feedback:
+        raise HTTPException(
+            status_code=404,
+            detail="피드백을 찾을 수 없습니다."
+        )
+    
+    # 권한 확인: 피드백의 멘토 또는 멘티만 댓글 작성 가능
+    if current_user.id not in [feedback.mentor_id, feedback.mentee_id]:
+        raise HTTPException(
+            status_code=403,
+            detail="이 피드백에 댓글을 작성할 권한이 없습니다."
+        )
+    
+    # 댓글 생성
+    comment = FeedbackComment(
+        feedback_id=feedback_id,
+        user_id=current_user.id,
+        comment_text=comment_text
+    )
+    
+    session.add(comment)
+    session.commit()
+    session.refresh(comment)
+    
+    return {
+        "message": "댓글이 성공적으로 작성되었습니다.",
+        "comment_id": comment.id
+    }
+
+
+@router.get("/feedback/{feedback_id}/comments")
+async def get_comments(
+    feedback_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    특정 피드백의 댓글 목록 조회
+    """
+    # 피드백 존재 및 권한 확인
+    feedback_statement = select(Feedback).where(Feedback.id == feedback_id)
+    feedback = session.exec(feedback_statement).first()
+    
+    if not feedback:
+        raise HTTPException(
+            status_code=404,
+            detail="피드백을 찾을 수 없습니다."
+        )
+    
+    # 권한 확인
+    if current_user.id not in [feedback.mentor_id, feedback.mentee_id]:
+        raise HTTPException(
+            status_code=403,
+            detail="이 피드백의 댓글을 볼 권한이 없습니다."
+        )
+    
+    # 댓글 조회
+    comments_statement = (
+        select(FeedbackComment)
+        .where(
+            FeedbackComment.feedback_id == feedback_id,
+            FeedbackComment.is_deleted == False
+        )
+        .order_by(FeedbackComment.created_at.asc())
+    )
+    comments = session.exec(comments_statement).all()
+    
+    comment_list = []
+    for comment in comments:
+        # 작성자 정보 조회
+        user_statement = select(User).where(User.id == comment.user_id)
+        user = session.exec(user_statement).first()
+        
+        comment_list.append({
+            "id": comment.id,
+            "user_id": comment.user_id,
+            "user_name": user.name if user else "알 수 없음",
+            "user_role": user.role if user else None,
+            "comment_text": comment.comment_text,
+            "created_at": comment.created_at.isoformat(),
+            "updated_at": comment.updated_at.isoformat()
+        })
+    
+    return {
+        "feedback_id": feedback_id,
+        "comments": comment_list
+    }
+
+
+@router.delete("/feedback/comments/{comment_id}")
+async def delete_comment(
+    comment_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    댓글 삭제 (작성자만 가능)
+    """
+    comment_statement = select(FeedbackComment).where(
+        FeedbackComment.id == comment_id
+    )
+    comment = session.exec(comment_statement).first()
+    
+    if not comment:
+        raise HTTPException(
+            status_code=404,
+            detail="댓글을 찾을 수 없습니다."
+        )
+    
+    # 권한 확인: 작성자만 삭제 가능
+    if comment.user_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="댓글을 삭제할 권한이 없습니다."
+        )
+    
+    # Soft delete
+    comment.is_deleted = True
+    session.add(comment)
+    session.commit()
+    
+    return {"message": "댓글이 성공적으로 삭제되었습니다."}
 

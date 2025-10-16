@@ -34,6 +34,7 @@ class User(SQLModel, table=True):
     specialties: Optional[str] = None
     team: Optional[str] = None  # 부서
     team_number: Optional[str] = None  # 팀 번호
+    mbti: Optional[str] = None  # MBTI 성격유형
     
     # 회사 정보
     employee_number: Optional[str] = None  # 사원번호
@@ -85,6 +86,7 @@ class UserRead(SQLModel):
     specialties: Optional[str] = None
     team: Optional[str] = None
     team_number: Optional[str] = None
+    mbti: Optional[str] = None
     employee_number: Optional[str] = None
     join_year: Optional[int] = None
     position: Optional[str] = None
@@ -105,6 +107,7 @@ class UserUpdate(SQLModel):
     specialties: Optional[str] = None
     team: Optional[str] = None
     team_number: Optional[str] = None
+    mbti: Optional[str] = None
     employee_number: Optional[str] = None
     join_year: Optional[int] = None
     position: Optional[str] = None
