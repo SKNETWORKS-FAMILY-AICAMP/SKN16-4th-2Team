@@ -95,10 +95,7 @@ UPLOAD_DIR=./uploads
 
 #### 5. 백엔드 실행
 ```bash
-# 초기 데이터 생성
-python -m app.init_data
-
-# 서버 시작
+# 서버 시작 (초기 데이터는 자동 생성됨)
 uvicorn app.main:app --reload
 ```
 
@@ -136,10 +133,10 @@ npm run dev
 
 ### 2. 초기 사용자 및 데이터 생성
 ```bash
-# Docker 환경
-docker-compose exec backend python -m app.init_data
+# Docker 환경 - 자동으로 초기화됩니다!
+# 별도 실행 불필요
 
-# 로컬 환경
+# 로컬 환경에서 수동 실행이 필요한 경우
 cd backend
 python -m app.init_data
 ```

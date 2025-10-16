@@ -1,6 +1,6 @@
 """
-초기 데이터 생성 스크립트
-테스트용 사용자 및 샘플 데이터 생성
+초기 데이터 생성 스크립트 (개선된 버전)
+컨테이너 재시작 시에도 안전하게 실행되도록 중복 생성 방지 로직 추가
 """
 from sqlmodel import Session, select
 from app.database import engine
@@ -9,16 +9,17 @@ from app.models.mentor import MentorMenteeRelation, ExamScore
 from app.utils.auth import get_password_hash
 import json
 from datetime import datetime
+import sys
 
 
 def create_initial_users(session: Session):
-    """초기 사용자 생성"""
-    print("Creating initial users...")
+    """초기 사용자 생성 (중복 방지)"""
+    print("📋 초기 사용자 확인 및 생성 중...")
     
     # 기존 사용자 확인
     existing_admin = session.exec(select(User).where(User.email == "admin@bank.com")).first()
     if existing_admin:
-        print("Users already exist. Skipping...")
+        print("✅ 관리자 계정이 이미 존재합니다. 스킵합니다.")
         return
     
     users = [
@@ -29,7 +30,8 @@ def create_initial_users(session: Session):
             name="관리자",
             role=UserRole.ADMIN,
             team="운영팀",
-            phone="010-1111-1111"
+            phone="010-1111-1111",
+            is_active=True
         ),
         # 멘토
         User(
@@ -41,6 +43,7 @@ def create_initial_users(session: Session):
             phone="010-2222-2222",
             interests="금융투자, 리더십",
             hobbies="독서, 테니스",
+            mbti="ENFJ",
             encouragement_message="함께 성장해나가요! 언제든 편하게 질문하세요."
         ),
         User(
@@ -52,6 +55,7 @@ def create_initial_users(session: Session):
             phone="010-2222-3333",
             interests="재무분석, 컨설팅",
             hobbies="골프, 영화감상",
+            mbti="ISTJ",
             encouragement_message="체계적으로 배워나가면 반드시 성공할 수 있어요!"
         ),
         # 멘티
@@ -63,7 +67,8 @@ def create_initial_users(session: Session):
             team="영업1팀",
             phone="010-3333-3333",
             interests="디지털금융, 마케팅",
-            hobbies="운동, 여행"
+            hobbies="운동, 여행",
+            is_active=True
         ),
         User(
             email="mentee2@bank.com",
@@ -73,7 +78,8 @@ def create_initial_users(session: Session):
             team="영업2팀",
             phone="010-3333-4444",
             interests="고객관리, 상품기획",
-            hobbies="그림그리기, 음악감상"
+            hobbies="그림그리기, 음악감상",
+            is_active=True
         ),
     ]
     
@@ -81,17 +87,21 @@ def create_initial_users(session: Session):
         session.add(user)
     
     session.commit()
-    print(f"✅ Created {len(users)} users")
+    print(f"✅ {len(users)}명의 사용자 생성 완료")
+    
+    # 생성된 사용자 확인
+    for user in users:
+        print(f"   - {user.role}: {user.email} / {'admin123' if user.role == UserRole.ADMIN else 'mentor123' if user.role == UserRole.MENTOR else 'mentee123'}")
 
 
 def create_mentor_relations(session: Session):
-    """멘토-멘티 관계 생성"""
-    print("Creating mentor-mentee relations...")
+    """멘토-멘티 관계 생성 (중복 방지)"""
+    print("📋 멘토-멘티 관계 확인 및 생성 중...")
     
     # 기존 관계 확인
     existing_relation = session.exec(select(MentorMenteeRelation)).first()
     if existing_relation:
-        print("Relations already exist. Skipping...")
+        print("✅ 멘토-멘티 관계가 이미 존재합니다. 스킵합니다.")
         return
     
     # 멘토와 멘티 조회
@@ -101,7 +111,7 @@ def create_mentor_relations(session: Session):
     mentee2 = session.exec(select(User).where(User.email == "mentee2@bank.com")).first()
     
     if not all([mentor1, mentor2, mentee1, mentee2]):
-        print("Users not found. Skipping relations...")
+        print("⚠️ 멘토 또는 멘티 사용자를 찾을 수 없습니다. 관계 생성을 스킵합니다.")
         return
     
     relations = [
@@ -123,19 +133,25 @@ def create_mentor_relations(session: Session):
         session.add(relation)
     
     session.commit()
-    print(f"✅ Created {len(relations)} mentor-mentee relations")
+    print(f"✅ {len(relations)}개의 멘토-멘티 관계 생성 완료")
 
 
 def create_exam_scores(session: Session):
-    """샘플 시험 점수 생성"""
-    print("Creating sample exam scores...")
+    """샘플 시험 점수 생성 (중복 방지)"""
+    print("📋 시험 점수 확인 및 생성 중...")
+    
+    # 기존 점수 확인
+    existing_score = session.exec(select(ExamScore)).first()
+    if existing_score:
+        print("✅ 시험 점수가 이미 존재합니다. 스킵합니다.")
+        return
     
     # 멘티 조회
     mentee1 = session.exec(select(User).where(User.email == "mentee@bank.com")).first()
     mentee2 = session.exec(select(User).where(User.email == "mentee2@bank.com")).first()
     
     if not all([mentee1, mentee2]):
-        print("Mentees not found. Skipping exam scores...")
+        print("⚠️ 멘티 사용자를 찾을 수 없습니다. 시험 점수 생성을 스킵합니다.")
         return
     
     exams = [
@@ -177,7 +193,34 @@ def create_exam_scores(session: Session):
         session.add(exam)
     
     session.commit()
-    print(f"✅ Created {len(exams)} exam scores")
+    print(f"✅ {len(exams)}개의 시험 점수 생성 완료")
+
+
+def verify_data_integrity(session: Session):
+    """데이터 무결성 확인"""
+    print("🔍 데이터 무결성 확인 중...")
+    
+    # 사용자 수 확인
+    user_count = session.exec(select(User)).all()
+    print(f"   - 총 사용자 수: {len(user_count)}")
+    
+    # 관리자 계정 확인
+    admin = session.exec(select(User).where(User.email == "admin@bank.com")).first()
+    if admin:
+        print(f"   - ✅ 관리자 계정 확인: {admin.name} ({admin.email})")
+    else:
+        print("   - ❌ 관리자 계정을 찾을 수 없습니다!")
+        return False
+    
+    # 멘토 계정 확인
+    mentors = session.exec(select(User).where(User.role == UserRole.MENTOR)).all()
+    print(f"   - 멘토 수: {len(mentors)}")
+    
+    # 멘티 계정 확인
+    mentees = session.exec(select(User).where(User.role == UserRole.MENTEE)).all()
+    print(f"   - 멘티 수: {len(mentees)}")
+    
+    return True
 
 
 def init_all_data():
@@ -212,4 +255,3 @@ def init_all_data():
 
 if __name__ == "__main__":
     init_all_data()
-

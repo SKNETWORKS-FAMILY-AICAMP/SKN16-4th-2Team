@@ -90,11 +90,16 @@ async def get_documents(
     """
     문서 목록 조회
     - 카테고리별 필터링 가능
+    - RAG 카테고리 문서는 RAG 탭에서만 조회 가능
     """
     statement = select(Document)
     
     if category:
+        # 특정 카테고리만 조회
         statement = statement.where(Document.category == category)
+    else:
+        # 카테고리가 없으면 RAG 제외하고 조회
+        statement = statement.where(Document.category != "RAG")
     
     statement = statement.offset(skip).limit(limit).order_by(Document.upload_date.desc())
     documents = session.exec(statement).all()
@@ -179,6 +184,9 @@ async def delete_document(
     for chunk in chunks:
         session.delete(chunk)
     
+    # 청크 삭제 커밋
+    session.commit()
+    
     # 문서 삭제
     session.delete(document)
     session.commit()
@@ -186,11 +194,122 @@ async def delete_document(
     return {"message": "Document deleted successfully"}
 
 
+@router.post("/upload-multiple", response_model=List[DocumentRead])
+async def upload_multiple_documents(
+    files: List[UploadFile] = File(...),
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    다중 문서 업로드 (RAG 전용)
+    - TXT 파일만 허용
+    - 자동으로 RAG 카테고리로 저장
+    - 즉시 인덱싱
+    """
+    uploaded_documents = []
+    
+    for file in files:
+        try:
+            # TXT 파일만 허용
+            if not file.filename.endswith('.txt'):
+                continue
+            
+            # 파일 저장
+            file_path, file_size = await save_upload_file(
+                file,
+                "RAG",
+                settings.UPLOAD_DIR
+            )
+            
+            # 문서 메타데이터 저장
+            document = Document(
+                title=Path(file.filename).stem,  # 확장자 제외한 파일명
+                category="RAG",
+                file_path=file_path,
+                file_type=".txt",
+                file_size=file_size,
+                description="RAG 시스템용 문서",
+                uploaded_by=current_user.id
+            )
+            
+            session.add(document)
+            session.flush()  # ID 생성을 위해 flush
+            
+            # RAG 인덱싱
+            try:
+                content = await _extract_text_from_file(file_path, ".txt")
+                rag_service = RAGService(session)
+                await rag_service.index_document(document.id, content)
+            except Exception as e:
+                print(f"Indexing error for {file.filename}: {e}")
+            
+            uploaded_documents.append(document)
+            
+        except Exception as e:
+            print(f"Upload error for {file.filename}: {e}")
+            continue
+    
+    session.commit()
+    
+    return uploaded_documents
+
+
+@router.post("/reindex-rag")
+async def reindex_rag_documents(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    RAG 문서들을 다시 인덱싱
+    """
+    try:
+        # RAG 카테고리 문서들 조회
+        statement = select(Document).where(Document.category == "RAG")
+        rag_documents = session.exec(statement).all()
+        
+        reindexed_count = 0
+        failed_count = 0
+        
+        for document in rag_documents:
+            try:
+                # 파일에서 텍스트 추출
+                content = await _extract_text_from_file(document.file_path, document.file_type)
+                
+                # RAG 인덱싱
+                rag_service = RAGService(session)
+                success = await rag_service.index_document(document.id, content)
+                
+                if success:
+                    reindexed_count += 1
+                    print(f"Successfully reindexed: {document.title}")
+                else:
+                    failed_count += 1
+                    print(f"Failed to reindex: {document.title}")
+                    
+            except Exception as e:
+                failed_count += 1
+                print(f"Error reindexing {document.title}: {e}")
+        
+        return {
+            "message": f"RAG 문서 재인덱싱 완료",
+            "total_documents": len(rag_documents),
+            "reindexed_count": reindexed_count,
+            "failed_count": failed_count
+        }
+        
+    except Exception as e:
+        print(f"Reindex error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to reindex RAG documents: {str(e)}"
+        )
+
+
 @router.get("/categories/list")
 async def get_categories(
     current_user: User = Depends(get_current_user)
 ):
-    """문서 카테고리 목록"""
+    """문서 카테고리 목록 (RAG 제외)"""
     return {
         "categories": [
             "경제용어",

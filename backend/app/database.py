@@ -20,7 +20,7 @@ engine = create_engine(
 def init_db():
     """
     데이터베이스 초기화
-    - 테이블 생성
+    - 테이블 생성 (데이터 보존)
     - pgvector 확장 활성화
     """
     # pgvector 확장 활성화
@@ -35,7 +35,7 @@ def init_db():
     
     # 모든 테이블 생성 (기존 테이블이 있으면 건너뜀)
     SQLModel.metadata.create_all(engine)
-    print("✅ Database tables created")
+    print("✅ Database tables created/verified")
 
 
 def get_session():
