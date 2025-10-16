@@ -83,6 +83,27 @@ class MentorDashboard(SQLModel):
     mentee_scores: Dict  # 멘티별 성적
 
 
+class Feedback(SQLModel, table=True):
+    """멘토 피드백 테이블"""
+    __tablename__ = "feedbacks"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    mentor_id: int = Field(foreign_key="users.id")
+    mentee_id: int = Field(foreign_key="users.id")
+    
+    # 피드백 내용
+    feedback_text: str = Field(sa_column=Column(Text))
+    feedback_type: str = Field(default="general")  # general, performance, improvement
+    
+    # 색상 섹션 (red, orange, yellow, gray)
+    color_section: Optional[str] = Field(default="red")
+    
+    # 피드백 상태
+    is_read: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    read_at: Optional[datetime] = None
+
+
 class MenteeDashboard(SQLModel):
     """멘티 대시보드 데이터"""
     mentee_id: int
@@ -90,6 +111,8 @@ class MenteeDashboard(SQLModel):
     exam_scores: List[Dict] = []  # 시험 점수 목록
     learning_progress: Optional[LearningProgress] = None
     recent_chats: List[Dict] = []
+    performance_scores: Optional[Dict] = None  # 6가지 지표 성적표
+    recent_feedbacks: List[Dict] = []  # 최근 피드백 목록
 
 
 

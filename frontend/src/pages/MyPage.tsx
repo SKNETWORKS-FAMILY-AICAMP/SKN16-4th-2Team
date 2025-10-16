@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 import { UserCircleIcon } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../store/authStore';
-import { authAPI } from '../utils/api';
 
 export default function MyPage() {
   const { user, updateUser } = useAuthStore();
