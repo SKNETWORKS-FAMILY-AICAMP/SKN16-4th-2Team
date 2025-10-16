@@ -1,42 +1,60 @@
+version: '3.8'
+
 services:
-  db:
-    image: ankane/pgvector:latest
+  # PostgreSQL 데이터베이스 (pgvector extension 포함)
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: mentor-postgres
     environment:
       POSTGRES_USER: mentoruser
       POSTGRES_PASSWORD: mentorpass
       POSTGRES_DB: mentordb
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mentoruser -d mentordb"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  # FastAPI 백엔드 애플리케이션
   backend:
-    build: ./backend
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mentor-backend
+    environment:
+      - DATABASE_URL=postgresql://mentoruser:mentorpass@postgres:5432/mentordb
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SECRET_KEY=${SECRET_KEY:-your-default-secret-key-change-this}
     ports:
       - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql://mentoruser:mentorpass@db:5432/mentordb
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-this-in-production-min-32-chars}
-      - ALGORITHM=HS256
-      - ACCESS_TOKEN_EXPIRE_MINUTES=30
-      - UPLOAD_DIR=/app/uploads
-    env_file:
-      - ./backend/.env
     volumes:
       - ./backend:/app
-      - uploads_data:/app/uploads
+      - ./uploads:/app/uploads
     depends_on:
-      db:
+      postgres:
         condition: service_healthy
+    restart: unless-stopped
+    # 컨테이너 시작 시 자동으로 초기 데이터 생성
+    command: >
+      sh -c "
+        echo '🔄 데이터베이스 연결 대기 중...' &&
+        python -c 'import time; time.sleep(5)' &&
+        echo '📊 초기 데이터 확인 및 생성...' &&
+        python -m app.init_data &&
+        echo '🚀 서버 시작...' &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      "
 
+  # React 프론트엔드 애플리케이션
   frontend:
     build: ./frontend
+    container_name: mentor-frontend
     ports:
       - "3000:3000"
     environment:
@@ -46,8 +64,23 @@ services:
       - /app/node_modules
     depends_on:
       - backend
+    restart: unless-stopped
+
+  # pgAdmin (선택사항 - 데이터베이스 관리 UI)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: mentor-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    profiles:
+      - dev  # 개발 환경에서만 실행
 
 volumes:
   postgres_data:
-  uploads_data:
-
+    driver: local

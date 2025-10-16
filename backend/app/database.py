@@ -20,7 +20,7 @@ engine = create_engine(
 def init_db():
     """
     데이터베이스 초기화
-    - 테이블 생성
+    - 테이블 생성 (데이터 보존)
     - pgvector 확장 활성화
     """
     # pgvector 확장 활성화
@@ -33,16 +33,9 @@ def init_db():
             print(f"❌ Error enabling pgvector: {e}")
             session.rollback()
     
-    # 기존 테이블 삭제 후 재생성 (개발 환경에서만)
-    try:
-        SQLModel.metadata.drop_all(engine)
-        print("✅ Existing tables dropped")
-    except Exception as e:
-        print(f"⚠️ Error dropping tables: {e}")
-    
-    # 모든 테이블 생성
+    # 테이블 생성만 (기존 데이터 보존)
     SQLModel.metadata.create_all(engine)
-    print("✅ Database tables created")
+    print("✅ Database tables created/verified")
 
 
 def get_session():
