@@ -8,7 +8,8 @@ import {
   EyeSlashIcon,
   PhoneIcon,
   EnvelopeIcon,
-  UserIcon
+  UserIcon,
+  ArrowPathIcon
 } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../store/authStore';
 import { authAPI } from '../utils/api';
@@ -47,29 +48,44 @@ export default function MyPage() {
 
   if (!user) return <div>로그인이 필요합니다.</div>;
 
+  const getDisplayPhotoUrl = (url?: string) => {
+    if (!url) return ''
+    if (/^https?:\/\//i.test(url) || url.startsWith('data:')) return url
+    // 핵심: 어떤 경우든 /uploads 경로는 프록시(/api)로 강제
+    if (url.includes('/uploads/')) {
+      const onlyPath = url.replace(/^https?:\/\/[^/]+/, '')
+      return onlyPath.startsWith('/api') ? onlyPath : `/api${onlyPath}`
+    }
+    return url
+  }
+
   // 이미지 업로드 핸들러
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
     try {
-      // 실제 업로드 API가 있다면 여기에 구현
-      // 예시: 서버에 업로드 후 URL 반환
-      // const url = await uploadProfileImage(file);
-      // setPhotoUrl(url);
-      // updateUser({ ...user, photo_url: url });
-      // 데모용: 로컬 미리보기
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        if (ev.target?.result) {
-          setPhotoUrl(ev.target.result as string);
-          updateUser({ ...user, photo_url: ev.target.result as string });
-        }
-      };
-      reader.readAsDataURL(file);
+      const data = await authAPI.uploadProfilePhoto(file as any);
+      if (data?.photo_url) {
+        setPhotoUrl(data.photo_url)
+        updateUser({ ...user, photo_url: data.photo_url })
+        return
+      }
     } finally {
       setUploading(false);
     }
+    // 실패 시에도 즉시 미리보기 제공 (이전 동작 유지)
+    try {
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        if (ev.target?.result) {
+          const preview = ev.target.result as string
+          setPhotoUrl(preview)
+          updateUser({ ...user, photo_url: preview })
+        }
+      }
+      reader.readAsDataURL(file)
+    } catch {}
   };
 
   // 편집 모드 토글
@@ -121,18 +137,49 @@ export default function MyPage() {
       }
       
       // 관심사를 문자열로 변환 (백엔드에서 JSON 문자열로 저장)
-      const updateData = {
-        ...editForm,
-        interests: Array.isArray(editForm.interests) 
-          ? JSON.stringify(editForm.interests) 
+      const updateData: any = {
+        name: editForm.name,
+        email: editForm.email,
+        phone: editForm.phone,
+        extension: editForm.extension,
+        team: editForm.team,
+        team_number: editForm.team_number,
+        mbti: editForm.mbti,
+        interests: Array.isArray(editForm.interests)
+          ? JSON.stringify(editForm.interests)
           : editForm.interests,
-        // 비밀번호가 비어있으면 제외
-        ...(editForm.password ? { password: editForm.password } : {})
       };
-      
-      // confirmPassword는 제외
-      delete updateData.confirmPassword;
-      
+
+      if (editForm.password) {
+        updateData.password = editForm.password;
+      }
+
+      // 변경 사항이 없는 경우 조용히 종료 (API 호출 안 함)
+      const serializedUserInterests = (() => {
+        if (!user?.interests) return '';
+        if (Array.isArray(user.interests)) return JSON.stringify(user.interests);
+        try { return JSON.stringify(JSON.parse(user.interests)); } catch { return String(user.interests); }
+      })();
+
+      const currentSnapshot = {
+        name: user?.name || '',
+        email: user?.email || '',
+        phone: user?.phone || '',
+        extension: user?.extension || '',
+        team: user?.team || '',
+        team_number: user?.team_number || '',
+        mbti: user?.mbti || '',
+        interests: serializedUserInterests,
+      };
+
+      const nextSnapshot = { ...currentSnapshot, ...updateData, interests: updateData.interests || '' };
+      const hasAnyChange = Object.keys(currentSnapshot).some((k) => (currentSnapshot as any)[k] !== (nextSnapshot as any)[k]) || !!editForm.password;
+
+      if (!hasAnyChange) {
+        setIsEditing(false);
+        return;
+      }
+
       // 실제 API 호출하여 DB 업데이트
       const updatedUser = await authAPI.updateProfile(updateData);
       
@@ -191,11 +238,13 @@ export default function MyPage() {
           {/* 프로필 사진 */}
           <div className="flex flex-col items-center mb-6">
             <div className="relative w-32 h-32 mb-4">
-              {photoUrl ? (
-                <img src={photoUrl} alt={user.name} className="w-32 h-32 rounded-full object-cover border-4 border-gray-100" />
-              ) : (
-                <UserCircleIcon className="w-32 h-32 text-gray-300" />
-          )}
+              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-gray-100 bg-gray-50 flex items-center justify-center">
+                {photoUrl ? (
+                  <img src={getDisplayPhotoUrl(photoUrl)} alt={user.name} className="w-full h-full object-cover" />
+                ) : (
+                  <UserCircleIcon className="w-20 h-20 text-gray-300" />
+                )}
+              </div>
           <button
                 className="absolute bottom-2 right-2 bg-blue-500 text-white rounded-full p-2 shadow-lg hover:bg-blue-600 focus:outline-none transition-colors"
             onClick={() => fileInputRef.current?.click()}
@@ -209,6 +258,26 @@ export default function MyPage() {
                   <PencilIcon className="w-5 h-5" />
                 )}
           </button>
+          {photoUrl && (
+            <button
+              className="absolute bottom-2 left-2 z-10 bg-white/95 backdrop-blur text-gray-800 rounded-full px-3 py-1 shadow hover:bg-white focus:outline-none transition-all border border-gray-200 flex items-center space-x-1 whitespace-nowrap"
+              onClick={async (e) => {
+                e.stopPropagation()
+                try {
+                  await authAPI.resetProfilePhoto()
+                  setPhotoUrl('')
+                  updateUser({ ...user, photo_url: undefined as any })
+                } catch (err) {
+                  console.error(err)
+                  alert('기본 상태로 되돌리기에 실패했습니다.')
+                }
+              }}
+              title="기본 이미지로 되돌리기"
+              type="button"
+            >
+              <ArrowPathIcon className="w-4 h-4" />
+            </button>
+          )}
           <input
             type="file"
             accept="image/*"

@@ -57,7 +57,11 @@ export default function Layout() {
                 title="마이페이지로 이동"
               >
                 {user?.photo_url ? (
-                  <img src={user.photo_url} alt={user.name} className="w-8 h-8 rounded-full" />
+                  <img
+                    src={user.photo_url.startsWith('/uploads') ? `/api${user.photo_url}` : user.photo_url}
+                    alt={user.name}
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
                 ) : (
                   <UserCircleIcon className="w-8 h-8 text-gray-400" />
                 )}

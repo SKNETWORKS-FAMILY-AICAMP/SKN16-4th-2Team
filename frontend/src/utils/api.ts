@@ -84,6 +84,20 @@ export const authAPI = {
     const response = await api.put('/auth/me', userData)
     return response.data
   },
+
+  uploadProfilePhoto: async (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await api.post('/auth/me/photo', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return response.data
+  },
+
+  resetProfilePhoto: async () => {
+    const response = await api.delete('/auth/me/photo')
+    return response.data
+  },
   
   findId: async (name: string, employeeNumber: string) => {
     const response = await api.post('/auth/find-id', null, {

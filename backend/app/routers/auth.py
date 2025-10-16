@@ -2,10 +2,13 @@
 인증 API 라우터
 회원가입, 로그인, 토큰 관리
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, select
 from typing import List
+import os
+import uuid
+from pathlib import Path
 
 from app.database import get_session
 from app.models.user import User, UserCreate, UserRead, UserUpdate, Token
@@ -17,6 +20,7 @@ from app.utils.auth import (
     get_current_user,
     get_current_active_admin
 )
+from app.config import settings
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -247,3 +251,76 @@ async def reset_password(
         "message": "Password has been reset successfully",
         "email": email
     }
+
+
+@router.post("/me/photo")
+async def upload_profile_photo(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    프로필 사진 업로드 및 사용자 프로필 업데이트
+    - 업로드된 파일을 uploads/profiles 폴더에 저장
+    - 저장 경로를 User.photo_url에 반영
+    - 반환: { photo_url: "/uploads/profiles/<filename>" }
+    """
+    # 저장 디렉토리 준비
+    profiles_dir = Path(settings.UPLOAD_DIR) / "profiles"
+    profiles_dir.mkdir(parents=True, exist_ok=True)
+
+    # 파일 확장자 제한(간단한 이미지 확장자 허용)
+    allowed_ext = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
+    ext = Path(file.filename).suffix.lower()
+    if ext not in allowed_ext:
+        raise HTTPException(status_code=400, detail="Only image files are allowed (png, jpg, jpeg, gif, webp)")
+
+    # 파일 저장
+    unique_name = f"{uuid.uuid4()}{ext}"
+    save_path = profiles_dir / unique_name
+    try:
+        with save_path.open("wb") as buffer:
+            buffer.write(await file.read())
+    except Exception as e:
+        if save_path.exists():
+            save_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=500, detail=f"Failed to save image: {e}")
+
+    # 정적 경로(클라이언트에서 접근할 URL)
+    public_url = f"/uploads/profiles/{unique_name}"
+
+    # 사용자 업데이트
+    current_user.photo_url = public_url
+    session.add(current_user)
+    session.commit()
+    session.refresh(current_user)
+
+    return {"photo_url": public_url}
+
+
+@router.delete("/me/photo")
+async def delete_profile_photo(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    프로필 사진 초기화 (기본 상태로 복구)
+    - 기존 파일이 서버에 있으면 삭제 시도
+    - DB의 photo_url 을 None 으로 설정
+    """
+    # 기존 파일 삭제 시도
+    try:
+        if current_user.photo_url and current_user.photo_url.startswith("/uploads/"):
+            path = Path(settings.UPLOAD_DIR) / Path(current_user.photo_url).relative_to("/uploads")
+            if path.exists():
+                path.unlink(missing_ok=True)
+    except Exception:
+        # 파일 삭제 실패해도 이어서 진행 (무해한 실패)
+        pass
+
+    current_user.photo_url = None
+    session.add(current_user)
+    session.commit()
+    session.refresh(current_user)
+
+    return {"message": "profile photo reset", "photo_url": None}
