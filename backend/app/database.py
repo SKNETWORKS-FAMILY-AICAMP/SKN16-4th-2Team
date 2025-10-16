@@ -33,7 +33,7 @@ def init_db():
             print(f"❌ Error enabling pgvector: {e}")
             session.rollback()
     
-    # 테이블 생성만 (기존 데이터 보존)
+    # 모든 테이블 생성 (기존 테이블이 있으면 건너뜀)
     SQLModel.metadata.create_all(engine)
     print("✅ Database tables created/verified")
 

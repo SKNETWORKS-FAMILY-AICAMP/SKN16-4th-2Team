@@ -79,11 +79,15 @@ class CommentRead(SQLModel):
     content: str
     created_at: datetime
     author_alias: str  # 익명2, 익명3... 형태
+    is_author: bool = False  # 현재 사용자가 작성자인지
+    is_admin: bool = False   # 현재 사용자가 관리자인지
 
 
 class PostDetail(SQLModel):
     """게시글 상세 정보 (댓글 포함)"""
     post: PostRead
     comments: List[CommentRead] = []
+    is_author: bool = False  # 현재 사용자가 작성자인지
+    is_admin: bool = False   # 현재 사용자가 관리자인지
 
 
