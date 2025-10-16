@@ -102,6 +102,13 @@ export const authAPI = {
     })
     return response.data
   },
+  
+  qrLogin: async (qrData: string) => {
+    const response = await api.post('/auth/qr-login', null, {
+      params: { qr_data: qrData }
+    })
+    return response.data
+  },
 }
 
 // 챗봇
