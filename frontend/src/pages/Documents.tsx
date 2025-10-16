@@ -196,39 +196,48 @@ function DocumentListItem({ document, onDownload }: any) {
       animate={{ opacity: 1, x: 0 }}
       className="p-6 hover:bg-gray-50 transition-colors"
     >
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center space-x-6">
         {/* 문서 아이콘 */}
         <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
           <DocumentTextIcon className="w-5 h-5 text-primary-600" />
         </div>
         
-        {/* 문서 정보 */}
+        {/* 제목 */}
+        <div className="flex-shrink-0 w-48">
+          <h3 className="font-semibold text-gray-900 truncate">{document.title}</h3>
+        </div>
+        
+        {/* 설명 */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center space-x-4">
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-gray-900 truncate">{document.title}</h3>
-              <div className="flex items-center space-x-4 mt-1 text-sm text-gray-600">
-                <span className="flex items-center space-x-1">
-                  <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
-                  <span>{document.category}</span>
-                </span>
-                <span>{document.file_type}</span>
-                <span>다운로드: {document.download_count}</span>
-              </div>
-              {document.description && (
-                <p className="text-sm text-gray-500 mt-1 truncate">{document.description}</p>
-              )}
-            </div>
-            
-            {/* 다운로드 버튼 */}
-            <button
-              onClick={() => onDownload(document.id, document.title + document.file_type)}
-              className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex-shrink-0"
-            >
-              <ArrowDownTrayIcon className="w-4 h-4" />
-              <span>다운로드</span>
-            </button>
-          </div>
+          {document.description ? (
+            <p className="text-sm text-gray-500 truncate">{document.description}</p>
+          ) : (
+            <p className="text-sm text-gray-400">설명 없음</p>
+          )}
+        </div>
+        
+        {/* 카테고리 */}
+        <div className="flex-shrink-0 w-24">
+          <span className="inline-flex items-center space-x-1 text-sm text-gray-600">
+            <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+            <span className="truncate">{document.category}</span>
+          </span>
+        </div>
+        
+        {/* 다운로드 수 */}
+        <div className="flex-shrink-0 w-20 text-center">
+          <span className="text-sm text-gray-600">{document.download_count}</span>
+        </div>
+        
+        {/* 다운로드 버튼 */}
+        <div className="flex-shrink-0">
+          <button
+            onClick={() => onDownload(document.id, document.title + document.file_type)}
+            className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            <ArrowDownTrayIcon className="w-4 h-4" />
+            <span>다운로드</span>
+          </button>
         </div>
       </div>
     </motion.div>
