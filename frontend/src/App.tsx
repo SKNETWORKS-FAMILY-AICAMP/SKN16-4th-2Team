@@ -4,6 +4,8 @@ import Layout from './components/Layout'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import FindId from './pages/FindId'
+import FindPassword from './pages/FindPassword'
 
 import Home from './pages/Home'
 import Documents from './pages/Documents'
@@ -39,6 +41,8 @@ function App() {
         <Route path="/" element={!isAuthenticated ? <Landing /> : <Navigate to="/home" />} />
         <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/home" />} />
         <Route path="/register" element={!isAuthenticated ? <Register /> : <Navigate to="/home" />} />
+        <Route path="/find-id" element={!isAuthenticated ? <FindId /> : <Navigate to="/home" />} />
+        <Route path="/find-password" element={!isAuthenticated ? <FindPassword /> : <Navigate to="/home" />} />
 
         {/* Protected routes */}
         <Route element={<Layout />}>

@@ -78,6 +78,24 @@ export const authAPI = {
     const response = await api.put('/auth/me', userData)
     return response.data
   },
+  
+  findId: async (name: string, employeeNumber: string) => {
+    const response = await api.post('/auth/find-id', null, {
+      params: { name, employee_number: employeeNumber }
+    })
+    return response.data
+  },
+  
+  resetPassword: async (email: string, employeeNumber: string, newPassword: string) => {
+    const response = await api.post('/auth/reset-password', null, {
+      params: { 
+        email, 
+        employee_number: employeeNumber,
+        new_password: newPassword
+      }
+    })
+    return response.data
+  },
 }
 
 // 챗봇
