@@ -192,3 +192,58 @@ async def delete_user(
     
     return {"message": "User deactivated successfully"}
 
+
+@router.post("/find-id")
+async def find_id(
+    name: str,
+    employee_number: str,
+    session: Session = Depends(get_session)
+):
+    """
+    아이디(이메일) 찾기
+    - 이름과 사원번호로 이메일 찾기
+    """
+    statement = select(User).where(User.name == name, User.employee_number == employee_number)
+    user = session.exec(statement).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found with provided information"
+        )
+    
+    return {
+        "email": user.email
+    }
+
+
+@router.post("/reset-password")
+async def reset_password(
+    email: str,
+    employee_number: str,
+    new_password: str,
+    session: Session = Depends(get_session)
+):
+    """
+    비밀번호 재설정
+    - 이메일과 사원번호로 본인 확인
+    - 새 비밀번호로 변경
+    """
+    statement = select(User).where(User.email == email, User.employee_number == employee_number)
+    user = session.exec(statement).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found with provided information"
+        )
+    
+    # 새 비밀번호 해싱 및 저장
+    user.hashed_password = get_password_hash(new_password)
+    session.add(user)
+    session.commit()
+    
+    return {
+        "message": "Password has been reset successfully",
+        "email": email
+    }
