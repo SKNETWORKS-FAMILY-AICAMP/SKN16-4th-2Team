@@ -237,48 +237,109 @@ class RAGService:
         """
         start_time = datetime.utcnow()
         
-        # 1단계: RAG 검색 시도
-        if context_docs is None:
-            context_docs = await self.similarity_search(question, k=5)
+        # 은행 온보딩 관련 키워드 확인 (수신/여신/외환 파트)
+        onboarding_keywords = {
+            "수신": ["예금", "적금", "통장", "계좌", "입금", "출금", "이자", "금리", "수신", "예금자보호", "신규개설", "통장발급", "비밀번호", "인증서"],
+            "여신": ["대출", "신용", "담보", "여신", "dsr", "dti", "ltv", "연체", "신용등급", "한도", "신용평가", "담보심사", "상환관리", "마이너스통장", "대출심사"],
+            "외환": ["송금", "환전", "외환", "해외송금", "환율", "tt매도", "tt매입", "무역결제", "외화예금", "송금수수료", "외화계좌", "해외송금한도", "환차익"]
+        }
         
-        # 컨텍스트 구성
+        question_lower = question.strip().lower()
+        
+        # 어떤 파트와 관련된 질문인지 확인
+        detected_part = None
+        for part, keywords in onboarding_keywords.items():
+            if any(keyword in question_lower for keyword in keywords):
+                detected_part = part
+                break
+        
+        # 온보딩 관련 질문이 아니면 간단한 GPT 답변
+        if not detected_part:
+            gpt_answer = await self._generate_gpt_fallback(question, [])
+            
+            response_time = (datetime.utcnow() - start_time).total_seconds()
+            
+            try:
+                chat_history = ChatHistory(
+                    user_id=user_id,
+                    user_message=question,
+                    bot_response=gpt_answer,
+                    source_documents=json.dumps([], ensure_ascii=False),
+                    response_time=response_time
+                )
+                self.session.add(chat_history)
+                self.session.commit()
+            except Exception as e:
+                print(f"Chat history save error: {e}")
+                self.session.rollback()
+            
+            return {
+                "answer": gpt_answer,
+                "sources": [],
+                "response_time": response_time,
+                "answer_type": "gpt"
+            }
+        
+        # 1단계: RAG 검색 시도 (온보딩 관련 질문) - 가중치 증가
+        if context_docs is None:
+            context_docs = await self.similarity_search(question, k=8)  # 더 많은 문서 검색
+        
+        # 컨텍스트 구성 (제목에서 "RAG - " 제거)
         context = "\n\n".join([
-            f"[{doc['category']} - {doc['title']}]\n{doc['content']}"
+            f"[{doc['title'].replace('RAG - ', '')}]\n{doc['content']}"
             for doc in context_docs
         ])
         
-        # RAG 기반 답변 생성
-        rag_prompt = f"""당신은 은행 신입사원을 돕는 친절한 멘토입니다.
-아래의 참고 자료를 바탕으로 질문에 답변해주세요.
+        # 온보딩 교육용 RAG 답변 생성
+        part_info = {
+            "수신": "고객이 은행에 돈을 맡기는 업무 (예금, 적금 등)",
+            "여신": "고객에게 돈을 빌려주는 업무 (대출, 신용평가 등)", 
+            "외환": "외국 돈을 사고팔거나 송금하는 업무"
+        }
+        
+        rag_prompt = f"""당신은 은행 신입사원 온보딩을 담당하는 AI 튜터입니다.
+현재 {detected_part} 파트 교육 중이며, {part_info[detected_part]}에 대해 설명하고 있습니다.
 
-참고 자료:
+다음 자료를 참고하여 답변해주세요:
 {context}
 
 질문: {question}
 
-답변 시 주의사항:
-1. 참고 자료에 있는 내용을 중심으로 답변하세요.
-2. 참고 자료에 없는 내용이면 "제공된 자료에서 해당 정보를 찾을 수 없습니다"라고 말하세요.
-3. 친절하고 이해하기 쉽게 설명하세요.
-4. 필요하면 예시를 들어 설명하세요.
+답변 규칙:
+1. 신입사원이 이해하기 쉽게 따뜻하고 교육적인 톤으로 답변
+2. 어려운 은행 용어는 쉬운 표현과 함께 설명
+3. 반드시 다음 순서로 구성:
+   - ① 핵심 개념 요약 (한 문단)
+   - ② 실제 현장 예시 (구체적인 상황이나 숫자 포함)
+   - ③ 실무 유의사항 (주의할 점이나 팁)
+4. 답변은 3-4문단 이내로 간결하게
+5. 신입사원이 회사에 자연스럽게 적응할 수 있도록 격려하는 톤 유지
+6. 답변에 참고자료나 출처 정보는 절대 포함하지 마세요
 
 답변:"""
         
         # RAG 답변 생성
         rag_answer = self._call_gpt(rag_prompt)
         
-        # 답변 품질 평가 (간단한 휴리스틱)
-        is_rag_adequate = self._evaluate_answer_quality(rag_answer, context_docs)
-        
+        # 답변 품질 평가 (중요 단어 필터링 포함)
+        is_rag_adequate = self._evaluate_answer_quality(rag_answer, context_docs, question)
+
         if is_rag_adequate and context_docs:
             # RAG 답변이 적절하면 그대로 사용
+            # 고품질 문서만 참고자료로 사용 (임계값 낮춤)
+            high_quality_docs = [doc for doc in context_docs if doc.get('similarity', 0) >= 0.75]
+            
+            # 참고자료 없이 답변만 사용
             final_answer = rag_answer
+                
             answer_type = "rag"
+            context_docs = high_quality_docs  # 고품질 문서만 전달
         else:
             # RAG 답변이 부적절하거나 문서가 없으면 GPT 폴백
             gpt_answer = await self._generate_gpt_fallback(question, context_docs)
             final_answer = gpt_answer
             answer_type = "gpt"
+            context_docs = []  # GPT 폴백 시에는 참고자료 없음
         
         # 응답 시간 계산
         response_time = (datetime.utcnow() - start_time).total_seconds()
@@ -308,24 +369,43 @@ class RAGService:
             "answer_type": answer_type
         }
     
-    def _evaluate_answer_quality(self, answer: str, context_docs: List[Dict]) -> bool:
+    def _evaluate_answer_quality(self, answer: str, context_docs: List[Dict], question: str = "") -> bool:
         """
-        RAG 답변의 품질 평가
+        RAG 답변의 품질 평가 (중요 단어 필터링 포함)
         Args:
             answer: 생성된 답변
             context_docs: 참고 문서들
+            question: 원본 질문
         Returns:
             bool: 답변이 적절한지 여부
         """
         if not answer or len(answer.strip()) < 20:
             print("Answer too short")
             return False
-        
+
         # 컨텍스트 문서가 없으면 RAG 답변으로 부적절
         if not context_docs or len(context_docs) == 0:
             print("No context documents found")
             return False
-        
+
+        # 중요 단어 필터링 - 질문의 핵심 키워드가 문서에 있는지 확인
+        if question:
+            question_lower = question.lower()
+            # 질문에서 중요한 키워드 추출 (2글자 이상)
+            important_keywords = [word for word in question_lower.split() if len(word) >= 2]
+            
+            # 문서 내용에 중요한 키워드가 포함되어 있는지 확인
+            has_important_keywords = False
+            for doc in context_docs:
+                doc_content_lower = doc.get('content', '').lower()
+                if any(keyword in doc_content_lower for keyword in important_keywords):
+                    has_important_keywords = True
+                    break
+            
+            if not has_important_keywords:
+                print("No important keywords found in RAG documents")
+                return False
+
         # 부정적인 지표들
         negative_indicators = [
             "찾을 수 없습니다",
@@ -338,58 +418,51 @@ class RAGService:
             "no information",
             "unable to find"
         ]
-        
+
         answer_lower = answer.lower()
         for indicator in negative_indicators:
             if indicator in answer_lower:
                 print(f"Negative indicator found: {indicator}")
                 return False
-        
-        # 유사도가 너무 낮은 문서들만 있는 경우
-        if context_docs and all(doc.get('similarity', 0) < 0.7 for doc in context_docs):
+
+        # 유사도 임계값을 0.75로 낮춰서 더 많은 문서를 허용 (RAG 가중치 증가)
+        if context_docs and all(doc.get('similarity', 0) < 0.75 for doc in context_docs):
             print("All documents have low similarity")
             return False
-        
-        print(f"Answer quality check passed. Context docs: {len(context_docs)}")
+
+        # 관련성 높은 문서가 있는지 확인 (임계값 낮춤)
+        high_quality_docs = [doc for doc in context_docs if doc.get('similarity', 0) >= 0.75]
+        if not high_quality_docs:
+            print("No high-quality relevant documents found")
+            return False
+
+        print(f"Answer quality check passed. High-quality docs: {len(high_quality_docs)}")
         return True
     
     async def _generate_gpt_fallback(self, question: str, context_docs: List[Dict]) -> str:
         """
-        GPT 폴백 답변 생성
+        온보딩 교육용 GPT 폴백 답변 생성
         """
-        # 컨텍스트가 있으면 포함, 없으면 일반적인 답변
-        if context_docs:
-            context = "\n\n".join([
-                f"[{doc['category']} - {doc['title']}]\n{doc['content'][:500]}..."  # 길이 제한
-                for doc in context_docs[:3]  # 상위 3개만
-            ])
-            
-            gpt_prompt = f"""당신은 은행 신입사원을 돕는 친절한 멘토입니다.
-업로드된 문서에서 일부 관련 정보를 찾았지만, 더 포괄적인 답변을 제공해주세요.
-
-참고 자료 (일부):
-{context}
+        # 간단한 인사 처리
+        if any(greeting in question.lower() for greeting in ["안녕", "안녕하세요", "하이", "hi", "hello"]):
+            return "안녕하세요! 😊 은행 신입사원 온보딩을 도와드리는 AI 튜터입니다. 수신(예금), 여신(대출), 외환(환전·송금) 파트 중 궁금한 업무가 있으시면 언제든 물어보세요!"
+        
+        # 온보딩 관련 질문이지만 RAG 문서가 없는 경우
+        gpt_prompt = f"""당신은 은행 신입사원 온보딩을 담당하는 AI 튜터입니다.
+신입사원이 회사에 자연스럽게 적응할 수 있도록 도와주세요.
 
 질문: {question}
 
-답변 시 주의사항:
-1. 은행 업무와 관련된 일반적인 지식을 바탕으로 답변하세요.
-2. 친절하고 이해하기 쉽게 설명하세요.
-3. 필요하면 예시를 들어 설명하세요.
-4. 불확실한 내용은 "일반적으로" 또는 "보통"이라는 표현을 사용하세요.
-
-답변:"""
-        else:
-            gpt_prompt = f"""당신은 은행 신입사원을 돕는 친절한 멘토입니다.
-업로드된 문서에서 관련 정보를 찾지 못했으므로, 일반적인 은행 업무 지식을 바탕으로 답변해주세요.
-
-질문: {question}
-
-답변 시 주의사항:
-1. 은행 업무와 관련된 일반적인 지식을 바탕으로 답변하세요.
-2. 친절하고 이해하기 쉽게 설명하세요.
-3. 필요하면 예시를 들어 설명하세요.
-4. 불확실한 내용은 "일반적으로" 또는 "보통"이라는 표현을 사용하세요.
+답변 규칙:
+1. 신입사원이 이해하기 쉽게 따뜻하고 교육적인 톤으로 답변
+2. 어려운 은행 용어는 쉬운 표현과 함께 설명
+3. 반드시 다음 순서로 구성:
+   - ① 핵심 개념 요약 (한 문단)
+   - ② 실제 현장 예시 (구체적인 상황이나 숫자 포함)
+   - ③ 실무 유의사항 (주의할 점이나 팁)
+4. 답변은 3-4문단 이내로 간결하게
+5. 신입사원이 회사에 자연스럽게 적응할 수 있도록 격려하는 톤 유지
+6. 불확실한 내용은 "일반적으로" 또는 "보통"이라는 표현 사용
 
 답변:"""
         
