@@ -181,6 +181,12 @@ function MenteeDashboard({ data, currentTime }: any) {
     { skill: 'IT활용', score: data?.performance_scores?.it_usage || 75 },
     { skill: '영업실적', score: data?.performance_scores?.sales_performance || 80 }
   ]
+  
+  // 최근 대화 더보기/접기 상태 관리 (index 기반)
+  const [expandedChats, setExpandedChats] = useState<Record<number, boolean>>({})
+  const toggleChatExpand = (idx: number) => {
+    setExpandedChats(prev => ({ ...prev, [idx]: !prev[idx] }))
+  }
 
   return (
     <div className="space-y-6">
@@ -404,12 +410,29 @@ function MenteeDashboard({ data, currentTime }: any) {
           <h2 className="text-xl font-bold text-gray-900 mb-4">최근 대화</h2>
         {data?.recent_chats && data.recent_chats.length > 0 ? (
           <div className="space-y-4">
-            {data.recent_chats.slice(0, 5).map((chat: any, idx: number) => (
-              <div key={idx} className="p-4 bg-gradient-to-r from-primary-50 to-amber-50 rounded-xl border border-primary-100">
-                <p className="font-medium text-bank-800 mb-1">{chat.user_message}</p>
-                <p className="text-sm text-primary-700 line-clamp-2">{chat.bot_response}</p>
+            {data.recent_chats.slice(0, 5).map((chat: any, idx: number) => {
+              const isExpanded = !!expandedChats[idx]
+              const needsToggle = (chat?.bot_response?.length || 0) > 120
+              return (
+                <div key={idx} className="p-4 bg-gradient-to-r from-primary-50 to-amber-50 rounded-xl border border-primary-100">
+                  <p className="font-medium text-bank-800 mb-1">{chat.user_message}</p>
+                  <p className={isExpanded ? "text-sm text-primary-700 whitespace-prewrap" : "text-sm text-primary-700 line-clamp-2"}>
+                    {chat.bot_response}
+                  </p>
+                  {needsToggle && (
+                    <div className="mt-2 text-right">
+                      <button
+                        type="button"
+                        onClick={() => toggleChatExpand(idx)}
+                        className="text-amber-700 hover:text-amber-800 text-xs font-medium"
+                      >
+                        {isExpanded ? '접기' : '더보기'}
+                      </button>
               </div>
-            ))}
+                  )}
+          </div>
+              )
+            })}
           </div>
         ) : (
           <div className="text-center py-8">
@@ -563,7 +586,7 @@ function MentorDashboard({ data }: any) {
           <button
             onClick={handleSelectMenteeClick}
             disabled={loadingMentees}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center space-x-2"
+            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 flex items-center space-x-2"
           >
             <PlusIcon className="w-4 h-4" />
             <span>{loadingMentees ? '로딩 중...' : '멘티 선택하기'}</span>
@@ -1458,12 +1481,12 @@ function MentorMenteeRelationTab({
     >
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold text-gray-900 flex items-center">
-          <UserGroupIcon className="w-6 h-6 mr-2 text-blue-600" />
+          <UserGroupIcon className="w-6 h-6 mr-2 text-amber-600" />
           멘토-멘티 매칭 관리
         </h2>
         <button
           onClick={() => setShowMatchingSection(!showMatchingSection)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
         >
           {showMatchingSection ? '숨기기' : '관리하기'}
         </button>
@@ -1471,39 +1494,39 @@ function MentorMenteeRelationTab({
 
       {/* 통계 카드 */}
       <div className="grid md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-blue-50 rounded-lg p-4">
+        <div className="bg-white rounded-lg p-4 border border-amber-100 shadow-sm">
           <div className="flex items-center">
-            <UserIcon className="w-8 h-8 text-blue-600 mr-3" />
+            <UserIcon className="w-8 h-8 text-amber-600 mr-3" />
             <div>
-              <p className="text-sm text-blue-600">총 멘토</p>
-              <p className="text-2xl font-bold text-blue-800">{matchingData.statistics?.total_mentors || 0}</p>
+              <p className="text-sm text-amber-700">총 멘토</p>
+              <p className="text-2xl font-bold text-amber-900">{matchingData.statistics?.total_mentors || 0}</p>
             </div>
           </div>
         </div>
-        <div className="bg-blue-50 rounded-lg p-4">
+        <div className="bg-white rounded-lg p-4 border border-amber-100 shadow-sm">
           <div className="flex items-center">
-            <AcademicCapIcon className="w-8 h-8 text-blue-600 mr-3" />
+            <AcademicCapIcon className="w-8 h-8 text-amber-600 mr-3" />
             <div>
-              <p className="text-sm text-blue-600">총 멘티</p>
-              <p className="text-2xl font-bold text-blue-800">{matchingData.statistics?.total_mentees || 0}</p>
+              <p className="text-sm text-amber-700">총 멘티</p>
+              <p className="text-2xl font-bold text-amber-900">{matchingData.statistics?.total_mentees || 0}</p>
             </div>
           </div>
         </div>
-        <div className="bg-blue-50 rounded-lg p-4">
+        <div className="bg-white rounded-lg p-4 border border-amber-100 shadow-sm">
           <div className="flex items-center">
-            <CheckCircleIcon className="w-8 h-8 text-blue-600 mr-3" />
+            <CheckCircleIcon className="w-8 h-8 text-amber-600 mr-3" />
             <div>
-              <p className="text-sm text-blue-600">매칭 완료</p>
-              <p className="text-2xl font-bold text-blue-800">{matchingData.statistics?.assigned_mentees || 0}</p>
+              <p className="text-sm text-amber-700">매칭 완료</p>
+              <p className="text-2xl font-bold text-amber-900">{matchingData.statistics?.assigned_mentees || 0}</p>
             </div>
           </div>
         </div>
-        <div className="bg-blue-50 rounded-lg p-4">
+        <div className="bg-white rounded-lg p-4 border border-amber-100 shadow-sm">
           <div className="flex items-center">
-            <XCircleIcon className="w-8 h-8 text-blue-600 mr-3" />
+            <XCircleIcon className="w-8 h-8 text-amber-600 mr-3" />
             <div>
-              <p className="text-sm text-blue-600">미매칭</p>
-              <p className="text-2xl font-bold text-blue-800">{matchingData.statistics?.unassigned_mentees || 0}</p>
+              <p className="text-sm text-amber-700">미매칭</p>
+              <p className="text-2xl font-bold text-amber-900">{matchingData.statistics?.unassigned_mentees || 0}</p>
             </div>
           </div>
         </div>
@@ -1527,7 +1550,7 @@ function MentorMenteeRelationTab({
                       {mentor.is_available && (
                         <button
                           onClick={() => onAssignClick(mentor, null)}
-                          className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                          className="px-3 py-1 bg-primary-600 text-white rounded text-sm hover:bg-primary-700"
                         >
                           멘티 배정
                         </button>
@@ -1567,26 +1590,26 @@ function MentorMenteeRelationTab({
           <h3 className="text-lg font-semibold text-gray-900 mb-4">현재 매칭 현황</h3>
           <div className="space-y-3">
             {matchingData.current_matches.map((match: any) => (
-              <div key={match.relation_id} className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div key={match.relation_id} className="p-4 bg-white rounded-lg border border-gray-200">
                 <div className="flex justify-between items-center">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
-                      <span className="font-semibold text-blue-900">{match.mentor?.name || '알 수 없음'}</span>
-                      <span className="text-blue-500">↔</span>
-                      <span className="font-semibold text-blue-900">{match.mentee?.name || '알 수 없음'}</span>
+                      <span className="font-semibold text-gray-900">{match.mentor?.name || '알 수 없음'}</span>
+                      <span className="text-gray-400">↔</span>
+                      <span className="font-semibold text-gray-900">{match.mentee?.name || '알 수 없음'}</span>
                     </div>
                     {match.notes && (
-                      <p className="text-sm text-blue-700 bg-blue-100 p-2 rounded">
+                      <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded">
                         <span className="font-medium">메모:</span> {match.notes}
                       </p>
                     )}
-                    <p className="text-xs text-blue-600 mt-1">
+                    <p className="text-xs text-gray-500 mt-1">
                       매칭일: {match.matched_at ? new Date(match.matched_at).toLocaleDateString('ko-KR') : '알 수 없음'}
                     </p>
                   </div>
                   <button
                     onClick={() => onUnassign(match.relation_id)}
-                    className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 ml-4"
+                    className="px-3 py-1 bg-primary-600 text-white rounded text-sm hover:bg-primary-700 ml-4"
                   >
                     해제
                   </button>
@@ -1635,7 +1658,7 @@ function AssignModal({
                 const mentee = availableMentees.find((m: any) => m.id === menteeId)
                 setSelectedMentee(mentee)
               }}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
             >
               <option value="">멘티를 선택하세요</option>
               {availableMentees.map((mentee: any) => (
@@ -1651,7 +1674,7 @@ function AssignModal({
             <textarea
               value={assignNotes}
               onChange={(e) => setAssignNotes(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
               rows={3}
               placeholder="매칭 관련 메모를 입력하세요..."
             />
@@ -1669,7 +1692,7 @@ function AssignModal({
           <button
             onClick={onConfirm}
             disabled={assigning || !selectedMentor || !selectedMentee}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
           >
             {assigning ? '매칭 중...' : '매칭 완료'}
           </button>
@@ -1708,7 +1731,7 @@ function MenteeSelectModal({
                       <h4 className="font-semibold text-gray-900">{mentee.name}</h4>
                       <p className="text-sm text-gray-600">{mentee.email}</p>
                       <div className="mt-2 flex flex-wrap gap-2">
-                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                        <span className="px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded-full">
                           {mentee.team} {mentee.team_number}
                         </span>
                         {mentee.mbti && (
@@ -1760,7 +1783,7 @@ function MenteeSelectModal({
                     <button
                       onClick={() => onSelect(mentee)}
                       disabled={selecting}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                      className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
                     >
                       {selecting ? '선택 중...' : '선택하기'}
                     </button>
