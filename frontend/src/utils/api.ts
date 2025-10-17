@@ -309,12 +309,12 @@ export const dashboardAPI = {
   },
 
   getAvailableMentees: async () => {
-    const response = await api.get('/dashboard/available-mentees')
+    const response = await api.get('/dashboard/mentor/available-mentees')
     return response.data
   },
 
   selectMentee: async (menteeId: number) => {
-    const response = await api.post('/dashboard/select-mentee', { mentee_id: menteeId })
+    const response = await api.post('/dashboard/mentor/select-mentee', { mentee_id: menteeId })
     return response.data
   },
   
