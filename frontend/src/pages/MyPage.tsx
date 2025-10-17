@@ -198,35 +198,72 @@ export default function MyPage() {
 
   // 관심사 옵션
   const interestOptions = [
-    'IT/테크', '금융', '마케팅', '영업', 'HR', '디자인', 
-    '음악', '독서', '운동', '여행', '요리', '게임'
+    'IT/테크', '주식', '부동산', '디자인/예술', '공연/전시', '마케팅', 
+    '스포츠', '음악', '독서', '게임', '사내 소모임', '자기계발'
   ];
+
+  // 부서 옵션
+  const teamOptions = [
+    '', '영업부', '기업금융 / 기업영업부', '리스크관리부', 
+    '여신심사 / 여신관리부', '자금부 / 자금시장부', '재무 / 회계부', 
+    '기획 / 전략부', 'IT / 정보기술부', '디지털 / 혁신부서', 
+    '마케팅 / 홍보부', '고객지원 / 고객센터 / 민원부', '법무부', 
+    '감사 / 내부감사부', '보안 / 정보보호부', '소비자보호부', 
+    '상품 / 금융상품개발부', '자산관리 / WM (Wealth Management)부', 
+    '외환 / 무역금융부', '투자은행부', '지속가능경영(ESG)부', 
+    '인사부', '총무부', 'CRM부'
+  ];
+
+  // 팀 옵션
+  const teamNumberOptions = [
+    '', '1팀', '2팀', '3팀', '4팀', '5팀', 
+    '6팀', '7팀', '8팀', '9팀', '10팀'
+  ];
+
+  // 휴대폰 번호 포맷팅
+  const formatPhoneNumber = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 3) return numbers;
+    if (numbers.length <= 7) return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+    return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
+  };
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900">내 정보</h1>
-        <button
-          onClick={handleEditToggle}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-            isEditing 
-              ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
-              : 'bg-blue-600 text-white hover:bg-blue-700'
-          }`}
-        >
-          {isEditing ? (
-            <>
-              <XMarkIcon className="w-5 h-5" />
-              <span>취소</span>
-            </>
-          ) : (
-            <>
-              <PencilIcon className="w-5 h-5" />
-              <span>편집</span>
-            </>
+        <div className="flex items-center space-x-3">
+          {isEditing && (
+            <button
+              onClick={handleSave}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg"
+            >
+              <CheckIcon className="w-5 h-5" />
+              <span>저장</span>
+            </button>
           )}
-        </button>
+          <button
+            onClick={handleEditToggle}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+              isEditing 
+                ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+          >
+            {isEditing ? (
+              <>
+                <XMarkIcon className="w-5 h-5" />
+                <span>취소</span>
+              </>
+            ) : (
+              <>
+                <PencilIcon className="w-5 h-5" />
+                <span>편집</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8">
@@ -464,14 +501,15 @@ export default function MyPage() {
                 <input
                   type="tel"
                   value={editForm.phone}
-                  onChange={(e) => handleFormChange('phone', e.target.value)}
+                  onChange={(e) => handleFormChange('phone', formatPhoneNumber(e.target.value))}
                   placeholder="010-1234-5678"
+                  maxLength={13}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               ) : (
                 <div className="text-gray-900">{user.phone || '-'}</div>
               )}
-      </div>
+            </div>
 
             {/* 내선 번호 */}
             <div>
@@ -510,26 +548,34 @@ export default function MyPage() {
               </label>
               {isEditing ? (
                 <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="text"
+                  <select
                     value={editForm.team}
                     onChange={(e) => handleFormChange('team', e.target.value)}
-                    placeholder="부서명"
                     className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <input
-                    type="text"
+                  >
+                    {teamOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option || '부서 선택'}
+                      </option>
+                    ))}
+                  </select>
+                  <select
                     value={editForm.team_number}
                     onChange={(e) => handleFormChange('team_number', e.target.value)}
-                    placeholder="팀명"
                     className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-        </div>
+                  >
+                    {teamNumberOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option || '팀 선택'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               ) : (
                 <div className="text-gray-900">
-            {user.team && user.team_number
-              ? `${user.team} ${user.team_number}`
-              : user.team || user.team_number || '-'}
+                  {user.team && user.team_number
+                    ? `${user.team} ${user.team_number}`
+                    : user.team || user.team_number || '-'}
                 </div>
               )}
             </div>
