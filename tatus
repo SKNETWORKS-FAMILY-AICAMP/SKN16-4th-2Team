@@ -1,0 +1,174 @@
+[1mdiff --git a/backend/app/init_data.py b/backend/app/init_data.py[m
+[1mindex 520bd65..67a437c 100644[m
+[1m--- a/backend/app/init_data.py[m
+[1m+++ b/backend/app/init_data.py[m
+[36m@@ -1,6 +1,6 @@[m
+ """[m
+[31m-초기 데이터 생성 스크립트[m
+[31m-테스트용 사용자 및 샘플 데이터 생성[m
+[32m+[m[32m초기 데이터 생성 스크립트 (개선된 버전)[m
+[32m+[m[32m컨테이너 재시작 시에도 안전하게 실행되도록 중복 생성 방지 로직 추가[m
+ """[m
+ from sqlmodel import Session, select[m
+ from app.database import engine[m
+[36m@@ -9,16 +9,17 @@[m [mfrom app.models.mentor import MentorMenteeRelation, ExamScore[m
+ from app.utils.auth import get_password_hash[m
+ import json[m
+ from datetime import datetime[m
+[32m+[m[32mimport sys[m
+ [m
+ [m
+ def create_initial_users(session: Session):[m
+[31m-    """초기 사용자 생성"""[m
+[31m-    print("Creating initial users...")[m
+[32m+[m[32m    """초기 사용자 생성 (중복 방지)"""[m
+[32m+[m[32m    print("📋 초기 사용자 확인 및 생성 중...")[m
+     [m
+     # 기존 사용자 확인[m
+     existing_admin = session.exec(select(User).where(User.email == "admin@bank.com")).first()[m
+     if existing_admin:[m
+[31m-        print("Users already exist. Skipping...")[m
+[32m+[m[32m        print("✅ 관리자 계정이 이미 존재합니다. 스킵합니다.")[m
+         return[m
+     [m
+     users = [[m
+[36m@@ -29,7 +30,8 @@[m [mdef create_initial_users(session: Session):[m
+             name="관리자",[m
+             role=UserRole.ADMIN,[m
+             team="운영팀",[m
+[31m-            phone="010-1111-1111"[m
+[32m+[m[32m            phone="010-1111-1111",[m
+[32m+[m[32m            is_active=True[m
+         ),[m
+         # 멘토[m
+         User([m
+[36m@@ -41,8 +43,8 @@[m [mdef create_initial_users(session: Session):[m
+             phone="010-2222-2222",[m
+             interests="금융투자, 리더십",[m
+             hobbies="독서, 테니스",[m
+[31m-            mbti="ENFJ",[m
+[31m-            encouragement_message="함께 성장해나가요! 언제든 편하게 질문하세요."[m
+[32m+[m[32m            encouragement_message="함께 성장해나가요! 언제든 편하게 질문하세요.",[m
+[32m+[m[32m            is_active=True[m
+         ),[m
+         User([m
+             email="mentor2@bank.com",[m
+[36m@@ -53,8 +55,8 @@[m [mdef create_initial_users(session: Session):[m
+             phone="010-2222-3333",[m
+             interests="재무분석, 컨설팅",[m
+             hobbies="골프, 영화감상",[m
+[31m-            mbti="ISTJ",[m
+[31m-            encouragement_message="체계적으로 배워나가면 반드시 성공할 수 있어요!"[m
+[32m+[m[32m            encouragement_message="체계적으로 배워나가면 반드시 성공할 수 있어요!",[m
+[32m+[m[32m            is_active=True[m
+         ),[m
+         # 멘티[m
+         User([m
+[36m@@ -65,7 +67,8 @@[m [mdef create_initial_users(session: Session):[m
+             team="영업1팀",[m
+             phone="010-3333-3333",[m
+             interests="디지털금융, 마케팅",[m
+[31m-            hobbies="운동, 여행"[m
+[32m+[m[32m            hobbies="운동, 여행",[m
+[32m+[m[32m            is_active=True[m
+         ),[m
+         User([m
+             email="mentee2@bank.com",[m
+[36m@@ -75,7 +78,8 @@[m [mdef create_initial_users(session: Session):[m
+             team="영업2팀",[m
+             phone="010-3333-4444",[m
+             interests="고객관리, 상품기획",[m
+[31m-            hobbies="그림그리기, 음악감상"[m
+[32m+[m[32m            hobbies="그림그리기, 음악감상",[m
+[32m+[m[32m            is_active=True[m
+         ),[m
+     ][m
+     [m
+[36m@@ -83,17 +87,21 @@[m [mdef create_initial_users(session: Session):[m
+         session.add(user)[m
+     [m
+     session.commit()[m
+[31m-    print(f"✅ Created {len(users)} users")[m
+[32m+[m[32m    print(f"✅ {len(users)}명의 사용자 생성 완료")[m
+[32m+[m[41m    [m
+[32m+[m[32m    # 생성된 사용자 확인[m
+[32m+[m[32m    for user in users:[m
+[32m+[m[32m        print(f"   - {user.role}: {user.email} / {'admin123' if user.role == UserRole.ADMIN else 'mentor123' if user.role == UserRole.MENTOR else 'mentee123'}")[m
+ [m
+ [m
+ def create_mentor_relations(session: Session):[m
+[31m-    """멘토-멘티 관계 생성"""[m
+[31m-    print("Creating mentor-mentee relations...")[m
+[32m+[m[32m    """멘토-멘티 관계 생성 (중복 방지)"""[m
+[32m+[m[32m    print("📋 멘토-멘티 관계 확인 및 생성 중...")[m
+     [m
+     # 기존 관계 확인[m
+     existing_relation = session.exec(select(MentorMenteeRelation)).first()[m
+     if existing_relation:[m
+[31m-        print("Relations already exist. Skipping...")[m
+[32m+[m[32m        print("✅ 멘토-멘티 관계가 이미 존재합니다. 스킵합니다.")[m
+         return[m
+     [m
+     # 멘토와 멘티 조회[m
+[36m@@ -103,7 +111,7 @@[m [mdef create_mentor_relations(session: Session):[m
+     mentee2 = session.exec(select(User).where(User.email == "mentee2@bank.com")).first()[m
+     [m
+     if not all([mentor1, mentor2, mentee1, mentee2]):[m
+[31m-        print("Users not found. Skipping relations...")[m
+[32m+[m[32m        print("⚠️ 멘토 또는 멘티 사용자를 찾을 수 없습니다. 관계 생성을 스킵합니다.")[m
+         return[m
+     [m
+     relations = [[m
+[36m@@ -125,19 +133,25 @@[m [mdef create_mentor_relations(session: Session):[m
+         session.add(relation)[m
+     [m
+     session.commit()[m
+[31m-    print(f"✅ Created {len(relations)} mentor-mentee relations")[m
+[32m+[m[32m    print(f"✅ {len(relations)}개의 멘토-멘티 관계 생성 완료")[m
+ [m
+ [m
+ def create_exam_scores(session: Session):[m
+[31m-    """샘플 시험 점수 생성"""[m
+[31m-    print("Creating sample exam scores...")[m
+[32m+[m[32m    """샘플 시험 점수 생성 (중복 방지)"""[m
+[32m+[m[32m    print("📋 시험 점수 확인 및 생성 중...")[m
+[32m+[m[41m    [m
+[32m+[m[32m    # 기존 점수 확인[m
+[32m+[m[32m    existing_score = session.exec(select(ExamScore)).first()[m
+[32m+[m[32m    if existing_score:[m
+[32m+[m[32m        print("✅ 시험 점수가 이미 존재합니다. 스킵합니다.")[m
+[32m+[m[32m        return[m
+     [m
+     # 멘티 조회[m
+     mentee1 = session.exec(select(User).where(User.email == "mentee@bank.com")).first()[m
+     mentee2 = session.exec(select(User).where(User.email == "mentee2@bank.com")).first()[m
+     [m
+     if not all([mentee1, mentee2]):[m
+[31m-        print("Mentees not found. Skipping exam scores...")[m
+[32m+[m[32m        print("⚠️ 멘티 사용자를 찾을 수 없습니다. 시험 점수 생성을 스킵합니다.")[m
+         return[m
+     [m
+     exams = [[m
+[36m@@ -179,29 +193,73 @@[m [mdef create_exam_scores(session: Session):[m
+         session.add(exam)[m
+     [m
+     session.commit()[m
+[31m-    print(f"✅ Created {len(exams)} exam scores")[m
+[32m+[m[32m    print(f"✅ {len(exams)}개의 시험 점수 생성 완료")[m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef verify_data_integrity(session: Session):[m
+[32m+[m[32m    """데이터 무결성 확인"""[m
+[32m+[m[32m    print("🔍 데이터 무결성 확인 중...")[m
+[32m+[m[41m    [m
+[32m+[m[32m    # 사용자 수 확인[m
+[32m+[m[32m    user_count = session.exec(select(User)).all()[m
+[32m+[m[32m    print(f"   - 총 사용자 수: {len(user_count)}")[m
+[32m+[m[41m    [m
+[32m+[m[32m    # 관리자 계정 확인[m
+[32m+[m[32m    admin = session.exec(select(User).where(User.email == "admin@bank.com")).first()[m
+[32m+[m[32m    if admin:[m
+[32m+[m[32m        print(f"   - ✅ 관리자 계정 확인: {admin.name} ({admin.email})")[m
+[32m+[m[32m    else:[m
+[32m+[m[32m        print("   - ❌ 관리자 계정을 찾을 수 없습니다!")[m
+[32m+[m[32m       

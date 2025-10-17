@@ -43,8 +43,8 @@ def create_initial_users(session: Session):
             phone="010-2222-2222",
             interests="금융투자, 리더십",
             hobbies="독서, 테니스",
-            encouragement_message="함께 성장해나가요! 언제든 편하게 질문하세요.",
-            is_active=True
+            mbti="ENFJ",
+            encouragement_message="함께 성장해나가요! 언제든 편하게 질문하세요."
         ),
         User(
             email="mentor2@bank.com",
@@ -55,8 +55,8 @@ def create_initial_users(session: Session):
             phone="010-2222-3333",
             interests="재무분석, 컨설팅",
             hobbies="골프, 영화감상",
-            encouragement_message="체계적으로 배워나가면 반드시 성공할 수 있어요!",
-            is_active=True
+            mbti="ISTJ",
+            encouragement_message="체계적으로 배워나가면 반드시 성공할 수 있어요!"
         ),
         # 멘티
         User(
@@ -224,41 +224,33 @@ def verify_data_integrity(session: Session):
 
 
 def init_all_data():
-    """모든 초기 데이터 생성 (개선된 버전)"""
-    print("\n🚀 초기 데이터 확인 및 생성을 시작합니다...\n")
+    """모든 초기 데이터 생성"""
+    print("\n🚀 Initializing data...\n")
     
-    try:
-        # 데이터베이스 테이블 초기화 (먼저 실행)
-        from app.database import init_db
-        init_db()
+    # 먼저 데이터베이스 테이블 생성
+    from app.database import init_db
+    init_db()
+    
+    with Session(engine) as session:
+        # 기존 사용자 확인
+        existing_admin = session.exec(select(User).where(User.email == "admin@bank.com")).first()
+        if existing_admin:
+            print("✅ Data already exists. Skipping initialization...")
+            print("\nTest accounts:")
+            print("  Admin:  admin@bank.com / admin123")
+            print("  Mentor: mentor@bank.com / mentor123")
+            print("  Mentee: mentee@bank.com / mentee123")
+            return
         
-        # 데이터베이스 연결 테스트
-        with Session(engine) as session:
-            session.exec(select(User).limit(1))
-            print("✅ 데이터베이스 연결 성공")
-        
-        # 초기 데이터 생성
-        with Session(engine) as session:
-            create_initial_users(session)
-            create_mentor_relations(session)
-            create_exam_scores(session)
-            
-            # 데이터 무결성 확인
-            if not verify_data_integrity(session):
-                print("❌ 데이터 무결성 검사 실패")
-                sys.exit(1)
-        
-        print("\n✅ 모든 초기 데이터 확인 및 생성이 완료되었습니다!\n")
-        print("🔑 테스트 계정:")
-        print("  관리자: admin@bank.com / admin123")
-        print("  멘토:   mentor@bank.com / mentor123")
-        print("  멘티:   mentee@bank.com / mentee123")
-        print("📚 API 문서: http://localhost:8000/docs")
-        
-    except Exception as e:
-        print(f"❌ 초기 데이터 생성 중 오류 발생: {e}")
-        print("💡 데이터베이스 연결을 확인하세요.")
-        sys.exit(1)
+        create_initial_users(session)
+        create_mentor_relations(session)
+        create_exam_scores(session)
+    
+    print("\n✅ All data initialized successfully!\n")
+    print("Test accounts:")
+    print("  Admin:  admin@bank.com / admin123")
+    print("  Mentor: mentor@bank.com / mentor123")
+    print("  Mentee: mentee@bank.com / mentee123")
 
 
 if __name__ == "__main__":

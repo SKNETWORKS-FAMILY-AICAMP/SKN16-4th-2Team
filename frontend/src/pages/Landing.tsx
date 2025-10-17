@@ -15,7 +15,7 @@ import {
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-100">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-secondary-50 to-amber-50">
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
@@ -25,35 +25,48 @@ export default function Landing() {
             transition={{ duration: 0.8 }}
             className="text-center"
           >
+            {/* 하경은행 로고와 곰 캐릭터 */}
+            <div className="flex justify-center items-center mb-8">
+              <img 
+                src="/assets/bear.png" 
+                alt="하경은행 곰 캐릭터" 
+                className="w-20 h-20 mr-4 rounded-full shadow-lg"
+              />
+              <div className="text-left">
+                <h2 className="text-2xl font-bold text-bank-800">하경은행</h2>
+                <p className="text-bank-600">Hakyung Bank</p>
+              </div>
+            </div>
+            
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-              은행 신입사원을 위한
+              신입사원을 위한
               <br />
-              <span className="bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">
-                AI 멘토 시스템
+              <span className="bg-gradient-to-r from-primary-600 to-amber-500 bg-clip-text text-transparent">
+                스마트 온보딩 플랫폼
               </span>
             </h1>
             <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-              RAG 기반 지능형 챗봇과 함께 빠르게 성장하세요.
+              AI 기반 지능형 온보딩 시스템으로 빠르게 적응하세요.
               <br />
-              멘토의 지식을 체계화하여 언제든 필요한 정보를 얻을 수 있습니다.
+              체계적인 교육과 멘토링으로 성공적인 은행원의 첫걸음을 시작하세요.
             </p>
             <div className="flex justify-center space-x-4">
               <Link
                 to="/register"
-                className="px-8 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-lg"
+                className="px-8 py-3 bg-gradient-to-r from-primary-600 to-primary-500 text-white rounded-xl font-semibold hover:from-primary-700 hover:to-primary-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
               >
-                시작하기
+                온보딩 시작하기
               </Link>
               <Link
                 to="/login"
-                className="px-8 py-3 bg-white text-primary-600 rounded-lg font-semibold hover:bg-gray-50 transition-colors border-2 border-primary-600"
+                className="px-8 py-3 bg-white text-primary-600 rounded-xl font-semibold hover:bg-primary-50 transition-all duration-300 border-2 border-primary-600 hover:border-primary-700 shadow-lg hover:shadow-xl"
               >
                 로그인
               </Link>
             </div>
           </motion.div>
 
-          {/* Floating Animation */}
+          {/* Floating Animation with Bear Character */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -61,14 +74,28 @@ export default function Landing() {
             className="mt-16 relative"
           >
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-96 h-96 bg-primary-200 rounded-full filter blur-3xl opacity-30 animate-pulse"></div>
+              <div className="w-96 h-96 bg-gradient-to-r from-primary-200 to-amber-200 rounded-full filter blur-3xl opacity-30 animate-pulse"></div>
             </div>
-            <div className="relative bg-white rounded-2xl shadow-2xl p-8 max-w-3xl mx-auto">
-              <img
-                src="https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&h=400&fit=crop"
-                alt="Team collaboration"
-                className="rounded-lg w-full h-64 object-cover"
-              />
+            <div className="relative bg-white rounded-3xl shadow-2xl p-8 max-w-4xl mx-auto border border-primary-100">
+              <div className="flex items-center justify-center space-x-8">
+                <div className="text-center">
+                  <img
+                    src="/assets/bear.png"
+                    alt="하경은행 곰 캐릭터"
+                    className="w-32 h-32 mx-auto mb-4 rounded-full shadow-lg"
+                  />
+                  <h3 className="text-xl font-bold text-primary-800">하경곰</h3>
+                  <p className="text-primary-600">당신의 온보딩 파트너</p>
+                </div>
+                <div className="hidden md:block w-px h-32 bg-gradient-to-b from-primary-200 to-transparent"></div>
+                <div className="text-center">
+                  <div className="w-32 h-32 mx-auto mb-4 bg-gradient-to-br from-primary-100 to-amber-100 rounded-full flex items-center justify-center">
+                    <span className="text-4xl">🏦</span>
+                  </div>
+                  <h3 className="text-xl font-bold text-bank-800">하경은행</h3>
+                  <p className="text-bank-600">신뢰와 혁신의 은행</p>
+                </div>
+              </div>
             </div>
           </motion.div>
         </div>
@@ -76,71 +103,102 @@ export default function Landing() {
 
       {/* Features Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
-          주요 기능
-        </h2>
+        <div className="text-center mb-16">
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">
+            스마트 온보딩 플랫폼의
+            <span className="bg-gradient-to-r from-primary-600 to-amber-500 bg-clip-text text-transparent"> 핵심 기능</span>
+          </h2>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            하경곰과 함께하는 체계적이고 효율적인 온보딩 경험을 제공합니다
+          </p>
+        </div>
         <div className="grid md:grid-cols-3 gap-8">
           <FeatureCard
             icon={ChatBubbleLeftRightIcon}
-            title="AI 챗봇"
-            description="RAG 기반 지능형 챗봇이 24/7 궁금한 점을 해결해드립니다."
+            title="AI 온보딩 어시스턴트"
+            description="하경곰 AI가 24/7 궁금한 점을 해결하고 업무 가이드를 제공합니다."
             color="primary"
           />
           <FeatureCard
             icon={DocumentTextIcon}
-            title="자료실"
-            description="은행업무 관련 모든 문서와 자료를 한 곳에서 관리합니다."
-            color="blue"
+            title="스마트 자료실"
+            description="은행업무 관련 모든 문서와 학습 자료를 체계적으로 관리합니다."
+            color="bank"
           />
           <FeatureCard
             icon={UserGroupIcon}
-            title="멘토링"
-            description="전담 멘토가 배정되어 체계적인 온보딩을 지원합니다."
-            color="green"
+            title="멘토 매칭 시스템"
+            description="개인별 특성에 맞는 전담 멘토가 배정되어 맞춤형 온보딩을 지원합니다."
+            color="amber"
           />
           <FeatureCard
             icon={LockClosedIcon}
-            title="익명 게시판"
-            description="대나무숲에서 부담 없이 질문하고 소통할 수 있습니다."
-            color="purple"
+            title="익명 소통 공간"
+            description="부담 없이 질문하고 동료들과 소통할 수 있는 안전한 공간을 제공합니다."
+            color="secondary"
           />
           <FeatureCard
             icon={ChartBarIcon}
-            title="학습 분석"
-            description="시험 점수와 학습 진행도를 시각화하여 확인할 수 있습니다."
-            color="orange"
+            title="성장 트래킹"
+            description="학습 진행도와 성과를 시각화하여 개인 성장을 체계적으로 관리합니다."
+            color="accent"
           />
           <FeatureCard
             icon={SparklesIcon}
-            title="맞춤형 지원"
-            description="개인별 학습 패턴을 분석하여 최적의 학습 경로를 제안합니다."
-            color="pink"
+            title="맞춤형 학습 경로"
+            description="개인별 학습 패턴을 분석하여 최적의 온보딩 경로를 제안합니다."
+            color="primary"
           />
         </div>
       </div>
 
       {/* CTA Section */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 py-16">
+      <div className="bg-gradient-to-r from-primary-600 via-primary-500 to-amber-500 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">
-            지금 바로 시작하세요
+          <div className="flex justify-center mb-8">
+            <img 
+              src="/assets/bear.png" 
+              alt="하경곰" 
+              className="w-16 h-16 rounded-full shadow-lg"
+            />
+          </div>
+          <h2 className="text-4xl font-bold text-white mb-4">
+            하경곰과 함께 시작하는
+            <br />
+            성공적인 온보딩 여정
           </h2>
-          <p className="text-primary-100 mb-8 text-lg">
-            은행 신입사원의 성공적인 시작을 AI 멘토가 함께합니다.
+          <p className="text-white/90 mb-8 text-lg max-w-2xl mx-auto">
+            하경은행 신입사원의 성공적인 시작을 위한 스마트 온보딩 플랫폼에 지금 참여하세요.
           </p>
           <Link
             to="/register"
-            className="inline-block px-8 py-3 bg-white text-primary-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors shadow-lg"
+            className="inline-block px-10 py-4 bg-white text-primary-600 rounded-xl font-bold hover:bg-gray-50 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1"
           >
-            무료로 시작하기
+            🚀 온보딩 플랫폼 시작하기
           </Link>
         </div>
       </div>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-gray-400 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p>&copy; 2024 Bank Mentor System. All rights reserved.</p>
+      <footer className="bg-gradient-to-r from-bank-900 to-bank-800 text-white py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row items-center justify-between">
+            <div className="flex items-center mb-4 md:mb-0">
+              <img 
+                src="/assets/bear.png" 
+                alt="하경은행 곰 캐릭터" 
+                className="w-12 h-12 mr-3 rounded-full"
+              />
+              <div>
+                <h3 className="text-xl font-bold">하경은행</h3>
+                <p className="text-bank-300">스마트 온보딩 플랫폼</p>
+              </div>
+            </div>
+            <div className="text-center md:text-right">
+              <p className="text-bank-300 mb-2">© 2024 Hakyung Bank. All rights reserved.</p>
+              <p className="text-bank-400 text-sm">신뢰와 혁신으로 함께하는 은행</p>
+            </div>
+          </div>
         </div>
       </footer>
     </div>
@@ -150,11 +208,10 @@ export default function Landing() {
 function FeatureCard({ icon: Icon, title, description, color }: any) {
   const colorClasses: any = {
     primary: 'bg-primary-100 text-primary-600',
-    blue: 'bg-blue-100 text-blue-600',
-    green: 'bg-green-100 text-green-600',
-    purple: 'bg-purple-100 text-purple-600',
-    orange: 'bg-orange-100 text-orange-600',
-    pink: 'bg-pink-100 text-pink-600',
+    bank: 'bg-bank-100 text-bank-600',
+    amber: 'bg-amber-100 text-amber-600',
+    secondary: 'bg-secondary-100 text-secondary-600',
+    accent: 'bg-accent-100 text-accent-600',
   }
 
   return (
@@ -163,13 +220,13 @@ function FeatureCard({ icon: Icon, title, description, color }: any) {
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
       viewport={{ once: true }}
-      className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow"
+      className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-primary-200 group"
     >
-      <div className={`w-12 h-12 rounded-lg ${colorClasses[color]} flex items-center justify-center mb-4`}>
-        <Icon className="w-6 h-6" />
+      <div className={`w-14 h-14 rounded-xl ${colorClasses[color]} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
+        <Icon className="w-7 h-7" />
       </div>
-      <h3 className="text-xl font-semibold text-gray-900 mb-2">{title}</h3>
-      <p className="text-gray-600">{description}</p>
+      <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-primary-700 transition-colors">{title}</h3>
+      <p className="text-gray-600 leading-relaxed">{description}</p>
     </motion.div>
   )
 }

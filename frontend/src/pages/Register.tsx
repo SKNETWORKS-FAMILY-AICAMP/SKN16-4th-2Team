@@ -31,7 +31,7 @@ export default function Register() {
     phone: '',
     extension: '',
     emergency_contact: '',
-    interests: [],
+    interests: [] as string[],
     team: '', // 부서
     team_number: '', // 팀
     employee_number: '',

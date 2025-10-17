@@ -4,6 +4,8 @@ import Layout from './components/Layout'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import FindId from './pages/FindId'
+import FindPassword from './pages/FindPassword'
 
 import Home from './pages/Home'
 import Documents from './pages/Documents'
@@ -39,13 +41,15 @@ function App() {
         <Route path="/" element={!isAuthenticated ? <Landing /> : <Navigate to="/home" />} />
         <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/home" />} />
         <Route path="/register" element={!isAuthenticated ? <Register /> : <Navigate to="/home" />} />
+        <Route path="/find-id" element={!isAuthenticated ? <FindId /> : <Navigate to="/home" />} />
+        <Route path="/find-password" element={!isAuthenticated ? <FindPassword /> : <Navigate to="/home" />} />
 
         {/* Protected routes */}
         <Route element={<Layout />}>
           <Route path="/home" element={isAuthenticated ? <Home /> : <Navigate to="/login" />} />
           <Route path="/documents" element={isAuthenticated ? <Documents /> : <Navigate to="/login" />} />
           <Route path="/rag" element={<AdminOnlyRoute><RAG /></AdminOnlyRoute>} />
-          <Route path="/board" element={isAuthenticated ? <AnonymousBoard /> : <Navigate to="/login" />} />
+          <Route path="/board" element={<AnonymousBoard />} />
           <Route path="/board/:postId" element={isAuthenticated ? <PostDetail /> : <Navigate to="/login" />} />
           <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />} />
           <Route path="/mypage" element={isAuthenticated ? <MyPage /> : <Navigate to="/login" />} />

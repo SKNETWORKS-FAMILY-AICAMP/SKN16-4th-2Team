@@ -192,3 +192,120 @@ async def delete_user(
     
     return {"message": "User deactivated successfully"}
 
+
+@router.post("/find-id")
+async def find_id(
+    name: str,
+    employee_number: str,
+    session: Session = Depends(get_session)
+):
+    """
+    아이디(이메일) 찾기
+    - 이름과 사원번호로 이메일 찾기
+    """
+    statement = select(User).where(User.name == name, User.employee_number == employee_number)
+    user = session.exec(statement).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found with provided information"
+        )
+    
+    return {
+        "email": user.email
+    }
+
+
+@router.post("/reset-password")
+async def reset_password(
+    email: str,
+    employee_number: str,
+    new_password: str,
+    session: Session = Depends(get_session)
+):
+    """
+    비밀번호 재설정
+    - 이메일과 사원번호로 본인 확인
+    - 새 비밀번호로 변경
+    """
+    statement = select(User).where(User.email == email, User.employee_number == employee_number)
+    user = session.exec(statement).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found with provided information"
+        )
+    
+    # 새 비밀번호 해싱 및 저장
+    user.hashed_password = get_password_hash(new_password)
+    session.add(user)
+    session.commit()
+    
+    return {
+        "message": "Password has been reset successfully",
+        "email": email
+    }
+
+
+@router.post("/qr-login", response_model=Token)
+async def qr_login(
+    qr_data: str,
+    session: Session = Depends(get_session)
+):
+    """
+    QR 로그인 (비밀번호 불필요)
+    - QR 코드에서 이메일 추출
+    - JWT 토큰 발급
+    """
+    try:
+        # QR 데이터 파싱: "qr-login:email"
+        parts = qr_data.split(":", 1)  # 최대 2개로 분할 (이메일에 :가 없다고 가정)
+        
+        if len(parts) < 2 or parts[0] != "qr-login":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid QR code format"
+            )
+        
+        email = parts[1]
+        
+        # 사용자 조회
+        statement = select(User).where(User.email == email)
+        user = session.exec(statement).first()
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        # 비활성 사용자 확인
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Inactive user"
+            )
+        
+        # 토큰 생성
+        access_token = create_access_token(
+            data={"sub": user.email, "role": user.role}
+        )
+        refresh_token = create_refresh_token(
+            data={"sub": user.email, "role": user.role}
+        )
+        
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid QR code: {str(e)}"
+        )

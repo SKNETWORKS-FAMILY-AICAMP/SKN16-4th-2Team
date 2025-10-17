@@ -1,9 +1,12 @@
 FROM python:3.11-slim
 
+# 비대화형 설치 설정 (debconf 에러 방지)
+ENV DEBIAN_FRONTEND=noninteractive
+
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Install system dependencies (불필요 패키지 제외)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*

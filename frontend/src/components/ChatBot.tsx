@@ -32,7 +32,7 @@ export default function ChatBot({ forceOpen = false, onClose }: ChatBotProps = {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: '안녕하세요! 무엇을 도와드릴까요? 궁금한 점을 물어보세요.',
+      text: '안녕하세요! 저는 AI 하리보예요 🐻\n하경은행 온보딩 플랫폼에서 무엇이든 도와드릴게요!\n궁금한 점을 자유롭게 물어보세요.',
       isBot: true,
       timestamp: new Date(),
     },
@@ -92,7 +92,7 @@ export default function ChatBot({ forceOpen = false, onClose }: ChatBotProps = {
       console.error('Chat error:', error)
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: '죄송합니다. 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+        text: '앗, 잠깐만요! 🐻\n일시적인 오류가 발생했어요.\n잠시 후 다시 시도해주세요.',
         isBot: true,
         timestamp: new Date(),
       }
@@ -128,14 +128,12 @@ export default function ChatBot({ forceOpen = false, onClose }: ChatBotProps = {
             className="fixed bottom-24 right-6 w-96 h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col z-40"
           >
             {/* Header */}
-            <div className="bg-gradient-to-r from-primary-600 to-primary-700 p-4 rounded-t-2xl flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                  <SparklesIcon className="w-6 h-6 text-white" />
-                </div>
+            <div className="bg-gradient-to-r from-primary-600 via-primary-500 to-amber-500 p-4 rounded-t-2xl flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <img src="/assets/bear.png" alt="하경곰" className="w-10 h-10 rounded-full shadow-md" />
                 <div>
-                  <h3 className="font-semibold text-white">AI 멘토</h3>
-                  <p className="text-xs text-primary-100">24/7 언제나 도와드립니다</p>
+                  <h3 className="font-bold text-white">AI 하리보</h3>
+                  <p className="text-xs text-white/90">온보딩 파트너 🐻</p>
                 </div>
               </div>
               <button
@@ -154,10 +152,10 @@ export default function ChatBot({ forceOpen = false, onClose }: ChatBotProps = {
                   className={`flex ${message.isBot ? 'justify-start' : 'justify-end'}`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                    className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                       message.isBot
-                        ? 'bg-gray-100 text-gray-900'
-                        : 'bg-primary-600 text-white'
+                        ? 'bg-gradient-to-r from-primary-50 to-amber-50 text-bank-800 border border-primary-200'
+                        : 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md'
                     }`}
                   >
                     <p className="text-sm whitespace-pre-wrap">{message.text}</p>
@@ -186,11 +184,14 @@ export default function ChatBot({ forceOpen = false, onClose }: ChatBotProps = {
               ))}
               {loading && (
                 <div className="flex justify-start">
-                  <div className="bg-gray-100 rounded-2xl px-4 py-3">
-                    <div className="flex space-x-2">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100"></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200"></div>
+                  <div className="bg-gradient-to-r from-primary-50 to-amber-50 rounded-2xl px-4 py-3 border border-primary-200">
+                    <div className="flex items-center space-x-2">
+                      <img src="/assets/bear.png" alt="하경곰" className="w-4 h-4 rounded-full" />
+                      <div className="flex space-x-1">
+                        <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce delay-100"></div>
+                        <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce delay-200"></div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -199,21 +200,21 @@ export default function ChatBot({ forceOpen = false, onClose }: ChatBotProps = {
             </div>
 
             {/* Input */}
-            <div className="p-4 border-t border-gray-200">
+            <div className="p-4 border-t border-primary-100">
               <div className="flex space-x-2">
                 <input
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="메시지를 입력하세요..."
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="AI 하리보에게 질문해보세요..."
+                  className="flex-1 px-4 py-3 border border-primary-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
                   disabled={loading}
                 />
                 <button
                   onClick={handleSend}
                   disabled={loading || !input.trim()}
-                  className="p-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-3 bg-gradient-to-r from-primary-600 to-primary-500 text-white rounded-xl hover:from-primary-700 hover:to-primary-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
                 >
                   <PaperAirplaneIcon className="w-5 h-5" />
                 </button>
@@ -239,7 +240,12 @@ export default function ChatBot({ forceOpen = false, onClose }: ChatBotProps = {
         {isOpen ? (
           <XMarkIcon className="w-8 h-8" />
         ) : (
-          <ChatBubbleLeftRightIcon className="w-8 h-8" />
+          <div className="relative">
+            <img src="/assets/bear.png" alt="하경곰" className="w-10 h-10 rounded-full" />
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-accent-500 rounded-full flex items-center justify-center">
+              <span className="text-white text-xs">💬</span>
+            </div>
+          </div>
         )}
       </motion.button>
     </>
