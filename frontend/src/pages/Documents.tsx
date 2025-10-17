@@ -2,6 +2,7 @@
  * 자료실 페이지
  */
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { documentAPI } from '../utils/api'
 import { 
@@ -17,6 +18,7 @@ import { motion } from 'framer-motion'
 
 export default function Documents() {
   const { user } = useAuthStore()
+  const [searchParams] = useSearchParams()
   const [documents, setDocuments] = useState<any[]>([])
   const [categories, setCategories] = useState<string[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>('')
@@ -25,6 +27,14 @@ export default function Documents() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
+
+  // URL 파라미터에서 검색어 읽기
+  useEffect(() => {
+    const searchQuery = searchParams.get('search')
+    if (searchQuery) {
+      setSearchTerm(searchQuery)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     loadDocuments()
