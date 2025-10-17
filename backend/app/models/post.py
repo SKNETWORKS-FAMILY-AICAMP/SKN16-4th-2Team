@@ -42,6 +42,10 @@ class PostRead(SQLModel):
     content: str
     view_count: int
     comment_count: int
+    like_count: int = 0  # 추천 수
+    dislike_count: int = 0  # 비추천 수
+    user_liked: bool = False  # 현재 사용자가 추천했는지
+    user_disliked: bool = False  # 현재 사용자가 비추천했는지
     created_at: datetime
     updated_at: datetime
     author_alias: str = "익명1"  # 항상 익명1로 표시
@@ -77,6 +81,10 @@ class CommentRead(SQLModel):
     id: int
     post_id: int
     content: str
+    like_count: int = 0  # 추천 수
+    dislike_count: int = 0  # 비추천 수
+    user_liked: bool = False  # 현재 사용자가 추천했는지
+    user_disliked: bool = False  # 현재 사용자가 비추천했는지
     created_at: datetime
     author_alias: str  # 익명2, 익명3... 형태
     is_author: bool = False  # 현재 사용자가 작성자인지
@@ -89,5 +97,37 @@ class PostDetail(SQLModel):
     comments: List[CommentRead] = []
     is_author: bool = False  # 현재 사용자가 작성자인지
     is_admin: bool = False   # 현재 사용자가 관리자인지
+
+
+class PostLike(SQLModel, table=True):
+    """게시글 추천/비추천 모델"""
+    __tablename__ = "post_likes"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    post_id: int = Field(foreign_key="posts.id")
+    user_id: int = Field(foreign_key="users.id")
+    is_like: bool = Field(default=True)  # True: 추천, False: 비추천
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    # 복합 유니크 제약: 한 사용자는 한 게시글에 대해 하나의 추천/비추천만 가능
+    __table_args__ = (
+        {"extend_existing": True}
+    )
+
+
+class CommentLike(SQLModel, table=True):
+    """댓글 추천/비추천 모델"""
+    __tablename__ = "comment_likes"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    comment_id: int = Field(foreign_key="comments.id")
+    user_id: int = Field(foreign_key="users.id")
+    is_like: bool = Field(default=True)  # True: 추천, False: 비추천
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    # 복합 유니크 제약: 한 사용자는 한 댓글에 대해 하나의 추천/비추천만 가능
+    __table_args__ = (
+        {"extend_existing": True}
+    )
 
 
