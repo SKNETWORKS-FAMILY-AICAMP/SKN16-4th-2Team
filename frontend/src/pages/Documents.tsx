@@ -18,6 +18,21 @@ import {
 } from '@heroicons/react/24/outline'
 import { motion } from 'framer-motion'
 
+// 카테고리별 배지 색상 클래스 맵
+const categoryBadgeClasses: Record<string, { dot: string; text: string; bg: string }> = {
+  '일반': { dot: 'bg-gray-400', text: 'text-gray-700', bg: 'bg-gray-100' },
+  '법규': { dot: 'bg-red-500', text: 'text-red-700', bg: 'bg-red-50' },
+  '상품설명서': { dot: 'bg-amber-500', text: 'text-amber-700', bg: 'bg-amber-50' },
+  '서식': { dot: 'bg-indigo-500', text: 'text-indigo-700', bg: 'bg-indigo-50' },
+  '약관': { dot: 'bg-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50' },
+  'FAQ': { dot: 'bg-blue-500', text: 'text-blue-700', bg: 'bg-blue-50' },
+  'RAG': { dot: 'bg-purple-500', text: 'text-purple-700', bg: 'bg-purple-50' },
+}
+
+function getCategoryStyles(category: string) {
+  return categoryBadgeClasses[category] || { dot: 'bg-gray-300', text: 'text-gray-700', bg: 'bg-gray-100' }
+}
+
 export default function Documents() {
   const { user } = useAuthStore()
   const [searchParams] = useSearchParams()
@@ -278,6 +293,7 @@ export default function Documents() {
 }
 
 function DocumentListItem({ document, onDownload, onDelete, user }: any) {
+  const styles = getCategoryStyles(document.category)
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
@@ -305,9 +321,9 @@ function DocumentListItem({ document, onDownload, onDelete, user }: any) {
         </div>
         
         {/* 카테고리 */}
-        <div className="flex-shrink-0 w-24">
-          <span className="inline-flex items-center space-x-1 text-sm text-gray-600">
-            <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+        <div className="flex-shrink-0 w-36">
+          <span className={`inline-flex items-center space-x-2 text-sm px-2.5 py-1 rounded-full ${styles.bg} ${styles.text}`}>
+            <span className={`w-2 h-2 rounded-full ${styles.dot}`}></span>
             <span className="truncate">{document.category}</span>
           </span>
         </div>

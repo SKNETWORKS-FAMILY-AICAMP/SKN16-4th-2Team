@@ -16,14 +16,13 @@ ALLOWED_EXTENSIONS = {
 
 # 파일 카테고리별 디렉토리
 CATEGORY_DIRS = {
-    "경제용어": "economic_terms",
-    "은행산업 기본지식": "banking_basics",
-    "고객언어 가이드": "customer_language",
-    "은행법": "banking_law",
-    "상품설명서": "product_descriptions",
-    "서식": "forms",
-    "약관": "terms",
-    "FAQ": "faq"
+    "일반": "1_general",
+    "법규": "2_law",
+    "상품설명서": "3_pd",
+    "서식": "4_forms",
+    "약관": "5_tc",
+    "FAQ": "6_faq",
+    "RAG": "RAG"  # 기존 RAG 카테고리 유지
 }
 
 

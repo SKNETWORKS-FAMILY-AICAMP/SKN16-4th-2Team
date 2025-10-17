@@ -101,7 +101,7 @@ async def get_documents(
         # 카테고리가 없으면 RAG 제외하고 조회
         statement = statement.where(Document.category != "RAG")
     
-    statement = statement.offset(skip).limit(limit).order_by(Document.upload_date.desc())
+    statement = statement.offset(skip).limit(limit).order_by(Document.title.asc())
     documents = session.exec(statement).all()
     
     return documents
@@ -334,14 +334,12 @@ async def get_categories(
     """문서 카테고리 목록 (RAG 제외)"""
     return {
         "categories": [
-            "경제용어",
-            "은행산업 기본지식",
-            "고객언어 가이드",
-            "은행법",
+            "일반",
+            "법규",
             "상품설명서",
             "서식",
             "약관",
-            "FAQ"
+            "FAQ",
         ]
     }
 
