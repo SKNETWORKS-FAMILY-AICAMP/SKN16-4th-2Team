@@ -185,6 +185,11 @@ export const documentAPI = {
     const response = await api.get('/documents/categories/list')
     return response.data
   },
+  
+  getRecentDocuments: async (limit: number = 3) => {
+    const response = await api.get(`/documents/recent?limit=${limit}`)
+    return response.data
+  },
 }
 
 // 게시판
@@ -219,6 +224,11 @@ export const postAPI = {
   
   deleteComment: async (id: number) => {
     const response = await api.delete(`/posts/comments/${id}`)
+    return response.data
+  },
+  
+  getPopularPosts: async (limit: number = 3) => {
+    const response = await api.get(`/posts/popular?limit=${limit}`)
     return response.data
   },
 }

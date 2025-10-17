@@ -45,8 +45,8 @@ export default function Layout() {
               <NavLink to="/home" icon={HomeIcon} text="홈" />
               <NavLink to="/documents" icon={DocumentTextIcon} text="자료실" />
               {user?.role === 'admin' && <NavLink to="/rag" icon={CpuChipIcon} text="AI 관리" />}
-              <NavLink to="/board" icon={ChatBubbleBottomCenterIcon} text="소통공간" />
-              <NavLink to="/dashboard" icon={ChartBarIcon} text="성장현황" />
+              <NavLink to="/board" icon={ChatBubbleBottomCenterIcon} text="대나무숲" />
+              <NavLink to="/dashboard" icon={ChartBarIcon} text="대시보드" />
             </div>
 
             {/* User Menu */}
