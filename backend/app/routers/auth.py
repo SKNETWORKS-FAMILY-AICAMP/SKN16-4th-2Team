@@ -11,7 +11,8 @@ import uuid
 from pathlib import Path
 
 from app.database import get_session
-from app.models.user import User, UserCreate, UserRead, UserUpdate, Token
+from app.models.user import User, UserCreate, UserRead, UserUpdate, Token, UserRole
+from app.models.mentor import ExamScore
 from app.utils.auth import (
     get_password_hash,
     verify_password,
@@ -21,8 +22,61 @@ from app.utils.auth import (
     get_current_active_admin
 )
 from app.config import settings
+import json
+import random
+from datetime import datetime
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+
+def generate_random_performance_scores():
+    """랜덤 성과 지표 생성"""
+    return {
+        "은행업무": random.randint(60, 95),
+        "상품지식": random.randint(60, 95),
+        "고객응대": random.randint(60, 95),
+        "법규준수": random.randint(60, 95),
+        "IT활용": random.randint(60, 95),
+        "영업실적": random.randint(60, 95)
+    }
+
+
+def create_initial_exam_score(user_id: int, session: Session):
+    """새 멘티에게 초기 시험 점수 생성"""
+    try:
+        performance_scores = generate_random_performance_scores()
+        total_score = sum(performance_scores.values()) / len(performance_scores)
+        
+        # 등급 계산
+        if total_score >= 90:
+            grade = "A+"
+        elif total_score >= 85:
+            grade = "A"
+        elif total_score >= 80:
+            grade = "B+"
+        elif total_score >= 75:
+            grade = "B"
+        elif total_score >= 70:
+            grade = "C+"
+        else:
+            grade = "C"
+        
+        exam_score = ExamScore(
+            mentee_id=user_id,
+            exam_name="신입사원 평가",
+            exam_date=datetime.utcnow(),
+            score_data=json.dumps(performance_scores, ensure_ascii=False),
+            total_score=round(total_score, 1),
+            grade=grade,
+            feedback="신입사원 평가를 완료하셨습니다. 앞으로도 꾸준히 발전해 나가세요!"
+        )
+        
+        session.add(exam_score)
+        session.commit()
+        print(f"✅ 새 멘티 ({user_id})에게 초기 시험 점수 생성 완료")
+        
+    except Exception as e:
+        print(f"⚠️ 초기 시험 점수 생성 실패: {e}")
 
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
@@ -74,7 +128,45 @@ async def register(
     session.commit()
     session.refresh(user)
     
+    # 멘티인 경우 자동으로 초기 시험 점수 생성
+    if user.role == UserRole.MENTEE:
+        create_initial_exam_score(user.id, session)
+    
     return user
+
+
+@router.post("/generate-scores-for-existing-mentees")
+async def generate_scores_for_existing_mentees(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_admin)
+):
+    """기존 멘티들에게 랜덤 성과 지표 생성 (관리자 전용)"""
+    try:
+        # 모든 멘티 조회
+        mentees = session.exec(select(User).where(User.role == UserRole.MENTEE)).all()
+        
+        generated_count = 0
+        for mentee in mentees:
+            # 이미 시험 점수가 있는지 확인
+            existing_exam = session.exec(
+                select(ExamScore).where(ExamScore.mentee_id == mentee.id)
+            ).first()
+            
+            if not existing_exam:
+                create_initial_exam_score(mentee.id, session)
+                generated_count += 1
+        
+        return {
+            "message": f"✅ {generated_count}명의 멘티에게 성과 지표를 생성했습니다.",
+            "total_mentees": len(mentees),
+            "generated_count": generated_count
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"성과 지표 생성 실패: {str(e)}"
+        )
 
 
 @router.post("/login", response_model=Token)
