@@ -188,8 +188,22 @@ class RAGService:
                 print("Failed to generate query embedding")
                 return []
             
-            # pgvector를 사용한 유사도 검색 (배열 문자열로 변환)
-            query_embedding_str = "[" + ",".join(map(str, query_embedding)) + "]"
+            # pgvector를 사용한 유사도 검색 (직접 벡터 문자열 삽입)
+            query_vector_str = "[" + ",".join(map(str, query_embedding)) + "]"
+            
+            # 키워드 기반 필터링 - 관련 문서만 검색
+            keyword_boost = ""
+            query_lower = query.lower()
+            
+            if any(keyword in query_lower for keyword in ["피해", "구제", "신청", "사기", "피해구제"]):
+                keyword_boost = """
+                    AND (d.title ILIKE '%피해%' OR d.title ILIKE '%구제%' OR d.title ILIKE '%신청%' OR d.title ILIKE '%사기%')
+                """
+            elif any(keyword in query_lower for keyword in ["대출", "신용", "여신", "보증", "심사", "서류", "보류"]):
+                keyword_boost = """
+                    AND (d.title ILIKE '%대출%' OR d.title ILIKE '%신용%' OR d.title ILIKE '%여신%' OR d.title ILIKE '%보증%' OR d.title ILIKE '%심사%' OR d.title ILIKE '%서류%' OR d.title ILIKE '%보류%')
+                """
+            # 기타 질문은 모든 RAG 문서에서 검색
             
             sql = text(f"""
                 SELECT 
@@ -198,13 +212,17 @@ class RAGService:
                     d.title,
                     d.category,
                     d.id as document_id,
-                    1 - (dc.embedding <=> '{query_embedding_str}'::vector) as similarity
+                    1 - (dc.embedding <=> '{query_vector_str}'::vector) as similarity
                 FROM document_chunks dc
                 JOIN documents d ON dc.document_id = d.id
                 WHERE d.is_indexed = true AND d.category = 'RAG'
-                ORDER BY dc.embedding <=> '{query_embedding_str}'::vector
+                {keyword_boost}
+                ORDER BY dc.embedding <=> '{query_vector_str}'::vector
                 LIMIT :k
             """)
+            
+            print(f"SQL Query: {sql}")
+            print(f"Keyword boost: {keyword_boost}")
             
             result = self.session.execute(sql, {"k": k})
             
@@ -305,36 +323,16 @@ class RAGService:
                 detected_part = part
                 break
         
-        # 온보딩 관련 질문이 아니면 간단한 GPT 답변
-        if not detected_part:
-            gpt_answer = await self._generate_gpt_fallback(question, [])
-            
-            response_time = (datetime.utcnow() - start_time).total_seconds()
-            
-            try:
-                chat_history = ChatHistory(
-                    user_id=user_id,
-                    user_message=question,
-                    bot_response=gpt_answer,
-                    source_documents=json.dumps([], ensure_ascii=False),
-                    response_time=response_time
-                )
-                self.session.add(chat_history)
-                self.session.commit()
-            except Exception as e:
-                print(f"Chat history save error: {e}")
-                self.session.rollback()
-            
-            return {
-                "answer": gpt_answer,
-                "sources": [],
-                "response_time": response_time,
-                "answer_type": "gpt"
-            }
+        # 이전에는 온보딩 관련 키워드가 없으면 RAG를 건너뛰었으나,
+        # 이제는 모든 질문에 대해 RAG를 우선 시도한다.
         
-        # 1단계: RAG 검색 시도 (온보딩 관련 질문) - 가중치 증가
+        # 1단계: RAG 검색 시도 (모든 질문)
         if context_docs is None:
-            context_docs = await self.similarity_search(question, k=8)  # 더 많은 문서 검색
+            print(f"RAG 검색 시작: '{question}'")
+            context_docs = await self.similarity_search(question, k=8)
+            print(f"RAG 검색 결과: {len(context_docs)}개 문서")
+            for i, doc in enumerate(context_docs):
+                print(f"  {i+1}. {doc['title']} (유사도: {doc.get('similarity', 0):.3f})")
         
         # 컨텍스트 구성 (제목에서 "RAG - " 제거)
         context = "\n\n".join([
@@ -342,33 +340,35 @@ class RAGService:
             for doc in context_docs
         ])
         
-        # 온보딩 교육용 RAG 답변 생성
+        # 온보딩 교육용 RAG 답변 생성 (파트 감지되면 설명 포함)
         part_info = {
             "수신": "고객이 은행에 돈을 맡기는 업무 (예금, 적금 등)",
             "여신": "고객에게 돈을 빌려주는 업무 (대출, 신용평가 등)", 
             "외환": "외국 돈을 사고팔거나 송금하는 업무"
         }
-        
-        rag_prompt = f"""당신은 은행 신입사원 온보딩을 담당하는 AI 하리보입니다. 🐻
-현재 {detected_part} 파트 교육 중이며, {part_info[detected_part]}에 대해 설명하고 있습니다. 🐼
 
-다음 자료를 참고하여 답변해주세요:
-{context}
+        part_header = ""
+        if detected_part:
+            part_header = f"현재 {detected_part} 파트 교육 중이며, {part_info[detected_part]}에 대해 설명하고 있습니다. 🐼\n\n"
 
-질문: {question}
-
-답변 규칙:
-1. 신입사원이 이해하기 쉽게 따뜻하고 교육적인 톤으로 답변 🐻
-2. 어려운 은행 용어는 쉬운 표현과 함께 설명
-3. 반드시 다음 순서로 구성:
-   - ① 핵심 개념 요약 (한 문단) 🐼
-   - ② 실제 현장 예시 (구체적인 상황이나 숫자 포함) 🐻‍❄️
-   - ③ 실무 유의사항 (주의할 점이나 팁) 🐻
-4. 답변은 3-4문단 이내로 간결하게
-5. 신입사원이 회사에 자연스럽게 적응할 수 있도록 격려하는 톤 유지
-6. 답변에 참고자료나 출처 정보는 절대 포함하지 마세요
-
-답변:"""
+        rag_prompt = (
+            "당신은 은행 신입사원 온보딩을 담당하는 AI 하리보입니다. 🐻\n"
+            f"{part_header}"
+            "다음 자료를 참고하여 답변해주세요:\n"
+            f"{context}\n\n"
+            f"질문: {question}\n\n"
+            "답변 규칙:\n"
+            "1. 신입사원이 이해하기 쉽게 따뜻하고 교육적인 톤으로 답변 🐻\n"
+            "2. 어려운 은행 용어는 쉬운 표현과 함께 설명\n"
+            "3. 반드시 다음 순서로 구성:\n"
+            "   - ① 핵심 개념 요약 (한 문단) 🐼\n"
+            "   - ② 실제 현장 예시 (구체적인 상황이나 숫자 포함) 🐻‍❄️\n"
+            "   - ③ 실무 유의사항 (주의할 점이나 팁) 🐻\n"
+            "4. 답변은 3-4문단 이내로 간결하게\n"
+            "5. 신입사원이 회사에 자연스럽게 적응할 수 있도록 격려하는 톤 유지\n"
+            "6. 답변에 참고자료나 출처 정보는 절대 포함하지 마세요\n\n"
+            "답변:"
+        )
         
         # RAG 답변 생성
         rag_answer = self._call_gpt(rag_prompt)
@@ -379,7 +379,7 @@ class RAGService:
         if is_rag_adequate and context_docs:
             # RAG 답변이 적절하면 그대로 사용
             # 고품질 문서만 참고자료로 사용 (임계값 낮춤)
-            high_quality_docs = [doc for doc in context_docs if doc.get('similarity', 0) >= 0.75]
+            high_quality_docs = [doc for doc in context_docs if doc.get('similarity', 0) >= 0.50]
             
             # 참고자료 없이 답변만 사용
             final_answer = rag_answer
@@ -477,13 +477,13 @@ class RAGService:
                 print(f"Negative indicator found: {indicator}")
                 return False
 
-        # 유사도 임계값을 0.75로 낮춰서 더 많은 문서를 허용 (RAG 가중치 증가)
-        if context_docs and all(doc.get('similarity', 0) < 0.75 for doc in context_docs):
+        # 유사도 임계값을 0.60으로 완화하여 더 많은 문서를 허용
+        if context_docs and all(doc.get('similarity', 0) < 0.40 for doc in context_docs):
             print("All documents have low similarity")
             return False
 
-        # 관련성 높은 문서가 있는지 확인 (임계값 낮춤)
-        high_quality_docs = [doc for doc in context_docs if doc.get('similarity', 0) >= 0.75]
+        # 관련성 높은 문서가 있는지 확인 (임계값 0.60으로 완화)
+        high_quality_docs = [doc for doc in context_docs if doc.get('similarity', 0) >= 0.40]
         if not high_quality_docs:
             print("No high-quality relevant documents found")
             return False
