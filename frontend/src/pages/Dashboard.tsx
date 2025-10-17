@@ -541,19 +541,14 @@ function MentorDashboard({ data }: any) {
       <h1 className="text-3xl font-bold text-gray-900">멘토 대시보드</h1>
 
       {/* Stats */}
-      <div className="grid md:grid-cols-4 gap-6">
+      <div className="grid md:grid-cols-3 gap-6">
         <StatCard
           icon={UserIcon}
           title="담당 멘티"
           value={data?.mentees?.length || 0}
           color="primary"
         />
-        <StatCard
-          icon={ChatBubbleBottomCenterTextIcon}
-          title="자주 묻는 질문"
-          value={data?.frequent_questions?.length || 0}
-          color="amber"
-        />
+        {/* 자주 묻는 질문 카드 제거 */}
         <StatCard
           icon={AcademicCapIcon}
           title="평균 성적"
@@ -631,7 +626,7 @@ function MentorDashboard({ data }: any) {
         />
       )}
 
-      {/* Mentee Select Modal */}
+      {/* 멘티 선택 모달 */}
       {showMenteeSelectModal && (
         <MenteeSelectModal
           availableMentees={availableMentees}
@@ -641,30 +636,7 @@ function MentorDashboard({ data }: any) {
         />
       )}
 
-      {/* Frequent Questions */}
-      {data?.frequent_questions && data.frequent_questions.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl shadow-lg p-8 border border-primary-100"
-        >
-          <div className="flex items-center mb-6">
-            <img src="/assets/bear.png" alt="하경곰" className="w-8 h-8 mr-3 rounded-full" />
-            <h2 className="text-2xl font-bold text-bank-800">담당 멘티 자주 묻는 질문</h2>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            {data.frequent_questions.slice(0, 20).map((item: any, idx: number) => (
-              <span
-                key={idx}
-                className="px-4 py-2 bg-gradient-to-r from-primary-100 to-amber-100 text-primary-800 rounded-xl text-sm font-medium border border-primary-200 hover:shadow-md transition-all duration-200"
-                style={{ fontSize: `${Math.min(16, 12 + item.count / 2)}px` }}
-              >
-                {item.word} ({item.count})
-              </span>
-            ))}
-          </div>
-        </motion.div>
-      )}
+      {/* 자주 묻는 질문 섹션 제거 */}
     </div>
   )
 }
@@ -1016,7 +988,8 @@ function FeedbackCard({ feedback, index, currentTime }: any) {
     try {
       // 항상 현재 시간을 새로 가져와서 계산
       const now = new Date()
-      const feedbackDate = new Date(createdAt)
+      // UTC 시간 문자열을 로컬 시간으로 변환
+      const feedbackDate = new Date(createdAt + (createdAt.includes('Z') ? '' : 'Z'))
       
       // 유효한 날짜인지 확인
       if (isNaN(feedbackDate.getTime())) {
@@ -1606,7 +1579,7 @@ function MentorMenteeRelationTab({
                       </p>
                     )}
                     <p className="text-xs text-gray-500 mt-1">
-                      매칭일: {match.matched_at ? new Date(match.matched_at).toLocaleDateString('ko-KR') : '알 수 없음'}
+                      매칭일: {match.matched_at ? new Date(match.matched_at + (match.matched_at.includes('Z') ? '' : 'Z')).toLocaleDateString('ko-KR') : '알 수 없음'}
                     </p>
                   </div>
                   <button
@@ -1938,7 +1911,7 @@ function UserManagementTab() {
                       </select>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(user.created_at).toLocaleDateString()}
+                      {new Date(user.created_at + (user.created_at.includes('Z') ? '' : 'Z')).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button className="text-primary-600 hover:text-primary-900">
@@ -2088,7 +2061,7 @@ function LearningHistoryTab() {
                       {item.user_message}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(item.created_at).toLocaleString()}
+                      {new Date(item.created_at + (item.created_at.includes('Z') ? '' : 'Z')).toLocaleString()}
                     </td>
                   </tr>
                 ))}
@@ -2227,7 +2200,7 @@ function DocumentManagementTab() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(doc.upload_date).toLocaleDateString()}
+                      {new Date(doc.upload_date + (doc.upload_date.includes('Z') ? '' : 'Z')).toLocaleDateString()}
                     </td>
                   </tr>
                 ))}
@@ -2362,7 +2335,7 @@ function SystemLogTab() {
                       {log.details ? JSON.stringify(log.details) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(log.timestamp).toLocaleString()}
+                      {new Date(log.timestamp + (log.timestamp.includes('Z') ? '' : 'Z')).toLocaleString()}
                     </td>
                   </tr>
                 ))}
