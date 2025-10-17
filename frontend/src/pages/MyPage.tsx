@@ -1,5 +1,16 @@
 import { useState, useRef } from 'react';
-import { UserCircleIcon, QrCodeIcon } from '@heroicons/react/24/outline';
+import { 
+  UserCircleIcon, 
+  QrCodeIcon, 
+  XMarkIcon, 
+  PencilIcon, 
+  EnvelopeIcon, 
+  UserIcon, 
+  PhoneIcon, 
+  EyeIcon, 
+  EyeSlashIcon 
+} from '@heroicons/react/24/outline';
+import { motion } from 'framer-motion';
 import { useAuthStore } from '../store/authStore';
 import { authAPI } from '../utils/api';
 import { QRCodeSVG } from 'qrcode.react';
@@ -9,6 +20,9 @@ export default function MyPage() {
   const [photoUrl, setPhotoUrl] = useState(user?.photo_url || '');
   const [uploading, setUploading] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // 편집 폼 데이터
