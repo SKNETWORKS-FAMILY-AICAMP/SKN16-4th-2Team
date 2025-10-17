@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { 
   UserCircleIcon, 
   PencilIcon, 
@@ -10,7 +10,8 @@ import {
   EnvelopeIcon,
   UserIcon,
   ArrowPathIcon,
-  QrCodeIcon
+  QrCodeIcon,
+  CameraIcon
 } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../store/authStore';
 import { authAPI } from '../utils/api';
@@ -26,6 +27,14 @@ export default function MyPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 웹캠 촬영 관련 상태
+  const [showCamera, setShowCamera] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [currentFilter, setCurrentFilter] = useState('none');
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   
   // 편집 폼 데이터
   const [editForm, setEditForm] = useState({
@@ -90,6 +99,142 @@ export default function MyPage() {
       reader.readAsDataURL(file)
     } catch {}
   };
+
+  // 웹캠 시작
+  const startCamera = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: 'user'
+        }
+      });
+      setStream(mediaStream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+    } catch (err) {
+      console.error('Camera error:', err);
+      alert('카메라에 접근할 수 없습니다. 권한을 확인해주세요.');
+      setShowCamera(false);
+    }
+  };
+
+  // 웹캠 중지
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  };
+
+  // 사진 촬영
+  const capturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    
+    // Canvas 크기 설정
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // 필터 적용
+    ctx.filter = getFilterStyle(currentFilter);
+    
+    // 좌우 반전 (거울 효과)
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    
+    // 비디오 프레임 캡처
+    ctx.drawImage(video, 0, 0);
+    
+    // 이미지 데이터 추출
+    const imageData = canvas.toDataURL('image/jpeg', 0.9);
+    setCapturedImage(imageData);
+  };
+
+  // 필터 스타일 반환
+  const getFilterStyle = (filter: string) => {
+    const filters: Record<string, string> = {
+      'none': 'none',
+      'grayscale': 'grayscale(100%)',
+      'sepia': 'sepia(100%)',
+      'bright': 'brightness(1.3)',
+      'dark': 'brightness(0.7)',
+      'contrast': 'contrast(1.5)',
+      'blur': 'blur(2px)',
+      'vintage': 'sepia(50%) contrast(1.2) brightness(0.9)',
+      'cool': 'hue-rotate(180deg) saturate(1.5)',
+      'warm': 'sepia(30%) saturate(1.3)',
+    };
+    return filters[filter] || 'none';
+  };
+
+  // 촬영된 사진 사용
+  const useCapturedPhoto = () => {
+    if (capturedImage) {
+      setPhotoUrl(capturedImage);
+      updateUser({ ...user, photo_url: capturedImage });
+      handleCloseCamera();
+    }
+  };
+
+  // 카메라 모달 닫기
+  const handleCloseCamera = () => {
+    stopCamera();
+    setShowCamera(false);
+    setCapturedImage(null);
+    setCurrentFilter('none');
+  };
+
+  // 카메라 모달 열기
+  const handleOpenCamera = () => {
+    setShowCamera(true);
+    setCapturedImage(null);
+  };
+
+  // useEffect: 카메라 시작 및 정리
+  useEffect(() => {
+    if (showCamera && !capturedImage) {
+      startCamera();
+    }
+    
+    return () => {
+      stopCamera();
+    };
+  }, [showCamera]);
+
+  // useEffect: 키보드 단축키 (ESC, Space)
+  useEffect(() => {
+    if (!showCamera) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // ESC: 모달 닫기
+      if (e.key === 'Escape') {
+        handleCloseCamera();
+      }
+      // Space: 사진 촬영 (촬영 전에만)
+      if (e.key === ' ' || e.code === 'Space') {
+        e.preventDefault(); // 스크롤 방지
+        if (!capturedImage) {
+          capturePhoto();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showCamera, capturedImage]);
 
   // 편집 모드 토글
   const handleEditToggle = () => {
@@ -285,10 +430,11 @@ export default function MyPage() {
                   <UserCircleIcon className="w-20 h-20 text-gray-300" />
           )}
               </div>
+          {/* 파일 업로드 버튼 */}
           <button
                 className="absolute bottom-2 right-2 bg-blue-500 text-white rounded-full p-2 shadow-lg hover:bg-blue-600 focus:outline-none transition-colors"
             onClick={() => fileInputRef.current?.click()}
-            title="프로필 이미지 업로드"
+            title="파일에서 업로드"
             type="button"
                 disabled={uploading}
               >
@@ -297,6 +443,16 @@ export default function MyPage() {
                 ) : (
                   <PencilIcon className="w-5 h-5" />
                 )}
+          </button>
+          
+          {/* 카메라 촬영 버튼 */}
+          <button
+            className="absolute bottom-2 right-14 bg-green-500 text-white rounded-full p-2 shadow-lg hover:bg-green-600 focus:outline-none transition-colors"
+            onClick={handleOpenCamera}
+            title="카메라로 촬영"
+            type="button"
+          >
+            <CameraIcon className="w-5 h-5" />
           </button>
           {photoUrl && (
             <button
@@ -696,6 +852,146 @@ export default function MyPage() {
           </div>
         )}
       </div>
+
+      {/* 웹캠 촬영 모달 */}
+      {showCamera && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden">
+            {/* 모달 헤더 */}
+            <div className="bg-gradient-to-r from-green-600 to-green-700 p-4 text-white">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CameraIcon className="w-6 h-6" />
+                  <div>
+                    <h3 className="text-xl font-bold">프로필 사진 촬영</h3>
+                    <p className="text-xs text-green-100 mt-0.5">
+                      {capturedImage ? '촬영 완료! 사진을 확인하세요' : 'Space: 촬영 | ESC: 닫기'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleCloseCamera}
+                  className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+                  title="닫기 (ESC)"
+                >
+                  <XMarkIcon className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* 모달 본문 */}
+            <div className="p-4">
+              {!capturedImage ? (
+                <>
+                  {/* 웹캠 미리보기 */}
+                  <div className="relative bg-black rounded-xl overflow-hidden mb-4">
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full aspect-video object-cover"
+                      style={{ 
+                        filter: getFilterStyle(currentFilter),
+                        transform: 'scaleX(-1)' // 거울 효과
+                      }}
+                    />
+                    {/* 원형 가이드라인 */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="w-48 h-48 rounded-full border-4 border-white border-dashed opacity-50"></div>
+                    </div>
+                    <div className="absolute bottom-3 left-3 bg-black/50 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-xs">
+                      <p>얼굴을 원 안에 맞춰주세요</p>
+                    </div>
+                  </div>
+
+                  {/* 필터 선택 */}
+                  <div className="mb-4">
+                    <h4 className="text-xs font-semibold text-gray-700 mb-2">필터 효과</h4>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {[
+                        { id: 'none', label: '원본', icon: '🌈' },
+                        { id: 'grayscale', label: '흑백', icon: '⬛' },
+                        { id: 'sepia', label: '세피아', icon: '📜' },
+                        { id: 'bright', label: '밝게', icon: '☀️' },
+                        { id: 'dark', label: '어둡게', icon: '🌙' },
+                        { id: 'contrast', label: '대비', icon: '⚡' },
+                        { id: 'blur', label: '부드럽게', icon: '💫' },
+                        { id: 'vintage', label: '빈티지', icon: '📷' },
+                        { id: 'cool', label: '쿨톤', icon: '❄️' },
+                        { id: 'warm', label: '따뜻하게', icon: '🔥' },
+                      ].map((filter) => (
+                        <button
+                          key={filter.id}
+                          onClick={() => setCurrentFilter(filter.id)}
+                          className={`p-2 rounded-lg border-2 transition-all ${
+                            currentFilter === filter.id
+                              ? 'border-green-500 bg-green-50 shadow-md'
+                              : 'border-gray-200 hover:border-green-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="text-xl mb-0.5">{filter.icon}</div>
+                          <div className="text-[10px] font-medium text-gray-700">{filter.label}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 촬영 및 취소 버튼 */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleCloseCamera}
+                      className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
+                      title="취소 (ESC)"
+                    >
+                      <XMarkIcon className="w-5 h-5" />
+                      취소
+                    </button>
+                    <button
+                      onClick={capturePhoto}
+                      className="flex-[2] py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2 shadow-lg"
+                      title="촬영 (Space)"
+                    >
+                      <CameraIcon className="w-5 h-5" />
+                      📸 촬영
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* 촬영된 사진 미리보기 */}
+                  <div className="mb-4">
+                    <img
+                      src={capturedImage}
+                      alt="촬영된 사진"
+                      className="w-full rounded-xl shadow-lg"
+                    />
+                  </div>
+
+                  {/* 버튼들 */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setCapturedImage(null)}
+                      className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+                    >
+                      다시 촬영
+                    </button>
+                    <button
+                      onClick={useCapturedPhoto}
+                      className="flex-1 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors"
+                    >
+                      사용하기
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+          
+          {/* 숨겨진 Canvas (캡처용) */}
+          <canvas ref={canvasRef} className="hidden" />
+        </div>
+      )}
     </div>
   );
 }

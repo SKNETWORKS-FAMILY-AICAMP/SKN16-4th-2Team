@@ -1016,7 +1016,8 @@ function FeedbackCard({ feedback, index, currentTime }: any) {
     try {
       // 항상 현재 시간을 새로 가져와서 계산
       const now = new Date()
-      const feedbackDate = new Date(createdAt)
+      // UTC 시간 문자열을 로컬 시간으로 변환
+      const feedbackDate = new Date(createdAt + (createdAt.includes('Z') ? '' : 'Z'))
       
       // 유효한 날짜인지 확인
       if (isNaN(feedbackDate.getTime())) {
@@ -1604,7 +1605,7 @@ function MentorMenteeRelationTab({
                       </p>
                     )}
                     <p className="text-xs text-gray-500 mt-1">
-                      매칭일: {match.matched_at ? new Date(match.matched_at).toLocaleDateString('ko-KR') : '알 수 없음'}
+                      매칭일: {match.matched_at ? new Date(match.matched_at + (match.matched_at.includes('Z') ? '' : 'Z')).toLocaleDateString('ko-KR') : '알 수 없음'}
                     </p>
                   </div>
                   <button
@@ -1936,7 +1937,7 @@ function UserManagementTab() {
                       </select>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(user.created_at).toLocaleDateString()}
+                      {new Date(user.created_at + (user.created_at.includes('Z') ? '' : 'Z')).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button className="text-primary-600 hover:text-primary-900">
@@ -2086,7 +2087,7 @@ function LearningHistoryTab() {
                       {item.user_message}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(item.created_at).toLocaleString()}
+                      {new Date(item.created_at + (item.created_at.includes('Z') ? '' : 'Z')).toLocaleString()}
                     </td>
                   </tr>
                 ))}
@@ -2225,7 +2226,7 @@ function DocumentManagementTab() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(doc.upload_date).toLocaleDateString()}
+                      {new Date(doc.upload_date + (doc.upload_date.includes('Z') ? '' : 'Z')).toLocaleDateString()}
                     </td>
                   </tr>
                 ))}
@@ -2360,7 +2361,7 @@ function SystemLogTab() {
                       {log.details ? JSON.stringify(log.details) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(log.timestamp).toLocaleString()}
+                      {new Date(log.timestamp + (log.timestamp.includes('Z') ? '' : 'Z')).toLocaleString()}
                     </td>
                   </tr>
                 ))}
