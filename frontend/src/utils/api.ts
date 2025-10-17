@@ -244,6 +244,12 @@ export const dashboardAPI = {
     const response = await api.get('/dashboard/mentor')
     return response.data
   },
+
+  // 동료의 새로운 매칭 관련 API들
+  getMatchingDashboard: async () => {
+    const response = await api.get('/dashboard/matching')
+    return response.data
+  },
   
   assignMentor: async (menteeId: number, mentorId: number, notes: string = '') => {
     const response = await api.post('/dashboard/assign-mentor', { 
@@ -251,6 +257,21 @@ export const dashboardAPI = {
       mentor_id: mentorId,
       notes
     })
+    return response.data
+  },
+
+  unassignMentor: async (relationId: number) => {
+    const response = await api.delete(`/dashboard/mentor-relations/${relationId}`)
+    return response.data
+  },
+
+  getAvailableMentees: async () => {
+    const response = await api.get('/dashboard/available-mentees')
+    return response.data
+  },
+
+  selectMentee: async (menteeId: number) => {
+    const response = await api.post('/dashboard/select-mentee', { mentee_id: menteeId })
     return response.data
   },
   

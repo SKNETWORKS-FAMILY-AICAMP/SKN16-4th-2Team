@@ -980,3 +980,146 @@ async def get_available_mentees(
     
     return {"available_mentees": available_mentees}
 
+
+@router.get("/matching")
+async def get_matching_dashboard(
+    current_user: User = Depends(get_current_active_admin),
+    session: Session = Depends(get_session)
+):
+    """
+    관리자 매칭 대시보드 데이터
+    - 전체 멘토/멘티 목록
+    - 현재 매칭 현황
+    - 매칭 통계
+    """
+    # 전체 멘토 목록
+    mentors_statement = select(User).where(User.role == "MENTOR")
+    mentors = session.exec(mentors_statement).all()
+    
+    # 전체 멘티 목록
+    mentees_statement = select(User).where(User.role == "MENTEE")
+    mentees = session.exec(mentees_statement).all()
+    
+    # 현재 매칭 현황
+    relations_statement = select(MentorMenteeRelation).where(MentorMenteeRelation.is_active == True)
+    relations = session.exec(relations_statement).all()
+    
+    # 매칭된 멘티 ID 목록
+    matched_mentee_ids = {relation.mentee_id for relation in relations}
+    
+    # 매칭 통계 계산
+    total_mentors = len(mentors)
+    total_mentees = len(mentees)
+    assigned_mentees = len(matched_mentee_ids)
+    unassigned_mentees = total_mentees - assigned_mentees
+    
+    # 멘토별 현재 멘티 수 계산
+    mentor_mentee_counts = {}
+    for relation in relations:
+        if relation.mentor_id not in mentor_mentee_counts:
+            mentor_mentee_counts[relation.mentor_id] = 0
+        mentor_mentee_counts[relation.mentor_id] += 1
+    
+    # 멘토 목록에 현재 멘티 수 추가
+    mentors_data = []
+    for mentor in mentors:
+        mentors_data.append({
+            "id": mentor.id,
+            "name": mentor.name,
+            "email": mentor.email,
+            "team": mentor.team,
+            "current_mentee_count": mentor_mentee_counts.get(mentor.id, 0),
+            "is_available": mentor_mentee_counts.get(mentor.id, 0) < 3  # 최대 3명까지 담당 가능
+        })
+    
+    # 멘티 목록에 매칭 상태 추가
+    mentees_data = []
+    for mentee in mentees:
+        # 현재 멘토 찾기
+        current_mentor = None
+        for relation in relations:
+            if relation.mentee_id == mentee.id:
+                mentor_statement = select(User).where(User.id == relation.mentor_id)
+                mentor = session.exec(mentor_statement).first()
+                if mentor:
+                    current_mentor = {
+                        "id": mentor.id,
+                        "name": mentor.name,
+                        "email": mentor.email
+                    }
+                break
+        
+        mentees_data.append({
+            "id": mentee.id,
+            "name": mentee.name,
+            "email": mentee.email,
+            "team": mentee.team,
+            "is_assigned": mentee.id in matched_mentee_ids,
+            "current_mentor": current_mentor
+        })
+    
+    # 현재 매칭 목록
+    current_matches = []
+    for relation in relations:
+        mentor_statement = select(User).where(User.id == relation.mentor_id)
+        mentor = session.exec(mentor_statement).first()
+        
+        mentee_statement = select(User).where(User.id == relation.mentee_id)
+        mentee = session.exec(mentee_statement).first()
+        
+        if mentor and mentee:
+            current_matches.append({
+                "relation_id": relation.id,
+                "mentor": {
+                    "id": mentor.id,
+                    "name": mentor.name,
+                    "email": mentor.email
+                },
+                "mentee": {
+                    "id": mentee.id,
+                    "name": mentee.name,
+                    "email": mentee.email
+                },
+                "matched_at": relation.matched_at,
+                "notes": relation.notes
+            })
+    
+    return {
+        "statistics": {
+            "total_mentors": total_mentors,
+            "total_mentees": total_mentees,
+            "assigned_mentees": assigned_mentees,
+            "unassigned_mentees": unassigned_mentees
+        },
+        "mentors": mentors_data,
+        "mentees": mentees_data,
+        "current_matches": current_matches
+    }
+
+
+@router.delete("/mentor-relations/{relation_id}")
+async def unassign_mentor(
+    relation_id: int,
+    current_user: User = Depends(get_current_active_admin),
+    session: Session = Depends(get_session)
+):
+    """
+    멘토-멘티 관계 해제 (관리자 전용)
+    """
+    # 관계 조회
+    relation_statement = select(MentorMenteeRelation).where(MentorMenteeRelation.id == relation_id)
+    relation = session.exec(relation_statement).first()
+    
+    if not relation:
+        raise HTTPException(status_code=404, detail="관계를 찾을 수 없습니다")
+    
+    if not relation.is_active:
+        raise HTTPException(status_code=400, detail="이미 비활성화된 관계입니다")
+    
+    # 관계 비활성화
+    relation.is_active = False
+    session.add(relation)
+    session.commit()
+    session.refresh(relation)
+    
+    return {"message": "멘토-멘티 관계가 성공적으로 해제되었습니다"}
