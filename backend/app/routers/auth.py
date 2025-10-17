@@ -324,3 +324,65 @@ async def delete_profile_photo(
     session.refresh(current_user)
 
     return {"message": "profile photo reset", "photo_url": None}
+
+
+@router.post("/qr-login", response_model=Token)
+async def qr_login(
+    qr_data: str,
+    session: Session = Depends(get_session)
+):
+    """
+    QR 로그인 (비밀번호 불필요)
+    - QR 코드에서 이메일 추출
+    - JWT 토큰 발급
+    """
+    try:
+        # QR 데이터 파싱: "qr-login:email"
+        parts = qr_data.split(":", 1)  # 최대 2개로 분할 (이메일에 :가 없다고 가정)
+        
+        if len(parts) < 2 or parts[0] != "qr-login":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid QR code format"
+            )
+        
+        email = parts[1]
+        
+        # 사용자 조회
+        statement = select(User).where(User.email == email)
+        user = session.exec(statement).first()
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        # 비활성 사용자 확인
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Inactive user"
+            )
+        
+        # 토큰 생성
+        access_token = create_access_token(
+            data={"sub": user.email, "role": user.role}
+        )
+        refresh_token = create_refresh_token(
+            data={"sub": user.email, "role": user.role}
+        )
+        
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid QR code: {str(e)}"
+        )
