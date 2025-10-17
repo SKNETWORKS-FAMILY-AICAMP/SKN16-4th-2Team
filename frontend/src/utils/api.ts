@@ -305,5 +305,110 @@ export const dashboardAPI = {
   },
 }
 
+// 관리자 API
+export const adminAPI = {
+  // 통계
+  getStats: async () => {
+    const response = await api.get('/admin/stats')
+    return response.data
+  },
+  
+  // 사용자 관리
+  getAllUsers: async (skip: number = 0, limit: number = 100, role?: string, search?: string) => {
+    const params = new URLSearchParams({
+      skip: skip.toString(),
+      limit: limit.toString()
+    })
+    if (role) params.append('role', role)
+    if (search) params.append('search', search)
+    
+    const response = await api.get(`/admin/users?${params}`)
+    return response.data
+  },
+  
+  updateUserRole: async (userId: number, newRole: string) => {
+    const response = await api.post(`/admin/users/${userId}/role`, { new_role: newRole })
+    return response.data
+  },
+  
+  // 멘토-멘티 관계 관리
+  getMentorMenteeRelations: async (skip: number = 0, limit: number = 100, isActive?: boolean) => {
+    const params = new URLSearchParams({
+      skip: skip.toString(),
+      limit: limit.toString()
+    })
+    if (isActive !== undefined) params.append('is_active', isActive.toString())
+    
+    const response = await api.get(`/admin/mentor-mentee-relations?${params}`)
+    return response.data
+  },
+  
+  createMentorMenteeRelation: async (mentorId: number, menteeId: number, notes?: string) => {
+    const response = await api.post('/admin/mentor-mentee-relations', {
+      mentor_id: mentorId,
+      mentee_id: menteeId,
+      notes
+    })
+    return response.data
+  },
+  
+  deactivateMentorMenteeRelation: async (relationId: number) => {
+    const response = await api.delete(`/admin/mentor-mentee-relations/${relationId}`)
+    return response.data
+  },
+  
+  // 학습 이력 관리
+  getLearningHistory: async (
+    userId?: number,
+    startDate?: string,
+    endDate?: string,
+    skip: number = 0,
+    limit: number = 100
+  ) => {
+    const params = new URLSearchParams({
+      skip: skip.toString(),
+      limit: limit.toString()
+    })
+    if (userId) params.append('user_id', userId.toString())
+    if (startDate) params.append('start_date', startDate)
+    if (endDate) params.append('end_date', endDate)
+    
+    const response = await api.get(`/admin/learning-history?${params}`)
+    return response.data
+  },
+  
+  // 문서 관리
+  getAllDocuments: async (skip: number = 0, limit: number = 100, category?: string) => {
+    const params = new URLSearchParams({
+      skip: skip.toString(),
+      limit: limit.toString()
+    })
+    if (category) params.append('category', category)
+    
+    const response = await api.get(`/admin/documents?${params}`)
+    return response.data
+  },
+  
+  // 시스템 로그
+  getSystemLogs: async (
+    logType?: string,
+    startDate?: string,
+    endDate?: string,
+    skip: number = 0,
+    limit: number = 100
+  ) => {
+    const params = new URLSearchParams({
+      skip: skip.toString(),
+      limit: limit.toString()
+    })
+    if (logType) params.append('log_type', logType)
+    if (startDate) params.append('start_date', startDate)
+    if (endDate) params.append('end_date', endDate)
+    
+    const response = await api.get(`/admin/system-logs?${params}`)
+    return response.data
+  },
+}
+
 export default api
 

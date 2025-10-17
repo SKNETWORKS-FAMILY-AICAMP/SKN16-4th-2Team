@@ -4,7 +4,7 @@
  */
 import { useState, useEffect } from 'react'
 import { useAuthStore } from '../store/authStore'
-import { dashboardAPI } from '../utils/api'
+import { dashboardAPI, adminAPI } from '../utils/api'
 import { 
   UserIcon,
   AcademicCapIcon,
@@ -79,8 +79,10 @@ export default function Dashboard() {
 
   if (user?.role === 'mentee') {
     return <MenteeDashboard data={data} currentTime={currentTime} />
-  } else if (user?.role === 'mentor' || user?.role === 'admin') {
+  } else if (user?.role === 'mentor') {
     return <MentorDashboard data={data} />
+  } else if (user?.role === 'admin') {
+    return <AdminDashboard data={data} />
   }
 
   return null
@@ -1052,6 +1054,817 @@ function StatCard({ icon: Icon, title, value, color }: any) {
       <Icon className="w-12 h-12 mb-4 opacity-80" />
       <p className="text-white/90 mb-1 font-medium">{title}</p>
       <p className="text-3xl font-bold">{value}</p>
+    </div>
+  )
+}
+
+// 관리자 대시보드 컴포넌트
+function AdminDashboard({ data }: any) {
+  const [activeTab, setActiveTab] = useState(0)
+  const [userStats, setUserStats] = useState({
+    totalUsers: 0,
+    mentors: 0,
+    mentees: 0,
+    activeRelations: 0
+  })
+  const [recentActivities, setRecentActivities] = useState([])
+
+  useEffect(() => {
+    loadAdminStats()
+  }, [])
+
+  const loadAdminStats = async () => {
+    try {
+      const stats = await adminAPI.getStats()
+      setUserStats({
+        totalUsers: stats.users.total,
+        mentors: stats.users.mentors,
+        mentees: stats.users.mentees,
+        activeRelations: stats.users.active_relations
+      })
+    } catch (error) {
+      console.error('관리자 통계 로드 실패:', error)
+      // 에러 시 기본값 설정
+      setUserStats({
+        totalUsers: 0,
+        mentors: 0,
+        mentees: 0,
+        activeRelations: 0
+      })
+    }
+  }
+
+  const tabs = [
+    { name: '사용자 관리', icon: UserIcon },
+    { name: '멘토-멘티 관계', icon: AcademicCapIcon },
+    { name: '학습 이력', icon: ChartBarIcon },
+    { name: '문서 관리', icon: PaperAirplaneIcon },
+    { name: '시스템 로그', icon: EyeIcon }
+  ]
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold text-gray-900">관리자 대시보드</h1>
+
+      {/* 전체 통계 */}
+      <div className="grid md:grid-cols-4 gap-6">
+        <StatCard
+          icon={UserIcon}
+          title="전체 사용자"
+          value={userStats.totalUsers}
+          color="primary"
+        />
+        <StatCard
+          icon={AcademicCapIcon}
+          title="멘토 수"
+          value={userStats.mentors}
+          color="amber"
+        />
+        <StatCard
+          icon={LightBulbIcon}
+          title="멘티 수"
+          value={userStats.mentees}
+          color="bank"
+        />
+        <StatCard
+          icon={StarIcon}
+          title="활성 매칭"
+          value={userStats.activeRelations}
+          color="success"
+        />
+      </div>
+
+      {/* 탭 네비게이션 */}
+      <div className="bg-white rounded-2xl shadow-lg border border-primary-100">
+        <div className="border-b border-gray-200">
+          <nav className="flex space-x-8 px-6">
+            {tabs.map((tab, index) => (
+              <button
+                key={index}
+                onClick={() => setActiveTab(index)}
+                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${
+                  activeTab === index
+                    ? 'border-primary-500 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <tab.icon className="w-5 h-5" />
+                {tab.name}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* 탭 콘텐츠 */}
+        <div className="p-6">
+          {activeTab === 0 && <UserManagementTab />}
+          {activeTab === 1 && <MentorMenteeRelationTab />}
+          {activeTab === 2 && <LearningHistoryTab />}
+          {activeTab === 3 && <DocumentManagementTab />}
+          {activeTab === 4 && <SystemLogTab />}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// 사용자 관리 탭
+function UserManagementTab() {
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [roleFilter, setRoleFilter] = useState('')
+
+  useEffect(() => {
+    loadUsers()
+  }, [searchTerm, roleFilter])
+
+  const loadUsers = async () => {
+    try {
+      setLoading(true)
+      const response = await adminAPI.getAllUsers(0, 100, roleFilter || undefined, searchTerm || undefined)
+      setUsers(response.users || [])
+    } catch (error) {
+      console.error('사용자 목록 로드 실패:', error)
+      setUsers([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleRoleChange = async (userId: number, newRole: string) => {
+    try {
+      await adminAPI.updateUserRole(userId, newRole)
+      alert('사용자 역할이 성공적으로 변경되었습니다.')
+      loadUsers() // 목록 새로고침
+    } catch (error) {
+      console.error('역할 변경 실패:', error)
+      alert('역할 변경에 실패했습니다.')
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold text-gray-900">사용자 관리</h2>
+        <button className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors">
+          새 사용자 추가
+        </button>
+      </div>
+      
+      {/* 검색 및 필터 */}
+      <div className="flex gap-4">
+        <input
+          type="text"
+          placeholder="이름 또는 이메일 검색..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+        />
+        <select
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+        >
+          <option value="">전체 역할</option>
+          <option value="admin">관리자</option>
+          <option value="mentor">멘토</option>
+          <option value="mentee">멘티</option>
+        </select>
+      </div>
+
+      {/* 사용자 목록 */}
+      {loading ? (
+        <div className="flex justify-center items-center h-32">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        </div>
+      ) : users.length > 0 ? (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    사용자
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    이메일
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    역할
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    가입일
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    작업
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {users.map((user: any) => (
+                  <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10">
+                          {user.photo_url ? (
+                            <img className="h-10 w-10 rounded-full" src={user.photo_url} alt="" />
+                          ) : (
+                            <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
+                              <UserIcon className="h-6 w-6 text-primary-600" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                          <div className="text-sm text-gray-500">{user.employee_number || '사원번호 없음'}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {user.email}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <select
+                        value={user.role}
+                        onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                        className="text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      >
+                        <option value="admin">관리자</option>
+                        <option value="mentor">멘토</option>
+                        <option value="mentee">멘티</option>
+                      </select>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(user.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button className="text-primary-600 hover:text-primary-900">
+                        상세보기
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-gray-50 rounded-lg p-8 text-center">
+          <UserIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600">사용자를 찾을 수 없습니다.</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// 멘토-멘티 관계 탭
+function MentorMenteeRelationTab() {
+  const [relations, setRelations] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+
+  useEffect(() => {
+    loadRelations()
+  }, [])
+
+  const loadRelations = async () => {
+    try {
+      setLoading(true)
+      const response = await adminAPI.getMentorMenteeRelations()
+      setRelations(response.relations || [])
+    } catch (error) {
+      console.error('멘토-멘티 관계 로드 실패:', error)
+      setRelations([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeactivateRelation = async (relationId: number) => {
+    if (confirm('정말로 이 관계를 비활성화하시겠습니까?')) {
+      try {
+        await adminAPI.deactivateMentorMenteeRelation(relationId)
+        alert('관계가 성공적으로 비활성화되었습니다.')
+        loadRelations() // 목록 새로고침
+      } catch (error) {
+        console.error('관계 비활성화 실패:', error)
+        alert('관계 비활성화에 실패했습니다.')
+      }
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold text-gray-900">멘토-멘티 관계 관리</h2>
+        <button 
+          onClick={() => setShowCreateModal(true)}
+          className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
+        >
+          새 매칭 생성
+        </button>
+      </div>
+      
+      {/* 관계 목록 */}
+      {loading ? (
+        <div className="flex justify-center items-center h-32">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        </div>
+      ) : relations.length > 0 ? (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    멘토
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    멘티
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    매칭일
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    상태
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    메모
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    작업
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {relations.map((relation: any) => (
+                  <tr key={relation.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{relation.mentor_name}</div>
+                      <div className="text-sm text-gray-500">{relation.mentor_email}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {/* 멘티 정보는 별도로 가져와야 함 */}
+                      멘티 ID: {relation.mentee_id}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(relation.matched_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        relation.is_active 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {relation.is_active ? '활성' : '비활성'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                      {relation.notes || '메모 없음'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      {relation.is_active && (
+                        <button 
+                          onClick={() => handleDeactivateRelation(relation.id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          비활성화
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-gray-50 rounded-lg p-8 text-center">
+          <AcademicCapIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600">멘토-멘티 관계를 찾을 수 없습니다.</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// 학습 이력 탭
+function LearningHistoryTab() {
+  const [history, setHistory] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [userId, setUserId] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+
+  useEffect(() => {
+    loadHistory()
+  }, [userId, startDate, endDate])
+
+  const loadHistory = async () => {
+    try {
+      setLoading(true)
+      const response = await adminAPI.getLearningHistory(
+        userId ? parseInt(userId) : undefined,
+        startDate || undefined,
+        endDate || undefined
+      )
+      setHistory(response.history || [])
+    } catch (error) {
+      console.error('학습 이력 로드 실패:', error)
+      setHistory([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case 'chat': return '채팅'
+      case 'exam': return '시험'
+      case 'feedback': return '피드백'
+      default: return type
+    }
+  }
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'chat': return 'bg-blue-100 text-blue-800'
+      case 'exam': return 'bg-green-100 text-green-800'
+      case 'feedback': return 'bg-yellow-100 text-yellow-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold text-gray-900">학습 이력 관리</h2>
+        <div className="flex gap-2">
+          <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
+            엑셀 다운로드
+          </button>
+          <button className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors">
+            통계 보기
+          </button>
+        </div>
+      </div>
+      
+      {/* 필터 */}
+      <div className="flex gap-4">
+        <input
+          type="number"
+          placeholder="사용자 ID (선택사항)"
+          value={userId}
+          onChange={(e) => setUserId(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+        />
+        <input
+          type="date"
+          placeholder="시작 날짜"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+        />
+        <input
+          type="date"
+          placeholder="종료 날짜"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+        />
+      </div>
+
+      {/* 이력 목록 */}
+      {loading ? (
+        <div className="flex justify-center items-center h-32">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        </div>
+      ) : history.length > 0 ? (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    타입
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    사용자
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    내용
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    일시
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {history.map((item: any, index: number) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTypeColor(item.type)}`}>
+                        {getTypeLabel(item.type)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{item.user_name}</div>
+                      <div className="text-sm text-gray-500">ID: {item.user_id}</div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900 max-w-md truncate">
+                      {item.user_message}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(item.created_at).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-gray-50 rounded-lg p-8 text-center">
+          <ChartBarIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600">학습 이력을 찾을 수 없습니다.</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// 문서 관리 탭
+function DocumentManagementTab() {
+  const [documents, setDocuments] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [categoryFilter, setCategoryFilter] = useState('')
+
+  useEffect(() => {
+    loadDocuments()
+  }, [categoryFilter])
+
+  const loadDocuments = async () => {
+    try {
+      setLoading(true)
+      const response = await adminAPI.getAllDocuments(0, 100, categoryFilter || undefined)
+      setDocuments(response.documents || [])
+    } catch (error) {
+      console.error('문서 목록 로드 실패:', error)
+      setDocuments([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold text-gray-900">문서 관리</h2>
+        <div className="flex gap-2">
+          <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
+            문서 업로드
+          </button>
+          <button className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors">
+            카테고리 관리
+          </button>
+        </div>
+      </div>
+      
+      {/* 카테고리 필터 */}
+      <div className="flex gap-4">
+        <select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+        >
+          <option value="">전체 카테고리</option>
+          <option value="경제용어">경제용어</option>
+          <option value="은행산업 기본지식">은행산업 기본지식</option>
+          <option value="고객언어 가이드">고객언어 가이드</option>
+          <option value="은행법">은행법</option>
+          <option value="상품설명서">상품설명서</option>
+          <option value="서식">서식</option>
+          <option value="약관">약관</option>
+          <option value="FAQ">FAQ</option>
+        </select>
+      </div>
+
+      {/* 문서 목록 */}
+      {loading ? (
+        <div className="flex justify-center items-center h-32">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        </div>
+      ) : documents.length > 0 ? (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    제목
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    카테고리
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    파일 타입
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    크기
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    다운로드 수
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    인덱싱 상태
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    업로드일
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {documents.map((doc: any) => (
+                  <tr key={doc.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{doc.title}</div>
+                      {doc.description && (
+                        <div className="text-sm text-gray-500">{doc.description}</div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {doc.category}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {doc.file_type.toUpperCase()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {(doc.file_size / 1024 / 1024).toFixed(2)} MB
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {doc.download_count}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        doc.is_indexed 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {doc.is_indexed ? '완료' : '대기'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(doc.upload_date).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-gray-50 rounded-lg p-8 text-center">
+          <PaperAirplaneIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600">문서를 찾을 수 없습니다.</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// 시스템 로그 탭
+function SystemLogTab() {
+  const [logs, setLogs] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [logType, setLogType] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+
+  useEffect(() => {
+    loadLogs()
+  }, [logType, startDate, endDate])
+
+  const loadLogs = async () => {
+    try {
+      setLoading(true)
+      const response = await adminAPI.getSystemLogs(
+        logType || undefined,
+        startDate || undefined,
+        endDate || undefined
+      )
+      setLogs(response.logs || [])
+    } catch (error) {
+      console.error('시스템 로그 로드 실패:', error)
+      setLogs([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const getLogTypeColor = (type: string) => {
+    switch (type) {
+      case 'user_activity': return 'bg-blue-100 text-blue-800'
+      case 'chat_activity': return 'bg-green-100 text-green-800'
+      case 'system_error': return 'bg-red-100 text-red-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold text-gray-900">시스템 로그</h2>
+        <div className="flex gap-2">
+          <select 
+            value={logType}
+            onChange={(e) => setLogType(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2"
+          >
+            <option value="">전체 로그</option>
+            <option value="user_activity">사용자 활동</option>
+            <option value="chat_activity">채팅 활동</option>
+            <option value="system_error">시스템 오류</option>
+          </select>
+          <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
+            로그 다운로드
+          </button>
+        </div>
+      </div>
+      
+      {/* 날짜 필터 */}
+      <div className="flex gap-4">
+        <input
+          type="date"
+          placeholder="시작 날짜"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+        />
+        <input
+          type="date"
+          placeholder="종료 날짜"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+        />
+      </div>
+
+      {/* 로그 목록 */}
+      {loading ? (
+        <div className="flex justify-center items-center h-32">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        </div>
+      ) : logs.length > 0 ? (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    타입
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    메시지
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    상세 정보
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    시간
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {logs.map((log: any) => (
+                  <tr key={log.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getLogTypeColor(log.type)}`}>
+                        {log.type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {log.message}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      {log.details ? JSON.stringify(log.details) : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-gray-50 rounded-lg p-8 text-center">
+          <EyeIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600">시스템 로그를 찾을 수 없습니다.</p>
+        </div>
+      )}
     </div>
   )
 }
