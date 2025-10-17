@@ -21,16 +21,31 @@ export default function Home() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-2xl p-8 text-white"
+        className="bg-gradient-to-r from-bank-600 to-bank-700 rounded-2xl p-8 text-white relative overflow-hidden"
       >
-        <h1 className="text-3xl font-bold mb-2">
-          안녕하세요, {user?.name}님! 👋
-        </h1>
-        <p className="text-primary-100 text-lg">
-          {user?.role === 'mentee' && '오늘도 성장하는 하루 되세요!'}
-          {user?.role === 'mentor' && '멘티들을 위한 조언을 준비해보세요.'}
-          {user?.role === 'admin' && '시스템을 관리해주세요.'}
-        </p>
+        {/* Background Pattern */}
+        <div className="absolute top-0 right-0 w-32 h-32 opacity-10">
+          <img src="/assets/bear.png" alt="하경은행 로고" className="w-full h-full object-contain" />
+        </div>
+        
+        <div className="relative z-10">
+          <div className="flex items-center mb-4">
+            <img src="/assets/bear.png" alt="하경은행" className="w-16 h-16 mr-4" />
+            <div>
+              <h1 className="text-3xl font-bold mb-2">
+                안녕하세요, {user?.name}님! 👋
+              </h1>
+              <p className="text-bank-100 text-lg font-medium">
+                하경은행 멘토링 시스템에 오신 것을 환영합니다
+              </p>
+            </div>
+          </div>
+          <p className="text-bank-100 text-base">
+            {user?.role === 'mentee' && '오늘도 성장하는 하루 되세요!'}
+            {user?.role === 'mentor' && '멘티들을 위한 조언을 준비해보세요.'}
+            {user?.role === 'admin' && '시스템을 관리해주세요.'}
+          </p>
+        </div>
       </motion.div>
 
       {/* Quick Links */}
@@ -87,9 +102,12 @@ export default function Home() {
 
       {/* Tips */}
       {user?.role === 'mentee' && (
-        <div className="bg-primary-50 border border-primary-200 rounded-xl p-6">
-          <h3 className="text-lg font-semibold text-primary-900 mb-3">💡 Tip</h3>
-          <ul className="space-y-2 text-primary-800">
+        <div className="bg-bank-50 border border-bank-200 rounded-xl p-6">
+          <h3 className="text-lg font-semibold text-bank-900 mb-3 flex items-center">
+            <img src="/assets/bear.png" alt="하경은행" className="w-6 h-6 mr-2" />
+            하경은행 멘토링 시스템 활용 Tip
+          </h3>
+          <ul className="space-y-2 text-bank-800">
             <li>• AI 챗봇에게 업무 관련 질문을 자유롭게 해보세요</li>
             <li>• 자료실에서 필요한 문서를 검색할 수 있습니다</li>
             <li>• 대나무숲에서 익명으로 고민을 나눌 수 있습니다</li>
@@ -103,10 +121,10 @@ export default function Home() {
 
 function QuickLinkCard({ to, icon: Icon, title, description, color }: any) {
   const colorClasses: any = {
-    blue: 'from-blue-500 to-blue-600',
-    green: 'from-green-500 to-green-600',
-    purple: 'from-purple-500 to-purple-600',
-    orange: 'from-orange-500 to-orange-600',
+    blue: 'from-bank-500 to-bank-600',
+    green: 'from-emerald-500 to-emerald-600',
+    purple: 'from-primary-500 to-primary-600',
+    orange: 'from-amber-500 to-amber-600',
   }
 
   return (
@@ -124,7 +142,7 @@ function QuickLinkCard({ to, icon: Icon, title, description, color }: any) {
 function ActivityItem({ title, description, time }: any) {
   return (
     <div className="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg">
-      <div className="w-2 h-2 bg-primary-600 rounded-full mt-2"></div>
+      <div className="w-2 h-2 bg-bank-600 rounded-full mt-2"></div>
       <div className="flex-1">
         <h4 className="font-semibold text-gray-900">{title}</h4>
         <p className="text-gray-600 text-sm">{description}</p>

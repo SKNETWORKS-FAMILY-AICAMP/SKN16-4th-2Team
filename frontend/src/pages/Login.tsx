@@ -188,20 +188,22 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 px-4 py-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-bank-50 to-bank-100 px-4 py-8">
       <div className="max-w-md w-full">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl mb-4">
-            {loginMode === 'normal' ? (
-            <LockClosedIcon className="w-8 h-8 text-white" />
-            ) : (
-              <QrCodeIcon className="w-8 h-8 text-white" />
-            )}
+          <div className="flex items-center justify-center mb-4">
+            <img src="/assets/bear.png" alt="하경은행" className="w-16 h-16 mr-3" />
+            <div className="text-left">
+              <h2 className="text-3xl font-bold text-gray-900">하경은행</h2>
+              <p className="text-gray-600 text-sm">멘토링 시스템</p>
+            </div>
           </div>
-          <h2 className="text-3xl font-bold text-gray-900">로그인</h2>
-          <p className="text-gray-600 mt-2">
-            {loginMode === 'normal' ? '멘토 시스템에 오신 것을 환영합니다' : '사원증 QR 코드로 빠르게 로그인하세요'}
+          <h3 className="text-2xl font-semibold text-gray-800 mb-2">
+            {loginMode === 'normal' ? '로그인' : 'QR 로그인'}
+          </h3>
+          <p className="text-gray-600">
+            {loginMode === 'normal' ? '하경은행 멘토링 시스템에 오신 것을 환영합니다' : '사원증 QR 코드로 빠르게 로그인하세요'}
           </p>
         </div>
 
@@ -211,7 +213,7 @@ export default function Login() {
             onClick={switchToNormalLogin}
             className={`flex-1 py-3 rounded-lg font-semibold transition-colors ${
               loginMode === 'normal'
-                ? 'bg-white text-primary-600 shadow-lg'
+                ? 'bg-white text-bank-600 shadow-lg'
                 : 'bg-white/50 text-gray-600 hover:bg-white/70'
             }`}
           >
@@ -222,7 +224,7 @@ export default function Login() {
             onClick={switchToQRLogin}
             className={`flex-1 py-3 rounded-lg font-semibold transition-colors ${
               loginMode === 'qr'
-                ? 'bg-white text-primary-600 shadow-lg'
+                ? 'bg-white text-bank-600 shadow-lg'
                 : 'bg-white/50 text-gray-600 hover:bg-white/70'
             }`}
           >
@@ -254,7 +256,7 @@ export default function Login() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bank-500 focus:border-transparent"
                 placeholder="your@email.com"
               />
             </div>
@@ -271,7 +273,7 @@ export default function Login() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bank-500 focus:border-transparent"
                 placeholder="••••••••"
               />
             </div>
@@ -279,7 +281,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 bg-bank-600 text-white rounded-lg font-semibold hover:bg-bank-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? '로그인 중...' : '로그인'}
             </button>
@@ -293,7 +295,7 @@ export default function Login() {
                     <p className="text-sm text-gray-600">
                       마이페이지에서 생성한 사원증 QR 코드를 스캔하세요
                     </p>
-                    <p className="text-xs text-primary-600 mt-1 font-medium">
+                    <p className="text-xs text-bank-600 mt-1 font-medium">
                       스캔 후 자동으로 로그인됩니다
                     </p>
                   </div>
@@ -306,7 +308,7 @@ export default function Login() {
 
               {loading && !qrScanning && (
                 <div className="flex flex-col items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-600 mb-4"></div>
+                  <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-bank-600 mb-4"></div>
                   <p className="text-gray-600 font-medium">로그인 중...</p>
                 </div>
               )}
@@ -315,17 +317,17 @@ export default function Login() {
 
           <div className="mt-6 text-center space-y-3">
             <div className="flex justify-center gap-4 text-sm">
-              <Link to="/find-id" className="text-gray-600 hover:text-primary-600">
+              <Link to="/find-id" className="text-gray-600 hover:text-bank-600">
                 아이디 찾기
               </Link>
               <span className="text-gray-300">|</span>
-              <Link to="/find-password" className="text-gray-600 hover:text-primary-600">
+              <Link to="/find-password" className="text-gray-600 hover:text-bank-600">
                 비밀번호 찾기
               </Link>
             </div>
             <p className="text-gray-600">
               계정이 없으신가요?{' '}
-              <Link to="/register" className="text-primary-600 font-semibold hover:text-primary-700">
+              <Link to="/register" className="text-bank-600 font-semibold hover:text-bank-700">
                 회원가입
               </Link>
             </p>
@@ -334,11 +336,14 @@ export default function Login() {
 
         {/* Demo Accounts */}
         <div className="mt-6 bg-white rounded-lg p-4 text-sm text-gray-600">
-          <p className="font-semibold mb-2">테스트 계정:</p>
+          <p className="font-semibold mb-2 flex items-center">
+            <img src="/assets/bear.png" alt="하경은행" className="w-4 h-4 mr-2" />
+            하경은행 테스트 계정:
+          </p>
           <ul className="space-y-1">
-            <li>• 관리자: admin@bank.com / admin123</li>
-            <li>• 멘토: mentor@bank.com / mentor123</li>
-            <li>• 멘티: mentee@bank.com / mentee123</li>
+            <li>• 관리자: admin@hakyung.com / admin123</li>
+            <li>• 멘토: mentor@hakyung.com / mentor123</li>
+            <li>• 멘티: mentee@hakyung.com / mentee123</li>
           </ul>
         </div>
       </div>
