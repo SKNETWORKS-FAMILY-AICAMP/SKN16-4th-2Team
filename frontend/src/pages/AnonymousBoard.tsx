@@ -51,7 +51,8 @@ export default function AnonymousBoard() {
   }
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
+    // UTC 시간 문자열을 로컬 시간으로 변환
+    const date = new Date(dateString + (dateString.includes('Z') ? '' : 'Z'))
     const now = new Date()
     const diff = now.getTime() - date.getTime()
     const minutes = Math.floor(diff / 60000)

@@ -360,6 +360,46 @@ async def create_comment(
     )
 
 
+@router.put("/{post_id}", response_model=PostRead)
+async def update_post(
+    post_id: int,
+    post_data: PostCreate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    게시글 수정
+    - 작성자 본인 또는 관리자만 수정 가능
+    """
+    statement = select(Post).where(Post.id == post_id, Post.is_deleted == False)
+    post = session.exec(statement).first()
+    
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    # 작성자 또는 관리자 확인
+    if post.author_id != current_user.id and current_user.role.value != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized to update this post")
+    
+    # 게시글 수정
+    post.title = post_data.title
+    post.content = post_data.content
+    session.add(post)
+    session.commit()
+    session.refresh(post)
+    
+    return PostRead(
+        id=post.id,
+        title=post.title,
+        content=post.content,
+        view_count=post.view_count,
+        comment_count=post.comment_count,
+        created_at=post.created_at,
+        updated_at=post.updated_at,
+        author_alias="글쓴이"
+    )
+
+
 @router.delete("/{post_id}")
 async def delete_post(
     post_id: int,
@@ -386,6 +426,64 @@ async def delete_post(
     session.commit()
     
     return {"message": "Post deleted successfully"}
+
+
+@router.put("/comments/{comment_id}", response_model=CommentRead)
+async def update_comment(
+    comment_id: int,
+    comment_data: CommentCreate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    댓글 수정
+    - 작성자 본인 또는 관리자만 수정 가능
+    """
+    statement = select(Comment).where(Comment.id == comment_id, Comment.is_deleted == False)
+    comment = session.exec(statement).first()
+    
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    
+    # 작성자 또는 관리자 확인
+    if comment.author_id != current_user.id and current_user.role.value != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized to update this comment")
+    
+    # 댓글 수정
+    comment.content = comment_data.content
+    session.add(comment)
+    session.commit()
+    session.refresh(comment)
+    
+    # 게시글 정보 가져오기
+    post_statement = select(Post).where(Post.id == comment.post_id)
+    post = session.exec(post_statement).first()
+    
+    # 작성자 별명 결정
+    if comment.author_id == post.author_id:
+        author_alias = "글쓴이"
+    else:
+        # 댓글 순서로 익명 번호 부여
+        existing_comments = session.exec(
+            select(Comment).where(
+                Comment.post_id == comment.post_id,
+                Comment.is_deleted == False,
+                Comment.author_id != post.author_id
+            ).order_by(Comment.created_at.asc())
+        ).all()
+        
+        comment_index = next((i for i, c in enumerate(existing_comments) if c.id == comment.id), 0)
+        author_alias = f"익명{comment_index + 1}"
+    
+    return CommentRead(
+        id=comment.id,
+        post_id=comment.post_id,
+        content=comment.content,
+        created_at=comment.created_at,
+        author_alias=author_alias,
+        is_author=comment.author_id == current_user.id,
+        is_admin=current_user.role.value == "admin"
+    )
 
 
 @router.delete("/comments/{comment_id}")

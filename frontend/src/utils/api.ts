@@ -224,6 +224,11 @@ export const postAPI = {
     return response.data
   },
   
+  updatePost: async (id: number, title: string, content: string) => {
+    const response = await api.put(`/posts/${id}`, { title, content })
+    return response.data
+  },
+  
   deletePost: async (id: number) => {
     const response = await api.delete(`/posts/${id}`)
     return response.data
@@ -231,6 +236,12 @@ export const postAPI = {
   
   createComment: async (postId: number, content: string) => {
     const response = await api.post('/posts/comments', { post_id: postId, content })
+    return response.data
+  },
+  
+  updateComment: async (id: number, content: string) => {
+    // post_id는 백엔드에서 기존 댓글의 post_id를 사용하므로, 여기서는 임시로 0을 전달
+    const response = await api.put(`/posts/comments/${id}`, { post_id: 0, content })
     return response.data
   },
   
