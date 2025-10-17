@@ -3,6 +3,7 @@
  * 로그인 후 메인 화면
  */
 import { Link } from 'react-router-dom'
+import { useState } from 'react'
 import { useAuthStore } from '../store/authStore'
 import { motion } from 'framer-motion'
 import {
@@ -11,9 +12,19 @@ import {
   ChartBarIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline'
+import ChatBot from '../components/ChatBot'
 
 export default function Home() {
   const { user } = useAuthStore()
+  const [isChatBotOpen, setIsChatBotOpen] = useState(false)
+
+  const handleOpenChatBot = () => {
+    setIsChatBotOpen(true)
+  }
+
+  const handleCloseChatBot = () => {
+    setIsChatBotOpen(false)
+  }
 
   return (
     <div className="space-y-8">
@@ -69,13 +80,13 @@ export default function Home() {
           description="학습 진행도 및 성과 분석"
           color="amber"
         />
-        <div className="bg-gradient-to-br from-accent-500 to-accent-600 rounded-2xl p-6 text-white cursor-pointer hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 group">
-          <div className="flex items-center justify-between mb-4">
-            <SparklesIcon className="w-12 h-12 group-hover:scale-110 transition-transform" />
-            <img src="/assets/bear.png" alt="하경곰" className="w-8 h-8 rounded-full" />
-          </div>
-          <h3 className="text-xl font-bold mb-2">AI 하리보</h3>
-          <p className="text-accent-100">우측 하단에서 만나보세요! 🐻</p>
+        <div 
+          onClick={handleOpenChatBot}
+          className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-6 text-white cursor-pointer hover:shadow-lg transition-all hover:scale-105"
+        >
+          <SparklesIcon className="w-12 h-12 mb-4" />
+          <h3 className="text-xl font-semibold mb-2">AI 챗봇</h3>
+          <p className="text-orange-100">클릭하여 챗봇 시작하기</p>
         </div>
       </div>
 
@@ -135,6 +146,12 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* ChatBot */}
+      <ChatBot 
+        forceOpen={isChatBotOpen} 
+        onClose={handleCloseChatBot}
+      />
     </div>
   )
 }

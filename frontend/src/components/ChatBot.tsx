@@ -4,6 +4,7 @@
  */
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 import { 
   ChatBubbleLeftRightIcon, 
   XMarkIcon, 
@@ -20,7 +21,13 @@ interface Message {
   timestamp: Date
 }
 
-export default function ChatBot() {
+interface ChatBotProps {
+  forceOpen?: boolean
+  onClose?: () => void
+}
+
+export default function ChatBot({ forceOpen = false, onClose }: ChatBotProps = {}) {
+  const navigate = useNavigate()
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -41,6 +48,19 @@ export default function ChatBot() {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  useEffect(() => {
+    if (forceOpen) {
+      setIsOpen(true)
+    }
+  }, [forceOpen])
+
+  const handleClose = () => {
+    setIsOpen(false)
+    if (onClose) {
+      onClose()
+    }
+  }
 
   const handleSend = async () => {
     if (!input.trim() || loading) return
@@ -89,6 +109,13 @@ export default function ChatBot() {
     }
   }
 
+  const handleSourceClick = (sourceTitle: string) => {
+    // "RAG - " 접두사 제거
+    const cleanTitle = sourceTitle.replace('RAG - ', '')
+    // 자료실로 이동하면서 검색어를 URL 파라미터로 전달
+    navigate(`/documents?search=${encodeURIComponent(cleanTitle)}`)
+  }
+
   return (
     <>
       {/* Chat Window */}
@@ -110,7 +137,7 @@ export default function ChatBot() {
                 </div>
               </div>
               <button
-                onClick={() => setIsOpen(false)}
+                onClick={handleClose}
                 className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
               >
                 <XMarkIcon className="w-5 h-5" />
@@ -135,11 +162,21 @@ export default function ChatBot() {
                     {message.sources && message.sources.length > 0 && (
                       <div className="mt-2 pt-2 border-t border-gray-300">
                         <p className="text-xs text-gray-600 mb-1">참고 자료:</p>
-                        {message.sources.slice(0, 3).map((source, idx) => (
-                          <p key={idx} className="text-xs text-gray-500">
-                            • {source.category} - {source.title}
-                          </p>
-                        ))}
+                        {(() => {
+                          // 중복 제거 (title 기준)
+                          const uniqueSources = message.sources.filter((source, index, self) => 
+                            index === self.findIndex(s => s.title === source.title)
+                          );
+                          return uniqueSources.slice(0, 3).map((source, idx) => (
+                            <p 
+                              key={idx} 
+                              className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer hover:underline"
+                              onClick={() => handleSourceClick(source.title)}
+                            >
+                              • {source.title.replace('RAG - ', '')}
+                            </p>
+                          ));
+                        })()}
                       </div>
                     )}
                   </div>
@@ -191,8 +228,14 @@ export default function ChatBot() {
       <motion.button
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
-        onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-br from-primary-600 via-primary-500 to-amber-500 text-white rounded-full shadow-xl flex items-center justify-center z-50 hover:shadow-2xl transition-all duration-300 border-2 border-white/20"
+        onClick={() => {
+          if (isOpen) {
+            handleClose()
+          } else {
+            setIsOpen(true)
+          }
+        }}
+        className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-br from-primary-600 to-primary-700 text-white rounded-full shadow-lg flex items-center justify-center z-50 hover:shadow-xl transition-shadow"
       >
         {isOpen ? (
           <XMarkIcon className="w-8 h-8" />
