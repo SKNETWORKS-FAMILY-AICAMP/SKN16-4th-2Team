@@ -5,6 +5,8 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { authAPI } from '../utils/api'
 import { UserPlusIcon } from '@heroicons/react/24/solid'
+import DatePicker from 'react-datepicker'
+import 'react-datepicker/dist/react-datepicker.css'
 
 export default function Register() {
   const interestOptions = [
@@ -41,14 +43,70 @@ export default function Register() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showInterests, setShowInterests] = useState(false)
+  const [selectedYear, setSelectedYear] = useState<Date | null>(null)
+  const [passwordStrength, setPasswordStrength] = useState({
+    hasMinLength: false,
+    hasUpperCase: false,
+    hasLowerCase: false,
+    hasSpecialChar: false
+  })
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [passwordMatch, setPasswordMatch] = useState(true)
   
   const navigate = useNavigate()
 
+  const formatPhoneNumber = (value: string) => {
+    // 숫자만 추출
+    const numbers = value.replace(/[^0-9]/g, '')
+    
+    // 길이에 따라 포맷팅
+    if (numbers.length <= 3) {
+      return numbers
+    } else if (numbers.length <= 7) {
+      return `${numbers.slice(0, 3)}-${numbers.slice(3)}`
+    } else if (numbers.length <= 11) {
+      return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7)}`
+    } else {
+      // 11자 초과 시 11자까지만
+      return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`
+    }
+  }
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    })
+    const { name, value } = e.target
+    
+    // 비상연락망 입력 시 자동 포맷팅
+    if (name === 'emergency_contact') {
+      const formatted = formatPhoneNumber(value)
+      setFormData({
+        ...formData,
+        [name]: formatted,
+      })
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value,
+      })
+    }
+
+    // 비밀번호 입력 시 강도 체크
+    if (name === 'password') {
+      setPasswordStrength({
+        hasMinLength: value.length <= 12 && value.length > 0,
+        hasUpperCase: /[A-Z]/.test(value),
+        hasLowerCase: /[a-z]/.test(value),
+        hasSpecialChar: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(value)
+      })
+      // 비밀번호 변경 시 확인 비밀번호와 비교
+      if (formData.confirmPassword) {
+        setPasswordMatch(value === formData.confirmPassword)
+      }
+    }
+
+    // 비밀번호 확인 입력 시 일치 여부 체크
+    if (name === 'confirmPassword') {
+      setPasswordMatch(formData.password === value)
+    }
   }
 
   const handleInterestToggle = (interest: string) => {
@@ -63,6 +121,13 @@ export default function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+
+    // 비밀번호 유효성 검사 (최대 12자)
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{1,12}$/
+    if (!passwordRegex.test(formData.password)) {
+      setError('비밀번호는 최대 12자이며, 대문자, 소문자, 특수문자를 모두 포함해야 합니다.')
+      return
+    }
 
     // 비밀번호 확인
     if (formData.password !== formData.confirmPassword) {
@@ -96,8 +161,8 @@ export default function Register() {
         position: formData.position || undefined,
       })
       
-      // 성공 시 로그인 페이지로 이동
-      navigate('/login')
+      // 성공 시 성공 모달 표시
+      setShowSuccessModal(true)
     } catch (err: any) {
       console.error('Register error:', err)
       setError(err.response?.data?.detail || '회원가입에 실패했습니다.')
@@ -106,9 +171,50 @@ export default function Register() {
     }
   }
 
+  const handleSuccessModalClose = () => {
+    setShowSuccessModal(false)
+    navigate('/login')
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 px-4 py-12">
-      <div className="max-w-2xl w-full">
+    <>
+      {/* 성공 모달 */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full animate-fade-in">
+            <div className="text-center">
+              {/* 체크 아이콘 */}
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
+                <svg className="h-10 w-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+              </div>
+              
+              {/* 제목 */}
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                회원가입이 완료되었습니다!
+              </h3>
+              
+              {/* 메시지 */}
+              <p className="text-gray-600 mb-6">
+                온보딩 플랫폼에 오신 것을 환영합니다.<br />
+                로그인 페이지로 이동하여 로그인해주세요.
+              </p>
+              
+              {/* 확인 버튼 */}
+              <button
+                onClick={handleSuccessModalClose}
+                className="w-full py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors"
+              >
+                로그인 페이지로 이동
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 px-4 py-12">
+        <div className="max-w-2xl w-full">
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl mb-4">
@@ -155,11 +261,36 @@ export default function Register() {
                   name="password"
                   autoComplete="new-password"
                   required
+                  maxLength={12}
                   value={formData.password}
                   onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="••••••••"
+                  placeholder="••••••••••••"
                 />
+                <p className="mt-1 text-xs text-gray-600 font-medium">
+                  ※ 최대 12자 이하, 대문자, 소문자, 특수문자를 모두 포함해야 합니다.
+                </p>
+                {/* 비밀번호 강도 표시 */}
+                {formData.password && (
+                  <div className="mt-2 space-y-1">
+                    <div className={`text-xs flex items-center gap-1 ${passwordStrength.hasMinLength ? 'text-green-600' : 'text-gray-400'}`}>
+                      <span>{passwordStrength.hasMinLength ? '✓' : '○'}</span>
+                      <span>12자 이하</span>
+                    </div>
+                    <div className={`text-xs flex items-center gap-1 ${passwordStrength.hasUpperCase ? 'text-green-600' : 'text-gray-400'}`}>
+                      <span>{passwordStrength.hasUpperCase ? '✓' : '○'}</span>
+                      <span>대문자 포함 (A-Z)</span>
+                    </div>
+                    <div className={`text-xs flex items-center gap-1 ${passwordStrength.hasLowerCase ? 'text-green-600' : 'text-gray-400'}`}>
+                      <span>{passwordStrength.hasLowerCase ? '✓' : '○'}</span>
+                      <span>소문자 포함 (a-z)</span>
+                    </div>
+                    <div className={`text-xs flex items-center gap-1 ${passwordStrength.hasSpecialChar ? 'text-green-600' : 'text-gray-400'}`}>
+                      <span>{passwordStrength.hasSpecialChar ? '✓' : '○'}</span>
+                      <span>특수문자 포함 (!@#$%...)</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Confirm Password */}
@@ -174,9 +305,25 @@ export default function Register() {
                   required
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="••••••••"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                    formData.confirmPassword && !passwordMatch
+                      ? 'border-red-500 bg-red-50'
+                      : 'border-gray-300'
+                  }`}
+                  placeholder="••••••••••••"
                 />
+                {formData.confirmPassword && !passwordMatch && (
+                  <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                    <span>✕</span>
+                    <span>비밀번호가 일치하지 않습니다</span>
+                  </p>
+                )}
+                {formData.confirmPassword && passwordMatch && (
+                  <p className="mt-1 text-xs text-green-600 flex items-center gap-1">
+                    <span>✓</span>
+                    <span>비밀번호가 일치합니다</span>
+                  </p>
+                )}
               </div>
 
               {/* Name */}
@@ -209,7 +356,6 @@ export default function Register() {
                 >
                   <option value="mentee">멘티 (신입사원)</option>
                   <option value="mentor">멘토</option>
-                  <option value="admin">관리자</option>
                 </select>
               </div>
 
@@ -224,6 +370,11 @@ export default function Register() {
                   required
                   value={formData.employee_number}
                   onChange={handleChange}
+                  onInput={(e: React.FormEvent<HTMLInputElement>) => {
+                    e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, '')
+                  }}
+                  pattern="[0-9]*"
+                  inputMode="numeric"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="2024001"
                 />
@@ -234,13 +385,22 @@ export default function Register() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   입사년도
                 </label>
-                <input
-                  type="text"
-                  name="join_year"
-                  value={formData.join_year}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="2024"
+                <DatePicker
+                  selected={selectedYear}
+                  onChange={(date: Date | null) => {
+                    setSelectedYear(date)
+                    setFormData({
+                      ...formData,
+                      join_year: date ? date.getFullYear().toString() : ''
+                    })
+                  }}
+                  showYearPicker
+                  dateFormat="yyyy"
+                  yearItemNumber={9}
+                  minDate={new Date('1900-01-01')}
+                  maxDate={new Date()}
+                  placeholderText="년도 선택"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent cursor-pointer"
                 />
               </div>
 
@@ -278,6 +438,11 @@ export default function Register() {
                   required
                   value={formData.extension}
                   onChange={handleChange}
+                  onInput={(e: React.FormEvent<HTMLInputElement>) => {
+                    e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, '')
+                  }}
+                  pattern="[0-9]*"
+                  inputMode="numeric"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="1234"
                 />
@@ -295,6 +460,8 @@ export default function Register() {
                   required
                   value={formData.emergency_contact}
                   onChange={handleChange}
+                  maxLength={13}
+                  inputMode="tel"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="010-1234-5678"
                 />
@@ -439,6 +606,7 @@ export default function Register() {
         </div>
       </div>
     </div>
+    </>
   )
 }
 
