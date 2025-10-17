@@ -1,6 +1,6 @@
 /**
  * 플로팅 챗봇 컴포넌트
- * RAG 기반 AI 챗봇
+ * RAG 기반 AI 챗봇 with 채팅 라이브러리
  */
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -9,17 +9,12 @@ import {
   ChatBubbleLeftRightIcon, 
   XMarkIcon, 
   PaperAirplaneIcon,
-  SparklesIcon
+  SparklesIcon,
+  Bars3Icon
 } from '@heroicons/react/24/solid'
 import { chatAPI } from '../utils/api'
-
-interface Message {
-  id: string
-  text: string
-  isBot: boolean
-  sources?: any[]
-  timestamp: Date
-}
+import { useChatStore, ChatMessage } from '../store/chatStore'
+import ChatSidebar from './ChatSidebar'
 
 interface ChatBotProps {
   forceOpen?: boolean
@@ -29,17 +24,22 @@ interface ChatBotProps {
 export default function ChatBot({ forceOpen = false, onClose }: ChatBotProps = {}) {
   const navigate = useNavigate()
   const [isOpen, setIsOpen] = useState(false)
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: '안녕하세요! 저는 AI 하리보예요 🐻\n하경은행 온보딩 플랫폼에서 무엇이든 도와드릴게요!\n궁금한 점을 자유롭게 물어보세요.',
-      isBot: true,
-      timestamp: new Date(),
-    },
-  ])
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  const {
+    sessions,
+    currentSessionId,
+    createSession,
+    addMessage,
+    setActiveSession,
+  } = useChatStore()
+
+  // 현재 활성 세션의 메시지들
+  const currentSession = sessions.find(s => s.id === currentSessionId)
+  const messages = currentSession?.messages || []
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -48,6 +48,15 @@ export default function ChatBot({ forceOpen = false, onClose }: ChatBotProps = {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  // 컴포넌트 마운트 시 기본 세션 생성
+  useEffect(() => {
+    if (sessions.length === 0) {
+      createSession()
+    } else if (!currentSessionId) {
+      setActiveSession(sessions[0].id)
+    }
+  }, [sessions.length, currentSessionId, createSession, setActiveSession])
 
   useEffect(() => {
     if (forceOpen) {
@@ -63,23 +72,24 @@ export default function ChatBot({ forceOpen = false, onClose }: ChatBotProps = {
   }
 
   const handleSend = async () => {
-    if (!input.trim() || loading) return
+    if (!input.trim() || loading || !currentSessionId) return
 
-    const userMessage: Message = {
+    const userMessage: ChatMessage = {
       id: Date.now().toString(),
       text: input,
       isBot: false,
       timestamp: new Date(),
     }
 
-    setMessages((prev) => [...prev, userMessage])
+    // 사용자 메시지를 현재 세션에 추가
+    addMessage(currentSessionId, userMessage)
     setInput('')
     setLoading(true)
 
     try {
       const response = await chatAPI.sendMessage(input)
       
-      const botMessage: Message = {
+      const botMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         text: response.answer,
         isBot: true,
@@ -87,19 +97,25 @@ export default function ChatBot({ forceOpen = false, onClose }: ChatBotProps = {
         timestamp: new Date(),
       }
 
-      setMessages((prev) => [...prev, botMessage])
+      // 봇 응답을 현재 세션에 추가
+      addMessage(currentSessionId, botMessage)
     } catch (error) {
       console.error('Chat error:', error)
-      const errorMessage: Message = {
+      const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         text: '앗, 잠깐만요! 🐻\n일시적인 오류가 발생했어요.\n잠시 후 다시 시도해주세요.',
         isBot: true,
         timestamp: new Date(),
       }
-      setMessages((prev) => [...prev, errorMessage])
+      addMessage(currentSessionId, errorMessage)
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleNewChat = () => {
+    createSession()
+    setIsSidebarOpen(false)
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -136,12 +152,28 @@ export default function ChatBot({ forceOpen = false, onClose }: ChatBotProps = {
                   <p className="text-xs text-white/90">온보딩 파트너 🐻</p>
                 </div>
               </div>
-              <button
-                onClick={handleClose}
-                className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
-              >
-                <XMarkIcon className="w-5 h-5" />
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setIsSidebarOpen(true)}
+                  className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+                  title="채팅 라이브러리"
+                >
+                  <Bars3Icon className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={handleNewChat}
+                  className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+                  title="새 대화"
+                >
+                  <SparklesIcon className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={handleClose}
+                  className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+                >
+                  <XMarkIcon className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Messages */}
@@ -224,6 +256,12 @@ export default function ChatBot({ forceOpen = false, onClose }: ChatBotProps = {
         )}
       </AnimatePresence>
 
+      {/* 채팅 라이브러리 사이드바 */}
+      <ChatSidebar 
+        isOpen={isSidebarOpen} 
+        onClose={() => setIsSidebarOpen(false)} 
+      />
+
       {/* Floating Button */}
       <motion.button
         whileHover={{ scale: 1.1 }}
@@ -240,12 +278,7 @@ export default function ChatBot({ forceOpen = false, onClose }: ChatBotProps = {
         {isOpen ? (
           <XMarkIcon className="w-8 h-8" />
         ) : (
-          <div className="relative">
-            <img src="/assets/bear.png" alt="하경곰" className="w-10 h-10 rounded-full" />
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-accent-500 rounded-full flex items-center justify-center">
-              <span className="text-white text-xs">💬</span>
-            </div>
-          </div>
+          <img src="/assets/bear.png" alt="하경곰" className="w-10 h-10 rounded-full" />
         )}
       </motion.button>
     </>

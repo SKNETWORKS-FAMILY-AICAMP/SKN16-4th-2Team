@@ -107,19 +107,19 @@ function MenteeDashboard({ data, currentTime }: any) {
           icon={ChatBubbleBottomCenterTextIcon}
           title="총 대화 수"
           value={data?.learning_progress?.total_chats || 0}
-          color="blue"
+          color="primary"
         />
         <StatCard
           icon={AcademicCapIcon}
           title="학습 진행도"
           value={`${data?.learning_progress?.progress_percentage || 0}%`}
-          color="green"
+          color="amber"
         />
         <StatCard
           icon={TrophyIcon}
           title="최근 시험 점수"
           value={data?.exam_scores?.[0]?.total_score?.toFixed(1) || 'N/A'}
-          color="purple"
+          color="bank"
         />
       </div>
 
@@ -127,9 +127,12 @@ function MenteeDashboard({ data, currentTime }: any) {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-xl shadow-md p-6"
+        className="bg-white rounded-2xl shadow-lg p-8 border border-primary-100"
       >
-        <h2 className="text-xl font-bold text-gray-900 mb-4">성과 지표 분석</h2>
+        <div className="flex items-center mb-6">
+          <img src="/assets/bear.png" alt="하경곰" className="w-8 h-8 mr-3 rounded-full" />
+          <h2 className="text-2xl font-bold text-bank-800">성과 지표 분석</h2>
+        </div>
         <div className="flex flex-col lg:flex-row gap-8">
           <div className="flex-1">
             <ResponsiveContainer width="100%" height={400}>
@@ -153,11 +156,11 @@ function MenteeDashboard({ data, currentTime }: any) {
                 <Radar
                   name="점수"
                   dataKey="score"
-                  stroke="#3b82f6"
-                  fill="#3b82f6"
+                  stroke="#d4a574"
+                  fill="#d4a574"
                   fillOpacity={0.3}
                   strokeWidth={2}
-                  dot={{ r: 4, fill: '#3b82f6' }}
+                  dot={{ r: 4, fill: '#d4a574' }}
                 />
                 <Tooltip 
                   formatter={(value: any) => [`${value}점`, '점수']}
@@ -174,7 +177,7 @@ function MenteeDashboard({ data, currentTime }: any) {
                   <div className="flex items-center space-x-2">
                     <div className="w-20 bg-gray-200 rounded-full h-2">
                       <div 
-                        className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500"
+                        className="bg-gradient-to-r from-primary-500 to-primary-600 h-2 rounded-full transition-all duration-500"
                         style={{ width: `${item.score}%` }}
                       ></div>
                     </div>
@@ -185,10 +188,10 @@ function MenteeDashboard({ data, currentTime }: any) {
                 </div>
               ))}
             </div>
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+            <div className="mt-6 p-4 bg-gradient-to-r from-primary-50 to-amber-50 rounded-xl border border-primary-200">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-blue-900">종합 점수</span>
-                <span className="text-lg font-bold text-blue-600">
+                <span className="text-sm font-medium text-primary-900">종합 점수</span>
+                <span className="text-lg font-bold text-primary-600">
                   {(performanceData.reduce((sum, item) => sum + item.score, 0) / performanceData.length).toFixed(1)}점
                 </span>
               </div>
@@ -201,9 +204,12 @@ function MenteeDashboard({ data, currentTime }: any) {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-xl shadow-md p-6"
+        className="bg-white rounded-2xl shadow-lg p-8 border border-primary-100"
       >
-        <h2 className="text-xl font-bold text-gray-900 mb-4">담당 멘토</h2>
+        <div className="flex items-center mb-6">
+          <img src="/assets/bear.png" alt="하경곰" className="w-8 h-8 mr-3 rounded-full" />
+          <h2 className="text-2xl font-bold text-bank-800">담당 멘토</h2>
+        </div>
         {data?.mentor_info ? (
           <div className="flex items-start space-x-4">
             {data.mentor_info.photo_url ? (
@@ -226,8 +232,8 @@ function MenteeDashboard({ data, currentTime }: any) {
                 <p className="text-gray-600 text-sm mt-1">관심사: {data.mentor_info.interests}</p>
               )}
               {data.mentor_info.encouragement_message && (
-                <div className="mt-3 p-3 bg-primary-50 rounded-lg">
-                  <p className="text-primary-900 text-sm italic">
+                <div className="mt-3 p-4 bg-gradient-to-r from-primary-50 to-amber-50 rounded-xl border border-primary-200">
+                  <p className="text-primary-800 text-sm italic">
                     "{data.mentor_info.encouragement_message}"
                   </p>
                 </div>
@@ -247,10 +253,13 @@ function MenteeDashboard({ data, currentTime }: any) {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-xl shadow-md p-6"
+        className="bg-white rounded-2xl shadow-lg p-8 border border-primary-100"
       >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900">멘토 피드백</h2>
+          <div className="flex items-center">
+            <img src="/assets/bear.png" alt="하경곰" className="w-8 h-8 mr-3 rounded-full" />
+            <h2 className="text-2xl font-bold text-bank-800">멘토 피드백</h2>
+          </div>
           {data?.recent_feedbacks && data.recent_feedbacks.length > 0 && (
             <div className="flex items-center space-x-2">
               <span className="text-sm text-gray-500">총 {data.recent_feedbacks.length}개</span>
@@ -263,13 +272,13 @@ function MenteeDashboard({ data, currentTime }: any) {
                 
                 if (recentCount > 0) {
                   return (
-                    <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full animate-pulse">
+                    <span className="px-2 py-1 bg-accent-100 text-accent-800 text-xs rounded-full animate-pulse">
                       최신 피드백 {recentCount}개
                     </span>
                   )
                 } else if (data.recent_feedbacks.filter((f: any) => !f.is_read).length > 0) {
                   return (
-                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                    <span className="px-2 py-1 bg-primary-100 text-primary-800 text-xs rounded-full">
                       새 피드백 {data.recent_feedbacks.filter((f: any) => !f.is_read).length}개
                     </span>
                   )
@@ -308,15 +317,18 @@ function MenteeDashboard({ data, currentTime }: any) {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-xl shadow-md p-6"
+        className="bg-white rounded-2xl shadow-lg p-8 border border-primary-100"
       >
-        <h2 className="text-xl font-bold text-gray-900 mb-4">최근 대화</h2>
+        <div className="flex items-center mb-6">
+          <img src="/assets/bear.png" alt="하경곰" className="w-8 h-8 mr-3 rounded-full" />
+          <h2 className="text-2xl font-bold text-bank-800">최근 대화</h2>
+        </div>
         {data?.recent_chats && data.recent_chats.length > 0 ? (
           <div className="space-y-4">
             {data.recent_chats.slice(0, 5).map((chat: any, idx: number) => (
-              <div key={idx} className="p-4 bg-gray-50 rounded-lg">
-                <p className="font-medium text-gray-900 mb-1">{chat.user_message}</p>
-                <p className="text-sm text-gray-600 line-clamp-2">{chat.bot_response}</p>
+              <div key={idx} className="p-4 bg-gradient-to-r from-primary-50 to-amber-50 rounded-xl border border-primary-100">
+                <p className="font-medium text-bank-800 mb-1">{chat.user_message}</p>
+                <p className="text-sm text-primary-700 line-clamp-2">{chat.bot_response}</p>
               </div>
             ))}
           </div>
@@ -373,13 +385,13 @@ function MentorDashboard({ data }: any) {
           icon={UserIcon}
           title="담당 멘티"
           value={data?.mentees?.length || 0}
-          color="blue"
+          color="primary"
         />
         <StatCard
           icon={ChatBubbleBottomCenterTextIcon}
           title="자주 묻는 질문"
           value={data?.frequent_questions?.length || 0}
-          color="green"
+          color="amber"
         />
         <StatCard
           icon={AcademicCapIcon}
@@ -392,13 +404,13 @@ function MentorDashboard({ data }: any) {
                 ).toFixed(1)
               : 'N/A'
           }
-          color="purple"
+          color="bank"
         />
         <StatCard
           icon={ChartBarIcon}
           title="활성 멘티"
           value={data?.mentees?.filter((m: any) => m.chat_count > 0)?.length || 0}
-          color="orange"
+          color="accent"
         />
       </div>
 
@@ -406,9 +418,12 @@ function MentorDashboard({ data }: any) {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-xl shadow-md p-6"
+        className="bg-white rounded-2xl shadow-lg p-8 border border-primary-100"
       >
-        <h2 className="text-xl font-bold text-gray-900 mb-6">담당 멘티 관리</h2>
+        <div className="flex items-center mb-6">
+          <img src="/assets/bear.png" alt="하경곰" className="w-8 h-8 mr-3 rounded-full" />
+          <h2 className="text-2xl font-bold text-bank-800">담당 멘티 관리</h2>
+        </div>
         <div className="grid gap-6">
           {data?.mentees?.map((mentee: any) => (
             <MenteeCard 
@@ -452,14 +467,17 @@ function MentorDashboard({ data }: any) {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-md p-6"
+          className="bg-white rounded-2xl shadow-lg p-8 border border-primary-100"
         >
-          <h2 className="text-xl font-bold text-gray-900 mb-4">자주 묻는 질문 키워드</h2>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex items-center mb-6">
+            <img src="/assets/bear.png" alt="하경곰" className="w-8 h-8 mr-3 rounded-full" />
+            <h2 className="text-2xl font-bold text-bank-800">담당 멘티 자주 묻는 질문</h2>
+          </div>
+          <div className="flex flex-wrap gap-3">
             {data.frequent_questions.slice(0, 20).map((item: any, idx: number) => (
               <span
                 key={idx}
-                className="px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm"
+                className="px-4 py-2 bg-gradient-to-r from-primary-100 to-amber-100 text-primary-800 rounded-xl text-sm font-medium border border-primary-200 hover:shadow-md transition-all duration-200"
                 style={{ fontSize: `${Math.min(16, 12 + item.count / 2)}px` }}
               >
                 {item.word} ({item.count})
@@ -531,14 +549,14 @@ function MenteeCard({ mentee, onGiveFeedback, onViewPerformance }: any) {
           <div className="flex space-x-2">
             <button
               onClick={() => onViewPerformance(mentee)}
-              className="flex items-center px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm"
+              className="flex items-center px-3 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors text-sm"
             >
               <EyeIcon className="w-4 h-4 mr-1" />
               성과 분석
             </button>
             <button
               onClick={() => onGiveFeedback(mentee)}
-              className="flex items-center px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm"
+              className="flex items-center px-3 py-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors text-sm"
             >
               <PencilIcon className="w-4 h-4 mr-1" />
               피드백
@@ -566,13 +584,13 @@ function FeedbackModal({ mentee, feedbackText, setFeedbackText, onSubmit, onClos
           value={feedbackText}
           onChange={(e) => setFeedbackText(e.target.value)}
           placeholder="멘티에게 전달할 피드백을 작성해주세요..."
-          className="w-full h-32 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full h-32 p-3 border border-primary-200 rounded-lg resize-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
         />
         <div className="flex space-x-3 mt-4">
           <button
             onClick={onSubmit}
             disabled={!feedbackText.trim()}
-            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            className="flex-1 bg-gradient-to-r from-primary-600 to-primary-500 text-white py-2 px-4 rounded-lg hover:from-primary-700 hover:to-primary-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-200"
           >
             피드백 전송
           </button>
@@ -638,11 +656,11 @@ function PerformanceModal({ mentee, onClose }: any) {
                 <Radar
                   name="점수"
                   dataKey="score"
-                  stroke="#3b82f6"
-                  fill="#3b82f6"
+                  stroke="#d4a574"
+                  fill="#d4a574"
                   fillOpacity={0.3}
                   strokeWidth={2}
-                  dot={{ r: 4, fill: '#3b82f6' }}
+                  dot={{ r: 4, fill: '#d4a574' }}
                 />
                 <Tooltip 
                   formatter={(value: any) => [`${value}점`, '점수']}
@@ -662,7 +680,7 @@ function PerformanceModal({ mentee, onClose }: any) {
                   <div className="flex items-center space-x-2">
                     <div className="w-20 bg-gray-200 rounded-full h-2">
                       <div 
-                        className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500"
+                        className="bg-gradient-to-r from-primary-500 to-primary-600 h-2 rounded-full transition-all duration-500"
                         style={{ width: `${item.score}%` }}
                       ></div>
                     </div>
@@ -675,12 +693,12 @@ function PerformanceModal({ mentee, onClose }: any) {
             </div>
             
             {/* 개선 제안 */}
-            <div className="mt-6 p-4 bg-yellow-50 rounded-lg">
-              <h5 className="font-semibold text-yellow-800 mb-2 flex items-center">
+            <div className="mt-6 p-4 bg-gradient-to-r from-amber-50 to-primary-50 rounded-xl border border-amber-200">
+              <h5 className="font-semibold text-amber-800 mb-2 flex items-center">
                 <LightBulbIcon className="w-5 h-5 mr-2" />
                 개선 제안
               </h5>
-              <ul className="text-sm text-yellow-700 space-y-1">
+              <ul className="text-sm text-amber-700 space-y-1">
                 <li>• IT활용 능력 향상을 위한 교육 프로그램 참여</li>
                 <li>• 상품지식 강화를 위한 정기 학습 계획 수립</li>
                 <li>• 고객응대 우수 사례 공유 및 학습</li>
@@ -888,18 +906,18 @@ function FeedbackCard({ feedback, index, currentTime }: any) {
       <p className="text-gray-800 leading-relaxed text-sm mb-3">{feedback.feedback_text}</p>
       
       {/* 댓글 토글 버튼 */}
-      <button
-        onClick={() => setShowComments(!showComments)}
-        className="flex items-center space-x-2 text-sm text-blue-600 hover:text-blue-800 transition-colors"
-      >
-        <ChatBubbleLeftRightIcon className="w-4 h-4" />
-        <span>{showComments ? '댓글 숨기기' : '댓글 보기'}</span>
-        {comments.length > 0 && (
-          <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs">
-            {comments.length}
-          </span>
-        )}
-      </button>
+        <button
+          onClick={() => setShowComments(!showComments)}
+          className="flex items-center space-x-2 text-sm text-primary-600 hover:text-primary-800 transition-colors"
+        >
+          <ChatBubbleLeftRightIcon className="w-4 h-4" />
+          <span>{showComments ? '댓글 숨기기' : '댓글 보기'}</span>
+          {comments.length > 0 && (
+            <span className="px-2 py-0.5 bg-primary-100 text-primary-800 rounded-full text-xs">
+              {comments.length}
+            </span>
+          )}
+        </button>
       
       {/* 댓글 영역 */}
       {showComments && (
@@ -915,7 +933,7 @@ function FeedbackCard({ feedback, index, currentTime }: any) {
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center space-x-2">
                         <span className={`text-xs font-semibold ${
-                          comment.user_role === 'MENTOR' ? 'text-blue-600' : 'text-green-600'
+                          comment.user_role === 'MENTOR' ? 'text-primary-600' : 'text-amber-600'
                         }`}>
                           {comment.user_name}
                         </span>
@@ -949,13 +967,13 @@ function FeedbackCard({ feedback, index, currentTime }: any) {
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
                   placeholder="댓글을 입력하세요..."
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 px-3 py-2 border border-primary-200 rounded-lg text-sm resize-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   rows={2}
                 />
                 <button
                   onClick={handleAddComment}
                   disabled={!newComment.trim()}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center space-x-1"
+                  className="px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-500 text-white rounded-lg hover:from-primary-700 hover:to-primary-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-200 flex items-center space-x-1"
                 >
                   <PaperAirplaneIcon className="w-4 h-4" />
                   <span>전송</span>
@@ -1023,16 +1041,16 @@ function FeedbackAccordion({ additionalFeedbacks, totalCount, currentTime }: any
 
 function StatCard({ icon: Icon, title, value, color }: any) {
   const colorClasses: any = {
-    blue: 'from-blue-500 to-blue-600',
-    green: 'from-green-500 to-green-600',
-    purple: 'from-purple-500 to-purple-600',
-    orange: 'from-orange-500 to-orange-600',
+    primary: 'from-primary-500 to-primary-600',
+    amber: 'from-amber-500 to-amber-600',
+    bank: 'from-bank-500 to-bank-600',
+    accent: 'from-accent-500 to-accent-600',
   }
 
   return (
-    <div className={`bg-gradient-to-br ${colorClasses[color]} rounded-xl p-6 text-white`}>
+    <div className={`bg-gradient-to-br ${colorClasses[color]} rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow`}>
       <Icon className="w-12 h-12 mb-4 opacity-80" />
-      <p className="text-white/80 mb-1">{title}</p>
+      <p className="text-white/90 mb-1 font-medium">{title}</p>
       <p className="text-3xl font-bold">{value}</p>
     </div>
   )
