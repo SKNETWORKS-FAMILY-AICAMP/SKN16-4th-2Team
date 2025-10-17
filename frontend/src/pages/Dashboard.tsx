@@ -1290,18 +1290,20 @@ function FeedbackAccordion({ additionalFeedbacks, totalCount, currentTime }: any
 }
 
 function StatCard({ icon: Icon, title, value, color }: any) {
-  const colorClasses: any = {
-    primary: 'from-primary-500 to-primary-600',
-    amber: 'from-amber-500 to-amber-600',
-    bank: 'from-bank-500 to-bank-600',
-    accent: 'from-accent-500 to-accent-600',
+  const textColors: any = {
+    primary: 'text-primary-600',
+    amber: 'text-amber-600',
+    bank: 'text-bank-600',
+    accent: 'text-accent-600',
   }
 
   return (
-    <div className={`bg-gradient-to-br ${colorClasses[color]} rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow`}>
-      <Icon className="w-12 h-12 mb-4 opacity-80" />
-      <p className="text-white/90 mb-1 font-medium">{title}</p>
-      <p className="text-3xl font-bold">{value}</p>
+    <div className="rounded-2xl p-6 bg-white border border-amber-100 shadow-sm hover:shadow-md transition-shadow">
+      <div className={`w-12 h-12 mb-3 flex items-center justify-center rounded-full bg-gray-50 ${textColors[color]}`}>
+        <Icon className="w-6 h-6" />
+      </div>
+      <p className="text-sm text-gray-500 mb-1 font-medium">{title}</p>
+      <p className={`text-3xl font-bold text-gray-900`}>{value}</p>
     </div>
   )
 }
