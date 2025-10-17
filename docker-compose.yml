@@ -12,7 +12,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./postgres_data:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     restart: unless-stopped
     healthcheck:
@@ -81,6 +81,4 @@ services:
     profiles:
       - dev  # 개발 환경에서만 실행
 
-volumes:
-  postgres_data:
-    driver: local
+# volumes 섹션 제거 - 호스트 경로 직접 마운트 사용
