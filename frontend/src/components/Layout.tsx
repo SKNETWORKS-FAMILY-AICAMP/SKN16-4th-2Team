@@ -11,7 +11,8 @@ import {
   ChartBarIcon,
   ArrowRightOnRectangleIcon,
   UserCircleIcon,
-  CpuChipIcon
+  CpuChipIcon,
+  UserGroupIcon
 } from '@heroicons/react/24/outline'
 
 export default function Layout() {

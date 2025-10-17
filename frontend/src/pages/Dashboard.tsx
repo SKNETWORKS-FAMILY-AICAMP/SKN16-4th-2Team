@@ -17,7 +17,13 @@ import {
   PencilIcon,
   ChartBarIcon,
   LightBulbIcon,
-  StarIcon
+  StarIcon,
+  PlusIcon,
+  UserGroupIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  InformationCircleIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline'
 import { 
   RadarChart, 
@@ -35,6 +41,15 @@ export default function Dashboard() {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [currentTime, setCurrentTime] = useState(new Date())
+  
+  // 관리자 매칭 관련 상태
+  const [matchingData, setMatchingData] = useState<any>(null)
+  const [showMatchingSection, setShowMatchingSection] = useState(false)
+  const [selectedMentor, setSelectedMentor] = useState<any>(null)
+  const [selectedMentee, setSelectedMentee] = useState<any>(null)
+  const [showAssignModal, setShowAssignModal] = useState(false)
+  const [assignNotes, setAssignNotes] = useState('')
+  const [assigning, setAssigning] = useState(false)
 
   useEffect(() => {
     loadDashboard()
@@ -58,14 +73,65 @@ export default function Dashboard() {
       if (user?.role === 'mentee') {
         const dashboardData = await dashboardAPI.getMenteeDashboard()
         setData(dashboardData)
-      } else if (user?.role === 'mentor' || user?.role === 'admin') {
+      } else if (user?.role === 'mentor') {
         const dashboardData = await dashboardAPI.getMentorDashboard()
         setData(dashboardData)
+      } else if (user?.role === 'admin') {
+        // 관리자는 매칭 대시보드 데이터 로드
+        const response = await dashboardAPI.getMatchingDashboard()
+        setMatchingData(response)
       }
     } catch (error) {
       console.error('Failed to load dashboard:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // 관리자 매칭 관련 함수들
+  const loadMatchingData = async () => {
+    try {
+      const response = await dashboardAPI.getMatchingDashboard()
+      setMatchingData(response)
+    } catch (error) {
+      console.error('매칭 데이터 로드 실패:', error)
+    }
+  }
+
+  const handleAssignClick = (mentor: any, mentee: any) => {
+    setSelectedMentor(mentor)
+    setSelectedMentee(mentee)
+    setShowAssignModal(true)
+  }
+
+  const handleAssignConfirm = async () => {
+    if (!selectedMentor || !selectedMentee) return
+
+    try {
+      setAssigning(true)
+      await dashboardAPI.assignMentor(selectedMentee.id, selectedMentor.id, assignNotes || '')
+      alert('멘토-멘티 매칭이 성공적으로 완료되었습니다!')
+      setShowAssignModal(false)
+      setAssignNotes('')
+      await loadMatchingData() // 데이터 새로고침
+    } catch (error) {
+      console.error('매칭 실패:', error)
+      alert('매칭에 실패했습니다.')
+    } finally {
+      setAssigning(false)
+    }
+  }
+
+  const handleUnassign = async (relationId: number) => {
+    if (!confirm('정말로 이 매칭을 해제하시겠습니까?')) return
+
+    try {
+      await dashboardAPI.unassignMentor(relationId)
+      alert('매칭이 해제되었습니다.')
+      await loadMatchingData() // 데이터 새로고침
+    } catch (error) {
+      console.error('매칭 해제 실패:', error)
+      alert('매칭 해제에 실패했습니다.')
     }
   }
 
@@ -82,7 +148,24 @@ export default function Dashboard() {
   } else if (user?.role === 'mentor') {
     return <MentorDashboard data={data} />
   } else if (user?.role === 'admin') {
-    return <AdminDashboard data={data} />
+      return (
+        <AdminDashboard
+          matchingData={matchingData}
+          onAssignClick={handleAssignClick}
+          onUnassign={handleUnassign}
+          showMatchingSection={showMatchingSection}
+          setShowMatchingSection={setShowMatchingSection}
+          showAssignModal={showAssignModal}
+          setShowAssignModal={setShowAssignModal}
+          selectedMentor={selectedMentor}
+          selectedMentee={selectedMentee}
+          setSelectedMentee={setSelectedMentee}
+          assignNotes={assignNotes}
+          setAssignNotes={setAssignNotes}
+          onAssignConfirm={handleAssignConfirm}
+          assigning={assigning}
+        />
+      )
   }
 
   return null
@@ -203,15 +286,12 @@ function MenteeDashboard({ data, currentTime }: any) {
       </motion.div>
 
       {/* Mentor Info */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-2xl shadow-lg p-8 border border-primary-100"
-      >
-        <div className="flex items-center mb-6">
-          <img src="/assets/bear.png" alt="하경곰" className="w-8 h-8 mr-3 rounded-full" />
-          <h2 className="text-2xl font-bold text-bank-800">담당 멘토</h2>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-xl shadow-md p-6"
+        >
+          <h2 className="text-xl font-bold text-gray-900 mb-4">담당 멘토</h2>
         {data?.mentor_info ? (
           <div className="flex items-start space-x-4">
             {data.mentor_info.photo_url ? (
@@ -252,11 +332,11 @@ function MenteeDashboard({ data, currentTime }: any) {
       </motion.div>
 
       {/* Recent Feedbacks */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-2xl shadow-lg p-8 border border-primary-100"
-      >
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-xl shadow-md p-6"
+        >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
             <img src="/assets/bear.png" alt="하경곰" className="w-8 h-8 mr-3 rounded-full" />
@@ -316,15 +396,12 @@ function MenteeDashboard({ data, currentTime }: any) {
       </motion.div>
 
       {/* Recent Chats */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-2xl shadow-lg p-8 border border-primary-100"
-      >
-        <div className="flex items-center mb-6">
-          <img src="/assets/bear.png" alt="하경곰" className="w-8 h-8 mr-3 rounded-full" />
-          <h2 className="text-2xl font-bold text-bank-800">최근 대화</h2>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-xl shadow-md p-6"
+        >
+          <h2 className="text-xl font-bold text-gray-900 mb-4">최근 대화</h2>
         {data?.recent_chats && data.recent_chats.length > 0 ? (
           <div className="space-y-4">
             {data.recent_chats.slice(0, 5).map((chat: any, idx: number) => (
@@ -351,6 +428,12 @@ function MentorDashboard({ data }: any) {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [showPerformanceModal, setShowPerformanceModal] = useState(false)
   const [feedbackText, setFeedbackText] = useState('')
+  
+  // 멘티 선택 관련 상태
+  const [showMenteeSelectModal, setShowMenteeSelectModal] = useState(false)
+  const [availableMentees, setAvailableMentees] = useState<any[]>([])
+  const [loadingMentees, setLoadingMentees] = useState(false)
+  const [selectingMentee, setSelectingMentee] = useState(false)
 
   const handleGiveFeedback = (mentee: any) => {
     setSelectedMentee(mentee)
@@ -360,6 +443,57 @@ function MentorDashboard({ data }: any) {
   const handleViewPerformance = (mentee: any) => {
     setSelectedMentee(mentee)
     setShowPerformanceModal(true)
+  }
+
+  // 멘티 선택 관련 함수들
+  const handleSelectMenteeClick = async () => {
+    try {
+      setLoadingMentees(true)
+      const response = await dashboardAPI.getAvailableMentees()
+      setAvailableMentees(response.available_mentees)
+      setShowMenteeSelectModal(true)
+    } catch (error) {
+      console.error('멘티 목록 로드 실패:', error)
+      alert('멘티 목록을 불러오는데 실패했습니다.')
+    } finally {
+      setLoadingMentees(false)
+    }
+  }
+
+  const handleMenteeSelect = async (mentee: any) => {
+    if (!confirm(`${mentee.name} 멘티를 선택하시겠습니까?`)) {
+      return
+    }
+
+    try {
+      setSelectingMentee(true)
+      await dashboardAPI.selectMentee(mentee.id)
+      alert(`${mentee.name} 멘티가 성공적으로 선택되었습니다!`)
+      setShowMenteeSelectModal(false)
+      // 페이지 새로고침으로 업데이트된 데이터 반영
+      window.location.reload()
+    } catch (error) {
+      console.error('멘티 선택 실패:', error)
+      alert('멘티 선택에 실패했습니다.')
+    } finally {
+      setSelectingMentee(false)
+    }
+  }
+
+  const handleUnassignMentee = async (mentee: any) => {
+    if (!confirm(`${mentee.name} 멘티와의 관계를 해제하시겠습니까?`)) {
+      return
+    }
+
+    try {
+      await dashboardAPI.unassignMentor(mentee.id)
+      alert(`${mentee.name} 멘티와의 관계가 성공적으로 해제되었습니다!`)
+      // 페이지 새로고침으로 업데이트된 데이터 반영
+      window.location.reload()
+    } catch (error) {
+      console.error('멘티 해제 실패:', error)
+      alert('멘티 해제에 실패했습니다.')
+    }
   }
 
   const submitFeedback = async () => {
@@ -422,10 +556,17 @@ function MentorDashboard({ data }: any) {
         animate={{ opacity: 1, y: 0 }}
         className="bg-white rounded-2xl shadow-lg p-8 border border-primary-100"
       >
-        <div className="flex items-center mb-6">
-          <img src="/assets/bear.png" alt="하경곰" className="w-8 h-8 mr-3 rounded-full" />
-          <h2 className="text-2xl font-bold text-bank-800">담당 멘티 관리</h2>
-        </div>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-gray-900">담당 멘티 관리</h2>
+          <button
+            onClick={handleSelectMenteeClick}
+            disabled={loadingMentees}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center space-x-2"
+          >
+            <PlusIcon className="w-4 h-4" />
+            <span>{loadingMentees ? '로딩 중...' : '멘티 선택하기'}</span>
+          </button>
+                  </div>
         <div className="grid gap-6">
           {data?.mentees?.map((mentee: any) => (
             <MenteeCard 
@@ -433,6 +574,7 @@ function MentorDashboard({ data }: any) {
               mentee={mentee} 
               onGiveFeedback={handleGiveFeedback}
               onViewPerformance={handleViewPerformance}
+              onUnassign={handleUnassignMentee}
             />
           ))}
           {(!data?.mentees || data.mentees.length === 0) && (
@@ -461,6 +603,16 @@ function MentorDashboard({ data }: any) {
         <PerformanceModal
           mentee={selectedMentee}
           onClose={() => setShowPerformanceModal(false)}
+        />
+      )}
+
+      {/* Mentee Select Modal */}
+      {showMenteeSelectModal && (
+        <MenteeSelectModal
+          availableMentees={availableMentees}
+          onSelect={handleMenteeSelect}
+          onClose={() => setShowMenteeSelectModal(false)}
+          selecting={selectingMentee}
         />
       )}
 
@@ -493,7 +645,7 @@ function MentorDashboard({ data }: any) {
 }
 
 // 멘티 카드 컴포넌트
-function MenteeCard({ mentee, onGiveFeedback, onViewPerformance }: any) {
+function MenteeCard({ mentee, onGiveFeedback, onViewPerformance, onUnassign }: any) {
   const getScoreColor = (score: number) => {
     if (score >= 90) return 'text-green-600'
     if (score >= 80) return 'text-blue-600'
@@ -508,6 +660,18 @@ function MenteeCard({ mentee, onGiveFeedback, onViewPerformance }: any) {
     return '개선 필요'
   }
 
+  // 프로필 사진 URL 처리 함수
+  const getDisplayPhotoUrl = (photoUrl: string | null) => {
+    if (!photoUrl) return null
+    // /uploads로 시작하는 경우 /api를 추가하여 프록시 경로로 변환
+    if (photoUrl.startsWith('/uploads')) {
+      return `/api${photoUrl}`
+    }
+    return photoUrl
+  }
+
+  const displayPhotoUrl = getDisplayPhotoUrl(mentee.photo_url)
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -516,8 +680,21 @@ function MenteeCard({ mentee, onGiveFeedback, onViewPerformance }: any) {
     >
       <div className="flex items-start justify-between">
         <div className="flex items-start space-x-4">
-          {mentee.photo_url ? (
-            <img src={mentee.photo_url} alt={mentee.name} className="w-16 h-16 rounded-full" />
+          {displayPhotoUrl ? (
+            <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100">
+              <img 
+                src={displayPhotoUrl} 
+                alt={mentee.name} 
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                  e.currentTarget.nextElementSibling.style.display = 'flex'
+                }}
+              />
+              <div className="w-full h-full bg-primary-100 rounded-full flex items-center justify-center hidden">
+                <UserIcon className="w-8 h-8 text-primary-600" />
+              </div>
+            </div>
           ) : (
             <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center">
               <UserIcon className="w-8 h-8 text-primary-600" />
@@ -528,6 +705,40 @@ function MenteeCard({ mentee, onGiveFeedback, onViewPerformance }: any) {
             <p className="text-gray-600 mb-2">
               {mentee.team} • MBTI: {mentee.mbti || '미설정'}
             </p>
+            {mentee.interests && (
+              <div className="mb-2">
+                <div className="flex items-start">
+                  <p className="text-xs text-gray-500 mb-1 mr-2 flex-shrink-0">관심사:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {(() => {
+                      let interestsArray = []
+                      if (Array.isArray(mentee.interests)) {
+                        interestsArray = mentee.interests
+                      } else if (typeof mentee.interests === 'string') {
+                        // JSON 배열 문자열인 경우 파싱
+                        try {
+                          const parsed = JSON.parse(mentee.interests)
+                          if (Array.isArray(parsed)) {
+                            interestsArray = parsed
+                          } else {
+                            interestsArray = [mentee.interests]
+                          }
+                        } catch {
+                          // JSON이 아닌 경우 컴마로 분리
+                          interestsArray = mentee.interests.split(',').map(s => s.trim()).filter(s => s)
+                        }
+                      }
+                      
+                      return interestsArray.map((interest: string, idx: number) => (
+                        <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                          {interest}
+                        </span>
+                      ))
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="flex items-center space-x-4 text-sm text-gray-500">
               <span className="flex items-center">
                 <ChatBubbleBottomCenterTextIcon className="w-4 h-4 mr-1" />
@@ -544,7 +755,7 @@ function MenteeCard({ mentee, onGiveFeedback, onViewPerformance }: any) {
         <div className="text-right">
           <div className="flex items-center space-x-2 mb-2">
             <span className="text-sm text-gray-600">최근 점수</span>
-            <span className={`text-2xl font-bold ${getScoreColor(mentee.recent_score || 0)}`}>
+            <span className={`text-2xl font-bold ${mentee.recent_score ? getScoreColor(mentee.recent_score) : 'text-blue-600'}`}>
               {mentee.recent_score?.toFixed(1) || 'N/A'}
             </span>
           </div>
@@ -562,6 +773,13 @@ function MenteeCard({ mentee, onGiveFeedback, onViewPerformance }: any) {
             >
               <PencilIcon className="w-4 h-4 mr-1" />
               피드백
+            </button>
+            <button
+              onClick={() => onUnassign(mentee)}
+              className="flex items-center px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm"
+            >
+              <XMarkIcon className="w-4 h-4 mr-1" />
+              해제
             </button>
           </div>
         </div>
@@ -1059,812 +1277,404 @@ function StatCard({ icon: Icon, title, value, color }: any) {
 }
 
 // 관리자 대시보드 컴포넌트
-function AdminDashboard({ data }: any) {
-  const [activeTab, setActiveTab] = useState(0)
-  const [userStats, setUserStats] = useState({
-    totalUsers: 0,
-    mentors: 0,
-    mentees: 0,
-    activeRelations: 0
-  })
-  const [recentActivities, setRecentActivities] = useState([])
-
-  useEffect(() => {
-    loadAdminStats()
-  }, [])
-
-  const loadAdminStats = async () => {
-    try {
-      const stats = await adminAPI.getStats()
-      setUserStats({
-        totalUsers: stats.users.total,
-        mentors: stats.users.mentors,
-        mentees: stats.users.mentees,
-        activeRelations: stats.users.active_relations
-      })
-    } catch (error) {
-      console.error('관리자 통계 로드 실패:', error)
-      // 에러 시 기본값 설정
-      setUserStats({
-        totalUsers: 0,
-        mentors: 0,
-        mentees: 0,
-        activeRelations: 0
-      })
-    }
-  }
-
-  const tabs = [
-    { name: '사용자 관리', icon: UserIcon },
-    { name: '멘토-멘티 관계', icon: AcademicCapIcon },
-    { name: '학습 이력', icon: ChartBarIcon },
-    { name: '문서 관리', icon: PaperAirplaneIcon },
-    { name: '시스템 로그', icon: EyeIcon }
-  ]
-
+function AdminDashboard({ 
+  matchingData, 
+  onAssignClick, 
+  onUnassign, 
+  showMatchingSection, 
+  setShowMatchingSection,
+  showAssignModal,
+  setShowAssignModal,
+  selectedMentor,
+  selectedMentee,
+  setSelectedMentee,
+  assignNotes,
+  setAssignNotes,
+  onAssignConfirm,
+  assigning
+}: any) {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-gray-900">관리자 대시보드</h1>
 
-      {/* 전체 통계 */}
-      <div className="grid md:grid-cols-4 gap-6">
-        <StatCard
-          icon={UserIcon}
-          title="전체 사용자"
-          value={userStats.totalUsers}
-          color="primary"
+      {/* 매칭 관리 섹션 */}
+      <AdminMatchingSection
+        matchingData={matchingData}
+        onAssignClick={onAssignClick}
+        onUnassign={onUnassign}
+        showMatchingSection={showMatchingSection}
+        setShowMatchingSection={setShowMatchingSection}
+      />
+
+      {/* 매칭 모달 */}
+      {showAssignModal && (
+        <AssignModal
+          selectedMentor={selectedMentor}
+          selectedMentee={selectedMentee}
+          setSelectedMentee={setSelectedMentee}
+          assignNotes={assignNotes}
+          setAssignNotes={setAssignNotes}
+          onConfirm={onAssignConfirm}
+          onClose={() => {
+            setShowAssignModal(false)
+            setSelectedMentee(null)
+            setAssignNotes('')
+          }}
+          assigning={assigning}
+          matchingData={matchingData}
         />
-        <StatCard
-          icon={AcademicCapIcon}
-          title="멘토 수"
-          value={userStats.mentors}
-          color="amber"
-        />
-        <StatCard
-          icon={LightBulbIcon}
-          title="멘티 수"
-          value={userStats.mentees}
-          color="bank"
-        />
-        <StatCard
-          icon={StarIcon}
-          title="활성 매칭"
-          value={userStats.activeRelations}
-          color="success"
-        />
-      </div>
-
-      {/* 탭 네비게이션 */}
-      <div className="bg-white rounded-2xl shadow-lg border border-primary-100">
-        <div className="border-b border-gray-200">
-          <nav className="flex space-x-8 px-6">
-            {tabs.map((tab, index) => (
-              <button
-                key={index}
-                onClick={() => setActiveTab(index)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${
-                  activeTab === index
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <tab.icon className="w-5 h-5" />
-                {tab.name}
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {/* 탭 콘텐츠 */}
-        <div className="p-6">
-          {activeTab === 0 && <UserManagementTab />}
-          {activeTab === 1 && <MentorMenteeRelationTab />}
-          {activeTab === 2 && <LearningHistoryTab />}
-          {activeTab === 3 && <DocumentManagementTab />}
-          {activeTab === 4 && <SystemLogTab />}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// 사용자 관리 탭
-function UserManagementTab() {
-  const [users, setUsers] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [roleFilter, setRoleFilter] = useState('')
-
-  useEffect(() => {
-    loadUsers()
-  }, [searchTerm, roleFilter])
-
-  const loadUsers = async () => {
-    try {
-      setLoading(true)
-      const response = await adminAPI.getAllUsers(0, 100, roleFilter || undefined, searchTerm || undefined)
-      setUsers(response.users || [])
-    } catch (error) {
-      console.error('사용자 목록 로드 실패:', error)
-      setUsers([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleRoleChange = async (userId: number, newRole: string) => {
-    try {
-      await adminAPI.updateUserRole(userId, newRole)
-      alert('사용자 역할이 성공적으로 변경되었습니다.')
-      loadUsers() // 목록 새로고침
-    } catch (error) {
-      console.error('역할 변경 실패:', error)
-      alert('역할 변경에 실패했습니다.')
-    }
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-900">사용자 관리</h2>
-        <button className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors">
-          새 사용자 추가
-        </button>
-      </div>
-      
-      {/* 검색 및 필터 */}
-      <div className="flex gap-4">
-        <input
-          type="text"
-          placeholder="이름 또는 이메일 검색..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-        />
-        <select
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-        >
-          <option value="">전체 역할</option>
-          <option value="admin">관리자</option>
-          <option value="mentor">멘토</option>
-          <option value="mentee">멘티</option>
-        </select>
-      </div>
-
-      {/* 사용자 목록 */}
-      {loading ? (
-        <div className="flex justify-center items-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-        </div>
-      ) : users.length > 0 ? (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    사용자
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    이메일
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    역할
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    가입일
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    작업
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {users.map((user: any) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10">
-                          {user.photo_url ? (
-                            <img className="h-10 w-10 rounded-full" src={user.photo_url} alt="" />
-                          ) : (
-                            <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
-                              <UserIcon className="h-6 w-6 text-primary-600" />
-                            </div>
-                          )}
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                          <div className="text-sm text-gray-500">{user.employee_number || '사원번호 없음'}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {user.email}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <select
-                        value={user.role}
-                        onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                        className="text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      >
-                        <option value="admin">관리자</option>
-                        <option value="mentor">멘토</option>
-                        <option value="mentee">멘티</option>
-                      </select>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(user.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button className="text-primary-600 hover:text-primary-900">
-                        상세보기
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : (
-        <div className="bg-gray-50 rounded-lg p-8 text-center">
-          <UserIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">사용자를 찾을 수 없습니다.</p>
-        </div>
       )}
     </div>
   )
 }
 
-// 멘토-멘티 관계 탭
-function MentorMenteeRelationTab() {
-  const [relations, setRelations] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [showCreateModal, setShowCreateModal] = useState(false)
-
-  useEffect(() => {
-    loadRelations()
-  }, [])
-
-  const loadRelations = async () => {
-    try {
-      setLoading(true)
-      const response = await adminAPI.getMentorMenteeRelations()
-      setRelations(response.relations || [])
-    } catch (error) {
-      console.error('멘토-멘티 관계 로드 실패:', error)
-      setRelations([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleDeactivateRelation = async (relationId: number) => {
-    if (confirm('정말로 이 관계를 비활성화하시겠습니까?')) {
-      try {
-        await adminAPI.deactivateMentorMenteeRelation(relationId)
-        alert('관계가 성공적으로 비활성화되었습니다.')
-        loadRelations() // 목록 새로고침
-      } catch (error) {
-        console.error('관계 비활성화 실패:', error)
-        alert('관계 비활성화에 실패했습니다.')
-      }
-    }
+// 관리자 매칭 섹션 컴포넌트
+function AdminMatchingSection({ 
+  matchingData, 
+  onAssignClick, 
+  onUnassign, 
+  showMatchingSection, 
+  setShowMatchingSection 
+}: any) {
+  if (!matchingData) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-900">멘토-멘티 관계 관리</h2>
-        <button 
-          onClick={() => setShowCreateModal(true)}
-          className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white rounded-xl shadow-md p-6"
+    >
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold text-gray-900 flex items-center">
+          <UserGroupIcon className="w-6 h-6 mr-2 text-blue-600" />
+          멘토-멘티 매칭 관리
+        </h2>
+        <button
+          onClick={() => setShowMatchingSection(!showMatchingSection)}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
-          새 매칭 생성
+          {showMatchingSection ? '숨기기' : '관리하기'}
         </button>
       </div>
-      
-      {/* 관계 목록 */}
-      {loading ? (
-        <div className="flex justify-center items-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+
+      {/* 통계 카드 */}
+      <div className="grid md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-blue-50 rounded-lg p-4">
+          <div className="flex items-center">
+            <UserIcon className="w-8 h-8 text-blue-600 mr-3" />
+            <div>
+              <p className="text-sm text-blue-600">총 멘토</p>
+              <p className="text-2xl font-bold text-blue-800">{matchingData.statistics?.total_mentors || 0}</p>
+            </div>
+          </div>
         </div>
-      ) : relations.length > 0 ? (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    멘토
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    멘티
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    매칭일
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    상태
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    메모
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    작업
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {relations.map((relation: any) => (
-                  <tr key={relation.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{relation.mentor_name}</div>
-                      <div className="text-sm text-gray-500">{relation.mentor_email}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {/* 멘티 정보는 별도로 가져와야 함 */}
-                      멘티 ID: {relation.mentee_id}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(relation.matched_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        relation.is_active 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {relation.is_active ? '활성' : '비활성'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                      {relation.notes || '메모 없음'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {relation.is_active && (
-                        <button 
-                          onClick={() => handleDeactivateRelation(relation.id)}
-                          className="text-red-600 hover:text-red-900"
+        <div className="bg-blue-50 rounded-lg p-4">
+          <div className="flex items-center">
+            <AcademicCapIcon className="w-8 h-8 text-blue-600 mr-3" />
+            <div>
+              <p className="text-sm text-blue-600">총 멘티</p>
+              <p className="text-2xl font-bold text-blue-800">{matchingData.statistics?.total_mentees || 0}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-blue-50 rounded-lg p-4">
+          <div className="flex items-center">
+            <CheckCircleIcon className="w-8 h-8 text-blue-600 mr-3" />
+            <div>
+              <p className="text-sm text-blue-600">매칭 완료</p>
+              <p className="text-2xl font-bold text-blue-800">{matchingData.statistics?.assigned_mentees || 0}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-blue-50 rounded-lg p-4">
+          <div className="flex items-center">
+            <XCircleIcon className="w-8 h-8 text-blue-600 mr-3" />
+            <div>
+              <p className="text-sm text-blue-600">미매칭</p>
+              <p className="text-2xl font-bold text-blue-800">{matchingData.statistics?.unassigned_mentees || 0}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {showMatchingSection && (
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* 멘토 목록 */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">멘토 목록</h3>
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {matchingData.mentors.map((mentor: any) => (
+                <div key={mentor.id} className="p-4 border border-gray-200 rounded-lg">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-semibold text-gray-900">{mentor.name}</h4>
+                      <p className="text-sm text-gray-600">{mentor.email}</p>
+                      <p className="text-xs text-gray-500">담당 멘티: {mentor.current_mentee_count}명</p>
+                    </div>
+                    <div className="flex flex-col space-y-1">
+                      {mentor.is_available && (
+                        <button
+                          onClick={() => onAssignClick(mentor, null)}
+                          className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
                         >
-                          비활성화
+                          멘티 배정
                         </button>
                       )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 멘티 목록 */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">멘티 목록</h3>
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {matchingData.mentees.map((mentee: any) => (
+                <div key={mentee.id} className="p-4 border border-gray-200 rounded-lg">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-semibold text-gray-900">{mentee.name}</h4>
+                      <p className="text-sm text-gray-600">{mentee.email}</p>
+                      <p className="text-xs text-gray-500">
+                        {mentee.current_mentor ? `담당 멘토: ${mentee.current_mentor.name}` : '미배정'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      ) : (
-        <div className="bg-gray-50 rounded-lg p-8 text-center">
-          <AcademicCapIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">멘토-멘티 관계를 찾을 수 없습니다.</p>
+      )}
+
+      {/* 현재 매칭 현황 */}
+      {showMatchingSection && matchingData.current_matches && matchingData.current_matches.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">현재 매칭 현황</h3>
+          <div className="space-y-3">
+            {matchingData.current_matches.map((match: any) => (
+              <div key={match.relation_id} className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex justify-between items-center">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <span className="font-semibold text-blue-900">{match.mentor?.name || '알 수 없음'}</span>
+                      <span className="text-blue-500">↔</span>
+                      <span className="font-semibold text-blue-900">{match.mentee?.name || '알 수 없음'}</span>
+                    </div>
+                    {match.notes && (
+                      <p className="text-sm text-blue-700 bg-blue-100 p-2 rounded">
+                        <span className="font-medium">메모:</span> {match.notes}
+                      </p>
+                    )}
+                    <p className="text-xs text-blue-600 mt-1">
+                      매칭일: {match.matched_at ? new Date(match.matched_at).toLocaleDateString('ko-KR') : '알 수 없음'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => onUnassign(match.relation_id)}
+                    className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 ml-4"
+                  >
+                    해제
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }
 
-// 학습 이력 탭
-function LearningHistoryTab() {
-  const [history, setHistory] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [userId, setUserId] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
-
-  useEffect(() => {
-    loadHistory()
-  }, [userId, startDate, endDate])
-
-  const loadHistory = async () => {
-    try {
-      setLoading(true)
-      const response = await adminAPI.getLearningHistory(
-        userId ? parseInt(userId) : undefined,
-        startDate || undefined,
-        endDate || undefined
-      )
-      setHistory(response.history || [])
-    } catch (error) {
-      console.error('학습 이력 로드 실패:', error)
-      setHistory([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'chat': return '채팅'
-      case 'exam': return '시험'
-      case 'feedback': return '피드백'
-      default: return type
-    }
-  }
-
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'chat': return 'bg-blue-100 text-blue-800'
-      case 'exam': return 'bg-green-100 text-green-800'
-      case 'feedback': return 'bg-yellow-100 text-yellow-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
+// 매칭 모달 컴포넌트
+function AssignModal({
+  selectedMentor,
+  selectedMentee,
+  setSelectedMentee,
+  assignNotes,
+  setAssignNotes,
+  onConfirm,
+  onClose,
+  assigning,
+  matchingData
+}: any) {
+  // 미매칭된 멘티들만 필터링
+  const availableMentees = matchingData?.mentees?.filter((mentee: any) => !mentee.is_assigned) || []
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-900">학습 이력 관리</h2>
-        <div className="flex gap-2">
-          <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
-            엑셀 다운로드
-          </button>
-          <button className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors">
-            통계 보기
-          </button>
-        </div>
-      </div>
-      
-      {/* 필터 */}
-      <div className="flex gap-4">
-        <input
-          type="number"
-          placeholder="사용자 ID (선택사항)"
-          value={userId}
-          onChange={(e) => setUserId(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-        />
-        <input
-          type="date"
-          placeholder="시작 날짜"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-        />
-        <input
-          type="date"
-          placeholder="종료 날짜"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-        />
-      </div>
-
-      {/* 이력 목록 */}
-      {loading ? (
-        <div className="flex justify-center items-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-        </div>
-      ) : history.length > 0 ? (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    타입
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    사용자
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    내용
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    일시
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {history.map((item: any, index: number) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTypeColor(item.type)}`}>
-                        {getTypeLabel(item.type)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{item.user_name}</div>
-                      <div className="text-sm text-gray-500">ID: {item.user_id}</div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900 max-w-md truncate">
-                      {item.user_message}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(item.created_at).toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+        <h3 className="text-lg font-bold text-gray-900 mb-4">멘토-멘티 매칭</h3>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">멘토</label>
+            <p className="text-gray-900">{selectedMentor?.name || '선택된 멘토 없음'}</p>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">멘티</label>
+            <select
+              value={selectedMentee?.id || ''}
+              onChange={(e) => {
+                const menteeId = parseInt(e.target.value)
+                const mentee = availableMentees.find((m: any) => m.id === menteeId)
+                setSelectedMentee(mentee)
+              }}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">멘티를 선택하세요</option>
+              {availableMentees.map((mentee: any) => (
+                <option key={mentee.id} value={mentee.id}>
+                  {mentee.name} ({mentee.email})
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">메모 (선택사항)</label>
+            <textarea
+              value={assignNotes}
+              onChange={(e) => setAssignNotes(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              rows={3}
+              placeholder="매칭 관련 메모를 입력하세요..."
+            />
           </div>
         </div>
-      ) : (
-        <div className="bg-gray-50 rounded-lg p-8 text-center">
-          <ChartBarIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">학습 이력을 찾을 수 없습니다.</p>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// 문서 관리 탭
-function DocumentManagementTab() {
-  const [documents, setDocuments] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [categoryFilter, setCategoryFilter] = useState('')
-
-  useEffect(() => {
-    loadDocuments()
-  }, [categoryFilter])
-
-  const loadDocuments = async () => {
-    try {
-      setLoading(true)
-      const response = await adminAPI.getAllDocuments(0, 100, categoryFilter || undefined)
-      setDocuments(response.documents || [])
-    } catch (error) {
-      console.error('문서 목록 로드 실패:', error)
-      setDocuments([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-900">문서 관리</h2>
-        <div className="flex gap-2">
-          <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
-            문서 업로드
-          </button>
-          <button className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors">
-            카테고리 관리
-          </button>
-        </div>
-      </div>
-      
-      {/* 카테고리 필터 */}
-      <div className="flex gap-4">
-        <select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-        >
-          <option value="">전체 카테고리</option>
-          <option value="경제용어">경제용어</option>
-          <option value="은행산업 기본지식">은행산업 기본지식</option>
-          <option value="고객언어 가이드">고객언어 가이드</option>
-          <option value="은행법">은행법</option>
-          <option value="상품설명서">상품설명서</option>
-          <option value="서식">서식</option>
-          <option value="약관">약관</option>
-          <option value="FAQ">FAQ</option>
-        </select>
-      </div>
-
-      {/* 문서 목록 */}
-      {loading ? (
-        <div className="flex justify-center items-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-        </div>
-      ) : documents.length > 0 ? (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    제목
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    카테고리
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    파일 타입
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    크기
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    다운로드 수
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    인덱싱 상태
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    업로드일
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {documents.map((doc: any) => (
-                  <tr key={doc.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{doc.title}</div>
-                      {doc.description && (
-                        <div className="text-sm text-gray-500">{doc.description}</div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {doc.category}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {doc.file_type.toUpperCase()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {(doc.file_size / 1024 / 1024).toFixed(2)} MB
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {doc.download_count}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        doc.is_indexed 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {doc.is_indexed ? '완료' : '대기'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(doc.upload_date).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : (
-        <div className="bg-gray-50 rounded-lg p-8 text-center">
-          <PaperAirplaneIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">문서를 찾을 수 없습니다.</p>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// 시스템 로그 탭
-function SystemLogTab() {
-  const [logs, setLogs] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [logType, setLogType] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
-
-  useEffect(() => {
-    loadLogs()
-  }, [logType, startDate, endDate])
-
-  const loadLogs = async () => {
-    try {
-      setLoading(true)
-      const response = await adminAPI.getSystemLogs(
-        logType || undefined,
-        startDate || undefined,
-        endDate || undefined
-      )
-      setLogs(response.logs || [])
-    } catch (error) {
-      console.error('시스템 로그 로드 실패:', error)
-      setLogs([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const getLogTypeColor = (type: string) => {
-    switch (type) {
-      case 'user_activity': return 'bg-blue-100 text-blue-800'
-      case 'chat_activity': return 'bg-green-100 text-green-800'
-      case 'system_error': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-900">시스템 로그</h2>
-        <div className="flex gap-2">
-          <select 
-            value={logType}
-            onChange={(e) => setLogType(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2"
+        
+        <div className="flex justify-end space-x-3 mt-6">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            disabled={assigning}
           >
-            <option value="">전체 로그</option>
-            <option value="user_activity">사용자 활동</option>
-            <option value="chat_activity">채팅 활동</option>
-            <option value="system_error">시스템 오류</option>
-          </select>
-          <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
-            로그 다운로드
+            취소
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={assigning || !selectedMentor || !selectedMentee}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
+            {assigning ? '매칭 중...' : '매칭 완료'}
           </button>
         </div>
       </div>
-      
-      {/* 날짜 필터 */}
-      <div className="flex gap-4">
-        <input
-          type="date"
-          placeholder="시작 날짜"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-        />
-        <input
-          type="date"
-          placeholder="종료 날짜"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-        />
-      </div>
+    </div>
+  )
+}
 
-      {/* 로그 목록 */}
-      {loading ? (
-        <div className="flex justify-center items-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+
+// 멘티 선택 모달 컴포넌트
+function MenteeSelectModal({ 
+  availableMentees, 
+  onSelect, 
+  onClose, 
+  selecting 
+}: any) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+        <h3 className="text-lg font-bold text-gray-900 mb-4">멘티 선택하기</h3>
+        
+        <div className="flex-1 overflow-y-auto">
+          {availableMentees.length === 0 ? (
+            <div className="text-center py-8">
+              <UserIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 text-lg">선택 가능한 멘티가 없습니다</p>
+              <p className="text-gray-400 text-sm">모든 멘티가 이미 배정되었습니다</p>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {availableMentees.map((mentee: any) => (
+                <div key={mentee.id} className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900">{mentee.name}</h4>
+                      <p className="text-sm text-gray-600">{mentee.email}</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                          {mentee.team} {mentee.team_number}
+                        </span>
+                        {mentee.mbti && (
+                          <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                            {mentee.mbti}
+                          </span>
+                        )}
+                        {mentee.join_year && (
+                          <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+                            {mentee.join_year}년 입사
+                          </span>
+                        )}
+                      </div>
+                      {mentee.interests && (
+                        <div className="mt-2">
+                          <div className="flex items-start">
+                            <p className="text-xl text-gray-500 mb-1 mr-2 flex-shrink-0">관심사:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {(() => {
+                                let interestsArray = []
+                                if (Array.isArray(mentee.interests)) {
+                                  interestsArray = mentee.interests
+                                } else if (typeof mentee.interests === 'string') {
+                                  // JSON 배열 문자열인 경우 파싱
+                                  try {
+                                    const parsed = JSON.parse(mentee.interests)
+                                    if (Array.isArray(parsed)) {
+                                      interestsArray = parsed
+                                    } else {
+                                      interestsArray = [mentee.interests]
+                                    }
+                                  } catch {
+                                    // JSON이 아닌 경우 컴마로 분리
+                                    interestsArray = mentee.interests.split(',').map(s => s.trim()).filter(s => s)
+                                  }
+                                }
+                                
+                                return interestsArray.map((interest: string, idx: number) => (
+                                  <span key={idx} className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">
+                                    {interest}
+                                  </span>
+                                ))
+                              })()}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => onSelect(mentee)}
+                      disabled={selecting}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    >
+                      {selecting ? '선택 중...' : '선택하기'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      ) : logs.length > 0 ? (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    타입
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    메시지
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    상세 정보
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    시간
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {logs.map((log: any) => (
-                  <tr key={log.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getLogTypeColor(log.type)}`}>
-                        {log.type}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {log.message}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {log.details ? JSON.stringify(log.details) : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(log.timestamp).toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        
+        <div className="flex justify-end mt-6 pt-4 border-t border-gray-200">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            disabled={selecting}
+          >
+            취소
+          </button>
         </div>
-      ) : (
-        <div className="bg-gray-50 rounded-lg p-8 text-center">
-          <EyeIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">시스템 로그를 찾을 수 없습니다.</p>
-        </div>
-      )}
+      </div>
     </div>
   )
 }
