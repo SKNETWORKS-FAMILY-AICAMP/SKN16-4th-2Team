@@ -1,19 +1,21 @@
 import { useState, useRef } from 'react';
 import { 
   UserCircleIcon, 
-  QrCodeIcon, 
-  XMarkIcon, 
   PencilIcon, 
-  EnvelopeIcon, 
-  UserIcon, 
-  PhoneIcon, 
-  EyeIcon, 
-  EyeSlashIcon 
+  CheckIcon, 
+  XMarkIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  PhoneIcon,
+  EnvelopeIcon,
+  UserIcon,
+  ArrowPathIcon,
+  QrCodeIcon
 } from '@heroicons/react/24/outline';
-import { motion } from 'framer-motion';
 import { useAuthStore } from '../store/authStore';
 import { authAPI } from '../utils/api';
 import { QRCodeSVG } from 'qrcode.react';
+import { motion } from 'framer-motion';
 
 export default function MyPage() {
   const { user, updateUser } = useAuthStore();
@@ -49,29 +51,44 @@ export default function MyPage() {
 
   if (!user) return <div>로그인이 필요합니다.</div>;
 
+  const getDisplayPhotoUrl = (url?: string) => {
+    if (!url) return ''
+    if (/^https?:\/\//i.test(url) || url.startsWith('data:')) return url
+    // 핵심: 어떤 경우든 /uploads 경로는 프록시(/api)로 강제
+    if (url.includes('/uploads/')) {
+      const onlyPath = url.replace(/^https?:\/\/[^/]+/, '')
+      return onlyPath.startsWith('/api') ? onlyPath : `/api${onlyPath}`
+    }
+    return url
+  }
+
   // 이미지 업로드 핸들러
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
     try {
-      // 실제 업로드 API가 있다면 여기에 구현
-      // 예시: 서버에 업로드 후 URL 반환
-      // const url = await uploadProfileImage(file);
-      // setPhotoUrl(url);
-      // updateUser({ ...user, photo_url: url });
-      // 데모용: 로컬 미리보기
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        if (ev.target?.result) {
-          setPhotoUrl(ev.target.result as string);
-          updateUser({ ...user, photo_url: ev.target.result as string });
-        }
-      };
-      reader.readAsDataURL(file);
+      const data = await authAPI.uploadProfilePhoto(file as any);
+      if (data?.photo_url) {
+        setPhotoUrl(data.photo_url)
+        updateUser({ ...user, photo_url: data.photo_url })
+        return
+      }
     } finally {
       setUploading(false);
     }
+    // 실패 시에도 즉시 미리보기 제공 (이전 동작 유지)
+    try {
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        if (ev.target?.result) {
+          const preview = ev.target.result as string
+          setPhotoUrl(preview)
+          updateUser({ ...user, photo_url: preview })
+        }
+      }
+      reader.readAsDataURL(file)
+    } catch {}
   };
 
   // 편집 모드 토글
@@ -123,18 +140,49 @@ export default function MyPage() {
       }
       
       // 관심사를 문자열로 변환 (백엔드에서 JSON 문자열로 저장)
-      const updateData = {
-        ...editForm,
-        interests: Array.isArray(editForm.interests) 
-          ? JSON.stringify(editForm.interests) 
+      const updateData: any = {
+        name: editForm.name,
+        email: editForm.email,
+        phone: editForm.phone,
+        extension: editForm.extension,
+        team: editForm.team,
+        team_number: editForm.team_number,
+        mbti: editForm.mbti,
+        interests: Array.isArray(editForm.interests)
+          ? JSON.stringify(editForm.interests)
           : editForm.interests,
-        // 비밀번호가 비어있으면 제외
-        ...(editForm.password ? { password: editForm.password } : {})
       };
-      
-      // confirmPassword는 제외
-      delete updateData.confirmPassword;
-      
+
+      if (editForm.password) {
+        updateData.password = editForm.password;
+      }
+
+      // 변경 사항이 없는 경우 조용히 종료 (API 호출 안 함)
+      const serializedUserInterests = (() => {
+        if (!user?.interests) return '';
+        if (Array.isArray(user.interests)) return JSON.stringify(user.interests);
+        try { return JSON.stringify(JSON.parse(user.interests)); } catch { return String(user.interests); }
+      })();
+
+      const currentSnapshot = {
+        name: user?.name || '',
+        email: user?.email || '',
+        phone: user?.phone || '',
+        extension: user?.extension || '',
+        team: user?.team || '',
+        team_number: user?.team_number || '',
+        mbti: user?.mbti || '',
+        interests: serializedUserInterests,
+      };
+
+      const nextSnapshot = { ...currentSnapshot, ...updateData, interests: updateData.interests || '' };
+      const hasAnyChange = Object.keys(currentSnapshot).some((k) => (currentSnapshot as any)[k] !== (nextSnapshot as any)[k]) || !!editForm.password;
+
+      if (!hasAnyChange) {
+        setIsEditing(false);
+        return;
+      }
+
       // 실제 API 호출하여 DB 업데이트
       const updatedUser = await authAPI.updateProfile(updateData);
       
@@ -150,35 +198,72 @@ export default function MyPage() {
 
   // 관심사 옵션
   const interestOptions = [
-    'IT/테크', '금융', '마케팅', '영업', 'HR', '디자인', 
-    '음악', '독서', '운동', '여행', '요리', '게임'
+    'IT/테크', '주식', '부동산', '디자인/예술', '공연/전시', '마케팅', 
+    '스포츠', '음악', '독서', '게임', '사내 소모임', '자기계발'
   ];
+
+  // 부서 옵션
+  const teamOptions = [
+    '', '영업부', '기업금융 / 기업영업부', '리스크관리부', 
+    '여신심사 / 여신관리부', '자금부 / 자금시장부', '재무 / 회계부', 
+    '기획 / 전략부', 'IT / 정보기술부', '디지털 / 혁신부서', 
+    '마케팅 / 홍보부', '고객지원 / 고객센터 / 민원부', '법무부', 
+    '감사 / 내부감사부', '보안 / 정보보호부', '소비자보호부', 
+    '상품 / 금융상품개발부', '자산관리 / WM (Wealth Management)부', 
+    '외환 / 무역금융부', '투자은행부', '지속가능경영(ESG)부', 
+    '인사부', '총무부', 'CRM부'
+  ];
+
+  // 팀 옵션
+  const teamNumberOptions = [
+    '', '1팀', '2팀', '3팀', '4팀', '5팀', 
+    '6팀', '7팀', '8팀', '9팀', '10팀'
+  ];
+
+  // 휴대폰 번호 포맷팅
+  const formatPhoneNumber = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 3) return numbers;
+    if (numbers.length <= 7) return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+    return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
+  };
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900">내 정보</h1>
-        <button
-          onClick={handleEditToggle}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-            isEditing 
-              ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
-              : 'bg-blue-600 text-white hover:bg-blue-700'
-          }`}
-        >
-          {isEditing ? (
-            <>
-              <XMarkIcon className="w-5 h-5" />
-              <span>취소</span>
-            </>
-          ) : (
-            <>
-              <PencilIcon className="w-5 h-5" />
-              <span>편집</span>
-            </>
+        <div className="flex items-center space-x-3">
+          {isEditing && (
+            <button
+              onClick={handleSave}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg"
+            >
+              <CheckIcon className="w-5 h-5" />
+              <span>저장</span>
+            </button>
           )}
-        </button>
+          <button
+            onClick={handleEditToggle}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+              isEditing 
+                ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+          >
+            {isEditing ? (
+              <>
+                <XMarkIcon className="w-5 h-5" />
+                <span>취소</span>
+              </>
+            ) : (
+              <>
+                <PencilIcon className="w-5 h-5" />
+                <span>편집</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8">
@@ -193,11 +278,13 @@ export default function MyPage() {
           {/* 프로필 사진 */}
           <div className="flex flex-col items-center mb-6">
             <div className="relative w-32 h-32 mb-4">
-              {photoUrl ? (
-                <img src={photoUrl} alt={user.name} className="w-32 h-32 rounded-full object-cover border-4 border-gray-100" />
-              ) : (
-                <UserCircleIcon className="w-32 h-32 text-gray-300" />
-          )}
+              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-gray-100 bg-gray-50 flex items-center justify-center">
+                {photoUrl ? (
+                  <img src={getDisplayPhotoUrl(photoUrl)} alt={user.name} className="w-full h-full object-cover" />
+                ) : (
+                  <UserCircleIcon className="w-20 h-20 text-gray-300" />
+                )}
+              </div>
           <button
                 className="absolute bottom-2 right-2 bg-blue-500 text-white rounded-full p-2 shadow-lg hover:bg-blue-600 focus:outline-none transition-colors"
             onClick={() => fileInputRef.current?.click()}
@@ -211,6 +298,27 @@ export default function MyPage() {
                   <PencilIcon className="w-5 h-5" />
                 )}
           </button>
+          {photoUrl && (
+            <button
+              className="absolute bottom-2 left-2 z-10 bg-white/95 backdrop-blur text-gray-800 rounded-full p-2 shadow hover:bg-white focus:outline-none transition-all border border-gray-200"
+              aria-label="기본 이미지로 되돌리기"
+              title="기본 이미지로 되돌리기"
+              onClick={async (e) => {
+                e.stopPropagation()
+                try {
+                  await authAPI.resetProfilePhoto()
+                  setPhotoUrl('')
+                  updateUser({ ...user, photo_url: undefined as any })
+                } catch (err) {
+                  console.error(err)
+                  alert('기본 상태로 되돌리기에 실패했습니다.')
+                }
+              }}
+              type="button"
+            >
+              <ArrowPathIcon className="w-4 h-4" />
+            </button>
+          )}
           <input
             type="file"
             accept="image/*"
@@ -393,14 +501,15 @@ export default function MyPage() {
                 <input
                   type="tel"
                   value={editForm.phone}
-                  onChange={(e) => handleFormChange('phone', e.target.value)}
+                  onChange={(e) => handleFormChange('phone', formatPhoneNumber(e.target.value))}
                   placeholder="010-1234-5678"
+                  maxLength={13}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               ) : (
                 <div className="text-gray-900">{user.phone || '-'}</div>
               )}
-      </div>
+            </div>
 
             {/* 내선 번호 */}
             <div>
@@ -439,26 +548,34 @@ export default function MyPage() {
               </label>
               {isEditing ? (
                 <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="text"
+                  <select
                     value={editForm.team}
                     onChange={(e) => handleFormChange('team', e.target.value)}
-                    placeholder="부서명"
                     className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <input
-                    type="text"
+                  >
+                    {teamOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option || '부서 선택'}
+                      </option>
+                    ))}
+                  </select>
+                  <select
                     value={editForm.team_number}
                     onChange={(e) => handleFormChange('team_number', e.target.value)}
-                    placeholder="팀명"
                     className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-        </div>
+                  >
+                    {teamNumberOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option || '팀 선택'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               ) : (
                 <div className="text-gray-900">
-            {user.team && user.team_number
-              ? `${user.team} ${user.team_number}`
-              : user.team || user.team_number || '-'}
+                  {user.team && user.team_number
+                    ? `${user.team} ${user.team_number}`
+                    : user.team || user.team_number || '-'}
                 </div>
               )}
             </div>
