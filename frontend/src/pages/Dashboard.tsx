@@ -723,8 +723,8 @@ function MenteeCard({ mentee, onGiveFeedback, onViewPerformance, onUnassign }: a
           ) : (
             <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center">
               <UserIcon className="w-8 h-8 text-primary-600" />
-            </div>
-          )}
+                  </div>
+                )}
           <div className="flex-1">
             <h3 className="text-xl font-bold text-gray-900 mb-1">{mentee.name}</h3>
             <p className="text-gray-600 mb-2">
@@ -760,8 +760,8 @@ function MenteeCard({ mentee, onGiveFeedback, onViewPerformance, onUnassign }: a
                         </span>
                       ))
                     })()}
-                  </div>
                 </div>
+              </div>
               </div>
             )}
             <div className="flex items-center space-x-4 text-sm text-gray-500">
@@ -777,11 +777,11 @@ function MenteeCard({ mentee, onGiveFeedback, onViewPerformance, onUnassign }: a
           </div>
         </div>
         
-        <div className="text-right">
+              <div className="text-right">
           <div className="flex items-center space-x-2 mb-2">
             <span className="text-sm text-gray-600">최근 점수</span>
             <span className={`text-2xl font-bold ${mentee.recent_score ? getScoreColor(mentee.recent_score) : 'text-blue-600'}`}>
-              {mentee.recent_score?.toFixed(1) || 'N/A'}
+                  {mentee.recent_score?.toFixed(1) || 'N/A'}
             </span>
           </div>
           <div className="flex space-x-2">
@@ -937,9 +937,9 @@ function PerformanceModal({ mentee, onClose }: any) {
                     <span className="text-sm font-bold text-gray-900 w-10 text-right">
                       {item.score}점
                     </span>
-                  </div>
-                </div>
-              ))}
+              </div>
+            </div>
+          ))}
             </div>
             
             {/* 개선 제안 */}
@@ -1233,7 +1233,7 @@ function FeedbackCard({ feedback, index, currentTime }: any) {
           )}
         </div>
       )}
-    </motion.div>
+      </motion.div>
   )
 }
 
@@ -1290,18 +1290,20 @@ function FeedbackAccordion({ additionalFeedbacks, totalCount, currentTime }: any
 }
 
 function StatCard({ icon: Icon, title, value, color }: any) {
-  const colorClasses: any = {
-    primary: 'from-primary-500 to-primary-600',
-    amber: 'from-amber-500 to-amber-600',
-    bank: 'from-bank-500 to-bank-600',
-    accent: 'from-accent-500 to-accent-600',
+  const textColors: any = {
+    primary: 'text-primary-600',
+    amber: 'text-amber-600',
+    bank: 'text-bank-600',
+    accent: 'text-accent-600',
   }
 
   return (
-    <div className={`bg-gradient-to-br ${colorClasses[color]} rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow`}>
-      <Icon className="w-12 h-12 mb-4 opacity-80" />
-      <p className="text-white/90 mb-1 font-medium">{title}</p>
-      <p className="text-3xl font-bold">{value}</p>
+    <div className="rounded-2xl p-6 bg-white border border-amber-100 shadow-sm hover:shadow-md transition-shadow">
+      <div className={`w-12 h-12 mb-3 flex items-center justify-center rounded-full bg-gray-50 ${textColors[color]}`}>
+        <Icon className="w-6 h-6" />
+      </div>
+      <p className="text-sm text-gray-500 mb-1 font-medium">{title}</p>
+      <p className={`text-3xl font-bold text-gray-900`}>{value}</p>
     </div>
   )
 }
@@ -1474,11 +1476,11 @@ function MentorMenteeRelationTab({
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-xl shadow-md p-6"
-    >
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-xl shadow-md p-6"
+        >
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold text-gray-900 flex items-center">
           <UserGroupIcon className="w-6 h-6 mr-2 text-amber-600" />
@@ -1558,8 +1560,8 @@ function MentorMenteeRelationTab({
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
+            ))}
+          </div>
           </div>
 
           {/* 멘티 목록 */}
@@ -1619,7 +1621,7 @@ function MentorMenteeRelationTab({
           </div>
         </div>
       )}
-    </motion.div>
+        </motion.div>
   )
 }
 
