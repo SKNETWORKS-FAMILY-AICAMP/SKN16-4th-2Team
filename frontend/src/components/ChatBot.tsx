@@ -21,7 +21,12 @@ interface Message {
   timestamp: Date
 }
 
-export default function ChatBot() {
+interface ChatBotProps {
+  forceOpen?: boolean
+  onClose?: () => void
+}
+
+export default function ChatBot({ forceOpen = false, onClose }: ChatBotProps = {}) {
   const navigate = useNavigate()
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
@@ -43,6 +48,19 @@ export default function ChatBot() {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  useEffect(() => {
+    if (forceOpen) {
+      setIsOpen(true)
+    }
+  }, [forceOpen])
+
+  const handleClose = () => {
+    setIsOpen(false)
+    if (onClose) {
+      onClose()
+    }
+  }
 
   const handleSend = async () => {
     if (!input.trim() || loading) return
@@ -121,7 +139,7 @@ export default function ChatBot() {
                 </div>
               </div>
               <button
-                onClick={() => setIsOpen(false)}
+                onClick={handleClose}
                 className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
               >
                 <XMarkIcon className="w-5 h-5" />
@@ -209,7 +227,13 @@ export default function ChatBot() {
       <motion.button
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          if (isOpen) {
+            handleClose()
+          } else {
+            setIsOpen(true)
+          }
+        }}
         className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-br from-primary-600 to-primary-700 text-white rounded-full shadow-lg flex items-center justify-center z-50 hover:shadow-xl transition-shadow"
       >
         {isOpen ? (

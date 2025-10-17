@@ -3,6 +3,7 @@
  * 로그인 후 메인 화면
  */
 import { Link } from 'react-router-dom'
+import { useState } from 'react'
 import { useAuthStore } from '../store/authStore'
 import { motion } from 'framer-motion'
 import {
@@ -11,9 +12,19 @@ import {
   ChartBarIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline'
+import ChatBot from '../components/ChatBot'
 
 export default function Home() {
   const { user } = useAuthStore()
+  const [isChatBotOpen, setIsChatBotOpen] = useState(false)
+
+  const handleOpenChatBot = () => {
+    setIsChatBotOpen(true)
+  }
+
+  const handleCloseChatBot = () => {
+    setIsChatBotOpen(false)
+  }
 
   return (
     <div className="space-y-8">
@@ -56,10 +67,13 @@ export default function Home() {
           description="학습 현황 및 통계"
           color="purple"
         />
-        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-6 text-white cursor-pointer hover:shadow-lg transition-shadow">
+        <div 
+          onClick={handleOpenChatBot}
+          className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-6 text-white cursor-pointer hover:shadow-lg transition-all hover:scale-105"
+        >
           <SparklesIcon className="w-12 h-12 mb-4" />
           <h3 className="text-xl font-semibold mb-2">AI 챗봇</h3>
-          <p className="text-orange-100">우측 하단 아이콘 클릭</p>
+          <p className="text-orange-100">클릭하여 챗봇 시작하기</p>
         </div>
       </div>
 
@@ -97,6 +111,12 @@ export default function Home() {
           </ul>
         </div>
       )}
+
+      {/* ChatBot */}
+      <ChatBot 
+        forceOpen={isChatBotOpen} 
+        onClose={handleCloseChatBot}
+      />
     </div>
   )
 }
