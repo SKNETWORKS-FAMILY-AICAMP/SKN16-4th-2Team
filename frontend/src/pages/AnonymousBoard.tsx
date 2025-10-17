@@ -8,8 +8,14 @@ import {
   PlusIcon, 
   ChatBubbleLeftIcon,
   EyeIcon,
-  ClockIcon
+  ClockIcon,
+  HandThumbUpIcon,
+  HandThumbDownIcon
 } from '@heroicons/react/24/outline'
+import { 
+  HandThumbUpIcon as HandThumbUpSolidIcon,
+  HandThumbDownIcon as HandThumbDownSolidIcon
+} from '@heroicons/react/24/solid'
 import { motion } from 'framer-motion'
 
 export default function AnonymousBoard() {
@@ -126,6 +132,65 @@ export default function AnonymousBoard() {
 }
 
 function PostCard({ post, formatDate }: any) {
+  const [liked, setLiked] = useState(post.user_liked || false)
+  const [disliked, setDisliked] = useState(post.user_disliked || false)
+  const [likeCount, setLikeCount] = useState(post.like_count || 0)
+  const [dislikeCount, setDislikeCount] = useState(post.dislike_count || 0)
+
+  const handleLike = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    try {
+      if (liked) {
+        // 이미 좋아요를 눌렀다면 취소
+        await postAPI.unlikePost(post.id)
+        setLiked(false)
+        setLikeCount(prev => prev - 1)
+      } else {
+        // 좋아요 추가
+        await postAPI.likePost(post.id)
+        setLiked(true)
+        setLikeCount(prev => prev + 1)
+        
+        // 비추천이 눌려있다면 취소
+        if (disliked) {
+          setDisliked(false)
+          setDislikeCount(prev => prev - 1)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to toggle like:', error)
+    }
+  }
+
+  const handleDislike = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    try {
+      if (disliked) {
+        // 이미 비추천을 눌렀다면 취소
+        await postAPI.undislikePost(post.id)
+        setDisliked(false)
+        setDislikeCount(prev => prev - 1)
+      } else {
+        // 비추천 추가
+        await postAPI.dislikePost(post.id)
+        setDisliked(true)
+        setDislikeCount(prev => prev + 1)
+        
+        // 추천이 눌려있다면 취소
+        if (liked) {
+          setLiked(false)
+          setLikeCount(prev => prev - 1)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to toggle dislike:', error)
+    }
+  }
+
   return (
     <Link to={`/board/${post.id}`}>
       <motion.div
@@ -136,6 +201,44 @@ function PostCard({ post, formatDate }: any) {
       >
         <h3 className="text-lg font-semibold text-gray-900 mb-2">{post.title}</h3>
         <p className="text-gray-600 mb-4 line-clamp-2">{post.content}</p>
+        
+        {/* 꿀추/꿀통 버튼 */}
+        <div className="flex items-center space-x-4 mb-4">
+          <button
+            onClick={handleLike}
+            className={`flex items-center space-x-1 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+              liked 
+                ? 'bg-amber-100 text-amber-700 border border-amber-200' 
+                : 'bg-gray-100 text-gray-600 hover:bg-amber-50 hover:text-amber-600'
+            }`}
+          >
+            {liked ? (
+              <HandThumbUpSolidIcon className="w-4 h-4" />
+            ) : (
+              <HandThumbUpIcon className="w-4 h-4" />
+            )}
+            <span>꿀추</span>
+            <span className="text-xs">{likeCount}</span>
+          </button>
+          
+          <button
+            onClick={handleDislike}
+            className={`flex items-center space-x-1 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+              disliked 
+                ? 'bg-red-100 text-red-700 border border-red-200' 
+                : 'bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-600'
+            }`}
+          >
+            {disliked ? (
+              <HandThumbDownSolidIcon className="w-4 h-4" />
+            ) : (
+              <HandThumbDownIcon className="w-4 h-4" />
+            )}
+            <span>꿀통</span>
+            <span className="text-xs">{dislikeCount}</span>
+          </button>
+        </div>
+
         <div className="flex items-center justify-between text-sm text-gray-500">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-1">

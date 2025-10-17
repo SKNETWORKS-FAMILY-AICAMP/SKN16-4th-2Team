@@ -226,9 +226,46 @@ export const postAPI = {
     const response = await api.delete(`/posts/comments/${id}`)
     return response.data
   },
-  
-  getPopularPosts: async (limit: number = 3) => {
-    const response = await api.get(`/posts/popular?limit=${limit}`)
+
+  // 꿀추/꿀통 시스템
+  likePost: async (postId: number) => {
+    const response = await api.post(`/posts/${postId}/like`)
+    return response.data
+  },
+
+  unlikePost: async (postId: number) => {
+    const response = await api.delete(`/posts/${postId}/like`)
+    return response.data
+  },
+
+  dislikePost: async (postId: number) => {
+    const response = await api.post(`/posts/${postId}/dislike`)
+    return response.data
+  },
+
+  undislikePost: async (postId: number) => {
+    const response = await api.delete(`/posts/${postId}/dislike`)
+    return response.data
+  },
+
+  // 댓글 꿀추/꿀통 시스템
+  likeComment: async (commentId: number) => {
+    const response = await api.post(`/posts/comments/${commentId}/like`)
+    return response.data
+  },
+
+  unlikeComment: async (commentId: number) => {
+    const response = await api.delete(`/posts/comments/${commentId}/like`)
+    return response.data
+  },
+
+  dislikeComment: async (commentId: number) => {
+    const response = await api.post(`/posts/comments/${commentId}/dislike`)
+    return response.data
+  },
+
+  undislikeComment: async (commentId: number) => {
+    const response = await api.delete(`/posts/comments/${commentId}/dislike`)
     return response.data
   },
 }

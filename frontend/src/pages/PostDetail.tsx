@@ -10,8 +10,14 @@ import {
   ChatBubbleLeftIcon,
   EyeIcon,
   ClockIcon,
-  TrashIcon
+  TrashIcon,
+  HandThumbUpIcon,
+  HandThumbDownIcon
 } from '@heroicons/react/24/outline'
+import { 
+  HandThumbUpIcon as HandThumbUpSolidIcon,
+  HandThumbDownIcon as HandThumbDownSolidIcon
+} from '@heroicons/react/24/solid'
 import { motion } from 'framer-motion'
 
 export default function PostDetail() {
@@ -202,30 +208,12 @@ export default function PostDetail() {
         {/* Comment List */}
         <div className="space-y-4 mb-6">
           {comments.map((comment) => (
-            <div
-              key={comment.id}
-              className="p-4 bg-gray-50 rounded-lg"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center space-x-2">
-                  <span className="font-medium text-green-600">{comment.author_alias}</span>
-                  <span className="text-xs text-gray-500">{formatDate(comment.created_at)}</span>
-                </div>
-                
-                {/* 댓글 삭제 버튼 - 작성자 또는 관리자만 표시 */}
-                {(comment.is_author || comment.is_admin) && (
-                  <button
-                    onClick={() => handleDeleteComment(comment.id)}
-                    className="flex items-center space-x-1 px-2 py-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-                    title="댓글 삭제"
-                  >
-                    <TrashIcon className="w-3 h-3" />
-                    <span className="text-xs">삭제</span>
-                  </button>
-                )}
-              </div>
-              <p className="text-gray-700 whitespace-pre-wrap">{comment.content}</p>
-            </div>
+            <CommentItem 
+              key={comment.id} 
+              comment={comment} 
+              formatDate={formatDate}
+              onDelete={handleDeleteComment}
+            />
           ))}
           {comments.length === 0 && (
             <p className="text-center text-gray-500 py-8">
@@ -259,5 +247,121 @@ export default function PostDetail() {
   )
 }
 
+// 댓글 아이템 컴포넌트
+function CommentItem({ comment, formatDate, onDelete }: any) {
+  const [liked, setLiked] = useState(comment.user_liked || false)
+  const [disliked, setDisliked] = useState(comment.user_disliked || false)
+  const [likeCount, setLikeCount] = useState(comment.like_count || 0)
+  const [dislikeCount, setDislikeCount] = useState(comment.dislike_count || 0)
 
+  const handleLike = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    try {
+      if (liked) {
+        await postAPI.unlikeComment(comment.id)
+        setLiked(false)
+        setLikeCount(prev => prev - 1)
+      } else {
+        await postAPI.likeComment(comment.id)
+        setLiked(true)
+        setLikeCount(prev => prev + 1)
+        
+        if (disliked) {
+          setDisliked(false)
+          setDislikeCount(prev => prev - 1)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to toggle comment like:', error)
+    }
+  }
+
+  const handleDislike = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    try {
+      if (disliked) {
+        await postAPI.undislikeComment(comment.id)
+        setDisliked(false)
+        setDislikeCount(prev => prev - 1)
+      } else {
+        await postAPI.dislikeComment(comment.id)
+        setDisliked(true)
+        setDislikeCount(prev => prev + 1)
+        
+        if (liked) {
+          setLiked(false)
+          setLikeCount(prev => prev - 1)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to toggle comment dislike:', error)
+    }
+  }
+
+  return (
+    <div className="p-4 bg-gray-50 rounded-lg">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center space-x-2">
+          <span className="font-medium text-green-600">{comment.author_alias}</span>
+          <span className="text-xs text-gray-500">{formatDate(comment.created_at)}</span>
+        </div>
+        
+        {/* 댓글 삭제 버튼 - 작성자 또는 관리자만 표시 */}
+        {(comment.is_author || comment.is_admin) && (
+          <button
+            onClick={() => onDelete(comment.id)}
+            className="flex items-center space-x-1 px-2 py-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+            title="댓글 삭제"
+          >
+            <TrashIcon className="w-3 h-3" />
+            <span className="text-xs">삭제</span>
+          </button>
+        )}
+      </div>
+      
+      <p className="text-gray-700 whitespace-pre-wrap mb-3">{comment.content}</p>
+      
+      {/* 댓글 꿀추/꿀통 버튼 */}
+      <div className="flex items-center space-x-3">
+        <button
+          onClick={handleLike}
+          className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium transition-all ${
+            liked 
+              ? 'bg-amber-100 text-amber-700 border border-amber-200' 
+              : 'bg-gray-100 text-gray-600 hover:bg-amber-50 hover:text-amber-600'
+          }`}
+        >
+          {liked ? (
+            <HandThumbUpSolidIcon className="w-3 h-3" />
+          ) : (
+            <HandThumbUpIcon className="w-3 h-3" />
+          )}
+          <span>꿀추</span>
+          <span className="text-xs">{likeCount}</span>
+        </button>
+        
+        <button
+          onClick={handleDislike}
+          className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium transition-all ${
+            disliked 
+              ? 'bg-red-100 text-red-700 border border-red-200' 
+              : 'bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-600'
+          }`}
+        >
+          {disliked ? (
+            <HandThumbDownSolidIcon className="w-3 h-3" />
+          ) : (
+            <HandThumbDownIcon className="w-3 h-3" />
+          )}
+          <span>꿀통</span>
+          <span className="text-xs">{dislikeCount}</span>
+        </button>
+      </div>
+    </div>
+  )
+}
 
