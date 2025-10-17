@@ -112,15 +112,29 @@ async def get_mentee_dashboard(
         progress_percentage=min(100, total_chats * 5)  # 간단한 진행도 계산
     )
     
-    # 6가지 지표 성적 데이터 (샘플 데이터 - 추후 실제 데이터로 대체)
+    # 6가지 지표 성적 데이터 (실제 시험 점수에서 추출)
     performance_scores = {
-        "banking": 85,  # 은행업무
-        "product_knowledge": 78,  # 상품지식
-        "customer_service": 92,  # 고객응대
-        "compliance": 88,  # 법규준수
-        "it_usage": 75,  # IT활용
-        "sales_performance": 80  # 영업실적
+        "banking": 0,  # 은행업무
+        "product_knowledge": 0,  # 상품지식
+        "customer_service": 0,  # 고객응대
+        "compliance": 0,  # 법규준수
+        "it_usage": 0,  # IT활용
+        "sales_performance": 0  # 영업실적
     }
+    
+    # 실제 시험 점수에서 성과 지표 추출
+    if exams:
+        latest_exam = exams[0]  # 가장 최근 시험
+        if latest_exam.score_data:
+            score_data = json.loads(latest_exam.score_data)
+            performance_scores = {
+                "banking": score_data.get("은행업무", 0),
+                "product_knowledge": score_data.get("상품지식", 0),
+                "customer_service": score_data.get("고객응대", 0),
+                "compliance": score_data.get("법규준수", 0),
+                "it_usage": score_data.get("IT활용", 0),
+                "sales_performance": score_data.get("영업실적", 0)
+            }
     
     # 최근 피드백 조회
     feedbacks_statement = (

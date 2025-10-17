@@ -441,6 +441,8 @@ function MentorDashboard({ data }: any) {
   }
 
   const handleViewPerformance = (mentee: any) => {
+    console.log('Selected mentee for performance analysis:', mentee)
+    console.log('Performance scores:', mentee.performance_scores)
     setSelectedMentee(mentee)
     setShowPerformanceModal(true)
   }
@@ -828,6 +830,9 @@ function FeedbackModal({ mentee, feedbackText, setFeedbackText, onSubmit, onClos
 
 // 성과 분석 모달 컴포넌트
 function PerformanceModal({ mentee, onClose }: any) {
+  console.log('PerformanceModal received mentee:', mentee)
+  console.log('PerformanceModal performance_scores:', mentee.performance_scores)
+  
   // 멘티의 실제 성과 지표 데이터 사용
   const performanceData = [
     { skill: '은행업무', score: mentee.performance_scores?.banking || mentee.recent_score || 85 },
@@ -837,6 +842,8 @@ function PerformanceModal({ mentee, onClose }: any) {
     { skill: 'IT활용', score: mentee.performance_scores?.it_usage || mentee.recent_score || 75 },
     { skill: '영업실적', score: mentee.performance_scores?.sales_performance || mentee.recent_score || 80 }
   ]
+  
+  console.log('PerformanceModal performanceData:', performanceData)
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
