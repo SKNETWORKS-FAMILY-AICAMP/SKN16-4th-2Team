@@ -541,19 +541,14 @@ function MentorDashboard({ data }: any) {
       <h1 className="text-3xl font-bold text-gray-900">멘토 대시보드</h1>
 
       {/* Stats */}
-      <div className="grid md:grid-cols-4 gap-6">
+      <div className="grid md:grid-cols-3 gap-6">
         <StatCard
           icon={UserIcon}
           title="담당 멘티"
           value={data?.mentees?.length || 0}
           color="primary"
         />
-        <StatCard
-          icon={ChatBubbleBottomCenterTextIcon}
-          title="자주 묻는 질문"
-          value={data?.frequent_questions?.length || 0}
-          color="amber"
-        />
+        {/* 자주 묻는 질문 카드 제거 */}
         <StatCard
           icon={AcademicCapIcon}
           title="평균 성적"
@@ -631,7 +626,7 @@ function MentorDashboard({ data }: any) {
         />
       )}
 
-      {/* Mentee Select Modal */}
+      {/* 멘티 선택 모달 */}
       {showMenteeSelectModal && (
         <MenteeSelectModal
           availableMentees={availableMentees}
@@ -641,30 +636,7 @@ function MentorDashboard({ data }: any) {
         />
       )}
 
-      {/* Frequent Questions */}
-      {data?.frequent_questions && data.frequent_questions.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl shadow-lg p-8 border border-primary-100"
-        >
-          <div className="flex items-center mb-6">
-            <img src="/assets/bear.png" alt="하경곰" className="w-8 h-8 mr-3 rounded-full" />
-            <h2 className="text-2xl font-bold text-bank-800">담당 멘티 자주 묻는 질문</h2>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            {data.frequent_questions.slice(0, 20).map((item: any, idx: number) => (
-              <span
-                key={idx}
-                className="px-4 py-2 bg-gradient-to-r from-primary-100 to-amber-100 text-primary-800 rounded-xl text-sm font-medium border border-primary-200 hover:shadow-md transition-all duration-200"
-                style={{ fontSize: `${Math.min(16, 12 + item.count / 2)}px` }}
-              >
-                {item.word} ({item.count})
-              </span>
-            ))}
-          </div>
-        </motion.div>
-      )}
+      {/* 자주 묻는 질문 섹션 제거 */}
     </div>
   )
 }
