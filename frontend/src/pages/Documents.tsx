@@ -12,7 +12,9 @@ import {
   MagnifyingGlassIcon,
   FolderIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  TrashIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
 import { motion } from 'framer-motion'
 
@@ -27,6 +29,9 @@ export default function Documents() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [documentToDelete, setDocumentToDelete] = useState<any>(null)
+  const [deleting, setDeleting] = useState(false)
 
   // URL 파라미터에서 검색어 읽기
   useEffect(() => {
@@ -86,6 +91,28 @@ export default function Documents() {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
+  }
+
+  const handleDelete = (document: any) => {
+    setDocumentToDelete(document)
+    setDeleteModalOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!documentToDelete) return
+
+    setDeleting(true)
+    try {
+      await documentAPI.deleteDocument(documentToDelete.id)
+      setDeleteModalOpen(false)
+      setDocumentToDelete(null)
+      loadDocuments() // 문서 목록 새로고침
+    } catch (error) {
+      console.error('Delete failed:', error)
+      alert('삭제에 실패했습니다.')
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const filteredDocuments = documents.filter((doc) =>
@@ -168,6 +195,8 @@ export default function Documents() {
                   key={doc.id}
                   document={doc}
                   onDownload={handleDownload}
+                  onDelete={handleDelete}
+                  user={user}
                 />
               ))}
             </div>
@@ -195,11 +224,60 @@ export default function Documents() {
           }}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 max-w-md w-full"
+          >
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="flex-shrink-0">
+                <ExclamationTriangleIcon className="w-8 h-8 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">문서 삭제 확인</h3>
+                <p className="text-sm text-gray-500">이 작업은 되돌릴 수 없습니다</p>
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-700 mb-2">
+                정말로 <span className="font-semibold text-red-600">"{documentToDelete?.title}"</span> 문서를 삭제하시겠습니까?
+              </p>
+              <p className="text-sm text-red-600 font-medium">
+                ⚠️ 파일과 관련 데이터가 영구적으로 삭제됩니다.
+              </p>
+            </div>
+            
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setDeleteModalOpen(false)
+                  setDocumentToDelete(null)
+                }}
+                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleting ? '삭제 중...' : '삭제하기'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }
 
-function DocumentListItem({ document, onDownload }: any) {
+function DocumentListItem({ document, onDownload, onDelete, user }: any) {
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
@@ -239,8 +317,9 @@ function DocumentListItem({ document, onDownload }: any) {
           <span className="text-sm text-gray-600">{document.download_count}</span>
         </div>
         
-        {/* 다운로드 버튼 */}
-        <div className="flex-shrink-0">
+        {/* 버튼들 */}
+        <div className="flex-shrink-0 flex items-center space-x-2">
+          {/* 다운로드 버튼 */}
           <button
             onClick={() => onDownload(document.id, document.title + document.file_type)}
             className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
@@ -248,6 +327,18 @@ function DocumentListItem({ document, onDownload }: any) {
             <ArrowDownTrayIcon className="w-4 h-4" />
             <span>다운로드</span>
           </button>
+          
+          {/* 삭제 버튼 (관리자만) */}
+          {user?.role === 'admin' && (
+            <button
+              onClick={() => onDelete(document)}
+              className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              title="문서 삭제"
+            >
+              <TrashIcon className="w-4 h-4" />
+              <span>삭제</span>
+            </button>
+          )}
         </div>
       </div>
     </motion.div>

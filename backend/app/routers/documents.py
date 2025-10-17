@@ -346,6 +346,66 @@ async def get_categories(
     }
 
 
+@router.post("/sync-filesystem")
+async def sync_filesystem_with_database(
+    current_user: User = Depends(get_current_active_admin),
+    session: Session = Depends(get_session)
+):
+    """
+    파일 시스템과 데이터베이스 동기화
+    - 존재하지 않는 파일의 DB 레코드 삭제
+    - 파일은 있지만 DB에 없는 경우는 무시 (수동으로 처리 필요)
+    """
+    try:
+        # 모든 문서 조회
+        statement = select(Document)
+        documents = session.exec(statement).all()
+        
+        deleted_count = 0
+        missing_files = []
+        
+        for document in documents:
+            file_path = Path(document.file_path)
+            
+            # 파일이 존재하지 않으면 DB에서 삭제
+            if not file_path.exists():
+                print(f"File not found, deleting DB record: {document.file_path}")
+                
+                # 관련 청크 삭제
+                from app.models.document import DocumentChunk
+                chunk_statement = select(DocumentChunk).where(DocumentChunk.document_id == document.id)
+                chunks = session.exec(chunk_statement).all()
+                for chunk in chunks:
+                    session.delete(chunk)
+                
+                # 문서 삭제
+                session.delete(document)
+                deleted_count += 1
+            else:
+                missing_files.append({
+                    "id": document.id,
+                    "title": document.title,
+                    "file_path": document.file_path,
+                    "exists": True
+                })
+        
+        session.commit()
+        
+        return {
+            "message": "파일 시스템과 데이터베이스 동기화 완료",
+            "total_documents_checked": len(documents),
+            "deleted_records": deleted_count,
+            "remaining_documents": len(missing_files)
+        }
+        
+    except Exception as e:
+        print(f"Sync error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to sync filesystem with database: {str(e)}"
+        )
+
+
 async def _extract_text_from_file(file_path: str, file_type: str) -> str:
     """
     파일에서 텍스트 추출

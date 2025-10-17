@@ -6,10 +6,12 @@ from sqlmodel import Session, select
 from app.database import engine
 from app.models.user import User, UserRole
 from app.models.mentor import MentorMenteeRelation, ExamScore
+from app.models.document import Document, DocumentChunk
 from app.utils.auth import get_password_hash
 import json
 from datetime import datetime
 import sys
+from pathlib import Path
 
 
 def create_initial_users(session: Session):
@@ -196,6 +198,43 @@ def create_exam_scores(session: Session):
     print(f"✅ {len(exams)}개의 시험 점수 생성 완료")
 
 
+def sync_filesystem_with_database(session: Session):
+    """파일 시스템과 데이터베이스 동기화"""
+    print("🔄 파일 시스템과 데이터베이스 동기화 중...")
+    
+    try:
+        # 모든 문서 조회
+        statement = select(Document)
+        documents = session.exec(statement).all()
+        
+        deleted_count = 0
+        
+        for document in documents:
+            file_path = Path(document.file_path)
+            
+            # 파일이 존재하지 않으면 DB에서 삭제
+            if not file_path.exists():
+                print(f"   - 파일 없음, DB 레코드 삭제: {document.file_path}")
+                
+                # 관련 청크 삭제
+                chunk_statement = select(DocumentChunk).where(DocumentChunk.document_id == document.id)
+                chunks = session.exec(chunk_statement).all()
+                for chunk in chunks:
+                    session.delete(chunk)
+                
+                # 문서 삭제
+                session.delete(document)
+                deleted_count += 1
+        
+        session.commit()
+        
+        print(f"   - ✅ 동기화 완료: {deleted_count}개 레코드 삭제")
+        print(f"   - 남은 문서 수: {len(documents) - deleted_count}")
+        
+    except Exception as e:
+        print(f"   - ❌ 동기화 오류: {e}")
+
+
 def verify_data_integrity(session: Session):
     """데이터 무결성 확인"""
     print("🔍 데이터 무결성 확인 중...")
@@ -232,6 +271,9 @@ def init_all_data():
     init_db()
     
     with Session(engine) as session:
+        # 파일 시스템과 데이터베이스 동기화 (항상 실행)
+        sync_filesystem_with_database(session)
+        
         # 기존 사용자 확인
         existing_admin = session.exec(select(User).where(User.email == "admin@bank.com")).first()
         if existing_admin:
