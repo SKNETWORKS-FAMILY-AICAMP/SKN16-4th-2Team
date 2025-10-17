@@ -268,6 +268,12 @@ export const postAPI = {
     const response = await api.delete(`/posts/comments/${commentId}/dislike`)
     return response.data
   },
+
+  // 인기 게시글 (기존 기능 유지)
+  getPopularPosts: async (limit: number = 3) => {
+    const response = await api.get(`/posts/popular?limit=${limit}`)
+    return response.data
+  },
 }
 
 // 대시보드
@@ -366,38 +372,6 @@ export const dashboardAPI = {
     return response.data
   },
 
-  // 관리자 매칭 대시보드 API
-  getMatchingDashboard: async () => {
-    const response = await api.get('/dashboard/admin/matching-dashboard')
-    return response.data
-  },
-
-  assignMentor: async (menteeId: number, mentorId: number, notes: string = '') => {
-    const response = await api.post('/dashboard/admin/assign-mentor', {
-      mentee_id: menteeId,
-      mentor_id: mentorId,
-      notes
-    })
-    return response.data
-  },
-
-  unassignMentor: async (relationId: number) => {
-    const response = await api.delete(`/dashboard/admin/unassign-mentor/${relationId}`)
-    return response.data
-  },
-
-  // 멘토가 멘티 선택하는 API
-  getAvailableMentees: async () => {
-    const response = await api.get('/dashboard/mentor/available-mentees')
-    return response.data
-  },
-
-  selectMentee: async (menteeId: number) => {
-    const response = await api.post('/dashboard/mentor/select-mentee', {
-      mentee_id: menteeId
-    })
-    return response.data
-  }
 }
 
 // 관리자 API

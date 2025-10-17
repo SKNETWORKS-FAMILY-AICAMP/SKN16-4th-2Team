@@ -676,3 +676,350 @@ async def undislike_comment(
     
     return {"message": "Comment undisliked successfully"}
 
+
+# 꿀추/꿀통 시스템 API들
+@router.post("/{post_id}/like")
+async def like_post(
+    post_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    게시글 꿀추 (추천)
+    """
+    # 게시글 존재 확인
+    post = session.get(Post, post_id)
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    # 이미 꿀추했는지 확인
+    existing_like = session.exec(
+        select(PostLike).where(
+            PostLike.post_id == post_id,
+            PostLike.user_id == current_user.id,
+            PostLike.is_like == True
+        )
+    ).first()
+    
+    if existing_like:
+        raise HTTPException(status_code=400, detail="Already liked this post")
+    
+    # 기존 꿀통이 있다면 제거
+    existing_dislike = session.exec(
+        select(PostLike).where(
+            PostLike.post_id == post_id,
+            PostLike.user_id == current_user.id,
+            PostLike.is_like == False
+        )
+    ).first()
+    
+    if existing_dislike:
+        session.delete(existing_dislike)
+    
+    # 새 꿀추 추가
+    post_like = PostLike(
+        post_id=post_id,
+        user_id=current_user.id,
+        is_like=True
+    )
+    session.add(post_like)
+    session.commit()
+    
+    return {"message": "Post liked successfully"}
+
+
+@router.delete("/{post_id}/like")
+async def unlike_post(
+    post_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    게시글 꿀추 취소
+    """
+    # 꿀추 찾기
+    existing_like = session.exec(
+        select(PostLike).where(
+            PostLike.post_id == post_id,
+            PostLike.user_id == current_user.id,
+            PostLike.is_like == True
+        )
+    ).first()
+    
+    if not existing_like:
+        raise HTTPException(status_code=404, detail="Like not found")
+    
+    session.delete(existing_like)
+    session.commit()
+    
+    return {"message": "Post unliked successfully"}
+
+
+@router.post("/{post_id}/dislike")
+async def dislike_post(
+    post_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    게시글 꿀통 (비추천)
+    """
+    # 게시글 존재 확인
+    post = session.get(Post, post_id)
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    # 이미 꿀통했는지 확인
+    existing_dislike = session.exec(
+        select(PostLike).where(
+            PostLike.post_id == post_id,
+            PostLike.user_id == current_user.id,
+            PostLike.is_like == False
+        )
+    ).first()
+    
+    if existing_dislike:
+        raise HTTPException(status_code=400, detail="Already disliked this post")
+    
+    # 기존 꿀추가 있다면 제거
+    existing_like = session.exec(
+        select(PostLike).where(
+            PostLike.post_id == post_id,
+            PostLike.user_id == current_user.id,
+            PostLike.is_like == True
+        )
+    ).first()
+    
+    if existing_like:
+        session.delete(existing_like)
+    
+    # 새 꿀통 추가
+    post_dislike = PostLike(
+        post_id=post_id,
+        user_id=current_user.id,
+        is_like=False
+    )
+    session.add(post_dislike)
+    session.commit()
+    
+    return {"message": "Post disliked successfully"}
+
+
+@router.delete("/{post_id}/dislike")
+async def undislike_post(
+    post_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    게시글 꿀통 취소
+    """
+    # 꿀통 찾기
+    existing_dislike = session.exec(
+        select(PostLike).where(
+            PostLike.post_id == post_id,
+            PostLike.user_id == current_user.id,
+            PostLike.is_like == False
+        )
+    ).first()
+    
+    if not existing_dislike:
+        raise HTTPException(status_code=404, detail="Dislike not found")
+    
+    session.delete(existing_dislike)
+    session.commit()
+    
+    return {"message": "Post undisliked successfully"}
+
+
+# 댓글 꿀추/꿀통 시스템
+@router.post("/comments/{comment_id}/like")
+async def like_comment(
+    comment_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    댓글 꿀추 (추천)
+    """
+    # 댓글 존재 확인
+    comment = session.get(Comment, comment_id)
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    
+    # 이미 꿀추했는지 확인
+    existing_like = session.exec(
+        select(CommentLike).where(
+            CommentLike.comment_id == comment_id,
+            CommentLike.user_id == current_user.id,
+            CommentLike.is_like == True
+        )
+    ).first()
+    
+    if existing_like:
+        raise HTTPException(status_code=400, detail="Already liked this comment")
+    
+    # 기존 꿀통이 있다면 제거
+    existing_dislike = session.exec(
+        select(CommentLike).where(
+            CommentLike.comment_id == comment_id,
+            CommentLike.user_id == current_user.id,
+            CommentLike.is_like == False
+        )
+    ).first()
+    
+    if existing_dislike:
+        session.delete(existing_dislike)
+    
+    # 새 꿀추 추가
+    comment_like = CommentLike(
+        comment_id=comment_id,
+        user_id=current_user.id,
+        is_like=True
+    )
+    session.add(comment_like)
+    session.commit()
+    
+    return {"message": "Comment liked successfully"}
+
+
+@router.delete("/comments/{comment_id}/like")
+async def unlike_comment(
+    comment_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    댓글 꿀추 취소
+    """
+    # 꿀추 찾기
+    existing_like = session.exec(
+        select(CommentLike).where(
+            CommentLike.comment_id == comment_id,
+            CommentLike.user_id == current_user.id,
+            CommentLike.is_like == True
+        )
+    ).first()
+    
+    if not existing_like:
+        raise HTTPException(status_code=404, detail="Like not found")
+    
+    session.delete(existing_like)
+    session.commit()
+    
+    return {"message": "Comment unliked successfully"}
+
+
+@router.post("/comments/{comment_id}/dislike")
+async def dislike_comment(
+    comment_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    댓글 꿀통 (비추천)
+    """
+    # 댓글 존재 확인
+    comment = session.get(Comment, comment_id)
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    
+    # 이미 꿀통했는지 확인
+    existing_dislike = session.exec(
+        select(CommentLike).where(
+            CommentLike.comment_id == comment_id,
+            CommentLike.user_id == current_user.id,
+            CommentLike.is_like == False
+        )
+    ).first()
+    
+    if existing_dislike:
+        raise HTTPException(status_code=400, detail="Already disliked this comment")
+    
+    # 기존 꿀추가 있다면 제거
+    existing_like = session.exec(
+        select(CommentLike).where(
+            CommentLike.comment_id == comment_id,
+            CommentLike.user_id == current_user.id,
+            CommentLike.is_like == True
+        )
+    ).first()
+    
+    if existing_like:
+        session.delete(existing_like)
+    
+    # 새 꿀통 추가
+    comment_dislike = CommentLike(
+        comment_id=comment_id,
+        user_id=current_user.id,
+        is_like=False
+    )
+    session.add(comment_dislike)
+    session.commit()
+    
+    return {"message": "Comment disliked successfully"}
+
+
+@router.delete("/comments/{comment_id}/dislike")
+async def undislike_comment(
+    comment_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    댓글 꿀통 취소
+    """
+    # 꿀통 찾기
+    existing_dislike = session.exec(
+        select(CommentLike).where(
+            CommentLike.comment_id == comment_id,
+            CommentLike.user_id == current_user.id,
+            CommentLike.is_like == False
+        )
+    ).first()
+    
+    if not existing_dislike:
+        raise HTTPException(status_code=404, detail="Dislike not found")
+    
+    session.delete(existing_dislike)
+    session.commit()
+    
+    return {"message": "Comment undisliked successfully"}
+
+
+@router.get("/popular")
+async def get_popular_posts(
+    limit: int = 3,
+    session: Session = Depends(get_session)
+):
+    """
+    인기 게시글 조회 (꿀추 수 기준)
+    """
+    from sqlmodel import func
+    
+    # 꿀추 수가 많은 게시글 조회
+    popular_posts = session.exec(
+        select(Post, func.count(PostLike.id).label('like_count'))
+        .join(PostLike, Post.id == PostLike.post_id, isouter=True)
+        .where(PostLike.is_like == True)
+        .group_by(Post.id)
+        .order_by(func.count(PostLike.id).desc())
+        .limit(limit)
+    ).all()
+    
+    # 결과 포맷팅
+    result = []
+    for post, like_count in popular_posts:
+        result.append({
+            "id": post.id,
+            "title": post.title,
+            "content": post.content,
+            "view_count": post.view_count,
+            "comment_count": post.comment_count,
+            "like_count": like_count or 0,
+            "created_at": post.created_at,
+            "updated_at": post.updated_at,
+            "author_alias": "글쓴이"
+        })
+    
+    return {"popular_posts": result}
