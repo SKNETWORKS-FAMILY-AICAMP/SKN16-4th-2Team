@@ -262,11 +262,16 @@ export default function RAG() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-8 text-white">
-        <h1 className="text-3xl font-bold mb-2">RAG 문서 업로드</h1>
-        <p className="text-purple-100">
-          TXT 파일을 업로드하면 챗봇이 해당 문서를 기반으로 답변합니다
-        </p>
+      <div className="bg-gradient-to-r from-primary-600 via-primary-500 to-amber-500 rounded-2xl p-8 text-white">
+        <div className="flex items-center mb-4">
+          <img src="/assets/bear.png" alt="하경곰" className="w-12 h-12 mr-4 rounded-full shadow-lg" />
+          <div>
+            <h1 className="text-3xl font-bold mb-2">RAG 문서 업로드</h1>
+            <p className="text-white/90">
+              TXT 파일을 업로드하면 AI 하리보가 해당 문서를 기반으로 답변합니다
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Status Message */}
@@ -293,7 +298,7 @@ export default function RAG() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
         <div className="space-y-6">
           {/* File Input */}
-          <div className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center hover:border-purple-400 transition-colors">
+          <div className="border-2 border-dashed border-primary-300 rounded-xl p-12 text-center hover:border-primary-500 transition-colors bg-gradient-to-br from-primary-50 to-amber-50">
             <input
               type="file"
               id="file-upload"
@@ -303,11 +308,11 @@ export default function RAG() {
               className="hidden"
             />
             <label htmlFor="file-upload" className="cursor-pointer">
-              <CloudArrowUpIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-              <p className="text-lg font-medium text-gray-700 mb-2">
+              <CloudArrowUpIcon className="w-16 h-16 mx-auto text-primary-500 mb-4" />
+              <p className="text-lg font-medium text-primary-800 mb-2">
                 TXT 파일을 선택하거나 드래그하세요
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-primary-600">
                 여러 파일을 한 번에 선택할 수 있습니다
               </p>
             </label>
@@ -324,7 +329,7 @@ export default function RAG() {
                     className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
                   >
                     <div className="flex items-center space-x-3">
-                      <DocumentTextIcon className="w-5 h-5 text-purple-600" />
+                      <DocumentTextIcon className="w-5 h-5 text-primary-600" />
                       <div>
                         <p className="text-sm font-medium text-gray-900">{file.name}</p>
                         <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
@@ -344,7 +349,7 @@ export default function RAG() {
               <button
                 onClick={handleUpload}
                 disabled={uploading}
-                className="w-full mt-4 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full mt-4 px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-semibold rounded-lg hover:from-primary-700 hover:to-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
               >
                 {uploading ? (
                   <span className="flex items-center justify-center">
@@ -402,7 +407,7 @@ export default function RAG() {
                 animate={{ opacity: 1, x: 0 }}
                 className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
                   selectedDocIds.includes(doc.id)
-                    ? 'bg-purple-50 border-purple-200'
+                    ? 'bg-primary-50 border-primary-200'
                     : 'bg-gray-50 border-gray-200'
                 }`}
               >
@@ -412,10 +417,10 @@ export default function RAG() {
                     type="checkbox"
                     checked={selectedDocIds.includes(doc.id)}
                     onChange={() => handleSelectDoc(doc.id)}
-                    className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 focus:ring-2"
+                    className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500 focus:ring-2"
                   />
                   
-                  <DocumentTextIcon className="w-6 h-6 text-purple-600" />
+                  <DocumentTextIcon className="w-6 h-6 text-primary-600" />
                   <div>
                     <p className="font-medium text-gray-900">{doc.title}</p>
                     <p className="text-sm text-gray-500">
@@ -453,14 +458,17 @@ export default function RAG() {
       )}
 
       {/* Info Box */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-        <h3 className="font-semibold text-blue-900 mb-2">💡 사용 방법</h3>
-        <ul className="space-y-2 text-sm text-blue-800">
+      <div className="bg-gradient-to-r from-primary-50 to-amber-50 border border-primary-200 rounded-xl p-6">
+        <div className="flex items-center mb-4">
+          <img src="/assets/bear.png" alt="하경곰" className="w-8 h-8 mr-3 rounded-full" />
+          <h3 className="font-semibold text-primary-900">💡 AI 하리보 사용 방법</h3>
+        </div>
+        <ul className="space-y-2 text-sm text-primary-800">
           <li>• TXT 파일만 업로드 가능합니다</li>
           <li>• 여러 파일을 한 번에 선택하여 업로드할 수 있습니다</li>
           <li>• 업로드된 문서는 자동으로 RAG 시스템에 인덱싱됩니다</li>
-          <li>• 챗봇에서 질문하면 업로드된 문서를 기반으로 답변합니다</li>
-          <li>• 우측 하단의 챗봇 아이콘을 클릭하여 대화를 시작하세요</li>
+          <li>• AI 하리보에게 질문하면 업로드된 문서를 기반으로 답변합니다</li>
+          <li>• 우측 하단의 하경곰 아이콘을 클릭하여 대화를 시작하세요</li>
         </ul>
       </div>
 

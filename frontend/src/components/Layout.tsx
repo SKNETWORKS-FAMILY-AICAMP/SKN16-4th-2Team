@@ -24,18 +24,18 @@ export default function Layout() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-secondary-50 to-primary-50">
       {/* Navigation Bar */}
-      <nav className="bg-white shadow-sm border-b border-gray-200">
+      <nav className="bg-white/80 backdrop-blur-md shadow-lg border-b border-primary-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             {/* Logo */}
             <div className="flex items-center">
-              <Link to="/home" className="flex items-center space-x-3">
-                <img src="/assets/bear.png" alt="하경은행" className="w-10 h-10" />
+              <Link to="/home" className="flex items-center space-x-3 group">
+                <img src="/assets/bear.png" alt="하경은행" className="w-10 h-10 rounded-full shadow-md group-hover:shadow-lg transition-shadow" />
                 <div className="flex flex-col">
-                  <span className="text-xl font-bold text-gray-900">하경은행</span>
-                  <span className="text-sm text-gray-600 -mt-1">멘토링 시스템</span>
+                  <span className="text-xl font-bold text-bank-800 group-hover:text-primary-700 transition-colors">하경은행</span>
+                  <span className="text-sm text-primary-600 -mt-1 font-medium">온보딩 플랫폼</span>
                 </div>
               </Link>
             </div>
@@ -44,40 +44,40 @@ export default function Layout() {
             <div className="flex items-center space-x-1">
               <NavLink to="/home" icon={HomeIcon} text="홈" />
               <NavLink to="/documents" icon={DocumentTextIcon} text="자료실" />
-              {user?.role === 'admin' && <NavLink to="/rag" icon={CpuChipIcon} text="RAG" />}
-              <NavLink to="/board" icon={ChatBubbleBottomCenterIcon} text="대나무숲" />
-              <NavLink to="/dashboard" icon={ChartBarIcon} text="대시보드" />
+              {user?.role === 'admin' && <NavLink to="/rag" icon={CpuChipIcon} text="AI 관리" />}
+              <NavLink to="/board" icon={ChatBubbleBottomCenterIcon} text="소통공간" />
+              <NavLink to="/dashboard" icon={ChartBarIcon} text="성장현황" />
             </div>
 
             {/* User Menu */}
             <div className="flex items-center space-x-4">
 
               <button
-                className="flex items-center space-x-2 focus:outline-none"
+                className="flex items-center space-x-2 focus:outline-none group"
                 onClick={() => navigate('/mypage')}
                 title="마이페이지로 이동"
               >
                 {user?.photo_url ? (
-                  <img src={user.photo_url} alt={user.name} className="w-8 h-8 rounded-full" />
+                  <img src={user.photo_url} alt={user.name} className="w-8 h-8 rounded-full border-2 border-primary-200 group-hover:border-primary-400 transition-colors" />
                 ) : (
-                  <UserCircleIcon className="w-8 h-8 text-gray-400" />
+                  <UserCircleIcon className="w-8 h-8 text-primary-400 group-hover:text-primary-600 transition-colors" />
                 )}
                 <div className="hidden md:block text-sm text-left">
-                  <div className="font-medium text-gray-900">{user?.name}</div>
-                  <div className="text-gray-500 text-xs">
+                  <div className="font-medium text-bank-800 group-hover:text-primary-700 transition-colors">{user?.name}</div>
+                  <div className="text-primary-500 text-xs">
                     {user?.role === 'admin' && '관리자'}
                     {user?.role === 'mentor' && '멘토'}
-                    {user?.role === 'mentee' && '멘티'}
+                    {user?.role === 'mentee' && '신입사원'}
                   </div>
                 </div>
               </button>
               
               <button
                 onClick={handleLogout}
-                className="flex items-center space-x-1 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                className="flex items-center space-x-1 px-3 py-2 rounded-lg text-bank-700 hover:bg-primary-50 hover:text-primary-700 transition-all duration-200 border border-transparent hover:border-primary-200"
               >
                 <ArrowRightOnRectangleIcon className="w-5 h-5" />
-                <span className="hidden md:inline text-sm">로그아웃</span>
+                <span className="hidden md:inline text-sm font-medium">로그아웃</span>
               </button>
             </div>
           </div>
@@ -96,9 +96,9 @@ function NavLink({ to, icon: Icon, text }: { to: string; icon: any; text: string
   return (
     <Link
       to={to}
-      className="flex items-center space-x-2 px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+      className="flex items-center space-x-2 px-4 py-2 rounded-xl text-bank-700 hover:bg-primary-50 hover:text-primary-700 transition-all duration-200 group"
     >
-      <Icon className="w-5 h-5" />
+      <Icon className="w-5 h-5 group-hover:scale-110 transition-transform" />
       <span className="hidden md:inline text-sm font-medium">{text}</span>
     </Link>
   )
