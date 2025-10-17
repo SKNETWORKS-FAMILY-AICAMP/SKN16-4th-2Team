@@ -83,7 +83,7 @@ async def upload_document(
 async def get_documents(
     category: Optional[str] = None,
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 500,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
