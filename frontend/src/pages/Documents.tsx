@@ -18,6 +18,21 @@ import {
 } from '@heroicons/react/24/outline'
 import { motion } from 'framer-motion'
 
+// 카테고리별 배지 색상 클래스 맵
+const categoryBadgeClasses: Record<string, { dot: string; text: string; bg: string }> = {
+  '일반': { dot: 'bg-gray-400', text: 'text-gray-700', bg: 'bg-gray-100' },
+  '법규': { dot: 'bg-red-500', text: 'text-red-700', bg: 'bg-red-50' },
+  '상품설명서': { dot: 'bg-amber-500', text: 'text-amber-700', bg: 'bg-amber-50' },
+  '서식': { dot: 'bg-indigo-500', text: 'text-indigo-700', bg: 'bg-indigo-50' },
+  '약관': { dot: 'bg-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50' },
+  'FAQ': { dot: 'bg-blue-500', text: 'text-blue-700', bg: 'bg-blue-50' },
+  'RAG': { dot: 'bg-purple-500', text: 'text-purple-700', bg: 'bg-purple-50' },
+}
+
+function getCategoryStyles(category: string) {
+  return categoryBadgeClasses[category] || { dot: 'bg-gray-300', text: 'text-gray-700', bg: 'bg-gray-100' }
+}
+
 export default function Documents() {
   const { user } = useAuthStore()
   const [searchParams] = useSearchParams()
@@ -278,6 +293,7 @@ export default function Documents() {
 }
 
 function DocumentListItem({ document, onDownload, onDelete, user }: any) {
+  const styles = getCategoryStyles(document.category)
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
@@ -305,9 +321,9 @@ function DocumentListItem({ document, onDownload, onDelete, user }: any) {
         </div>
         
         {/* 카테고리 */}
-        <div className="flex-shrink-0 w-24">
-          <span className="inline-flex items-center space-x-1 text-sm text-gray-600">
-            <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+        <div className="flex-shrink-0 w-36">
+          <span className={`inline-flex items-center space-x-2 text-sm px-2.5 py-1 rounded-full ${styles.bg} ${styles.text}`}>
+            <span className={`w-2 h-2 rounded-full ${styles.dot}`}></span>
             <span className="truncate">{document.category}</span>
           </span>
         </div>
@@ -346,19 +362,33 @@ function DocumentListItem({ document, onDownload, onDelete, user }: any) {
 }
 
 function UploadModal({ categories, onClose, onSuccess }: any) {
+  const [files, setFiles] = useState<File[]>([])
   const [file, setFile] = useState<File | null>(null)
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState('')
   const [description, setDescription] = useState('')
   const [loading, setLoading] = useState(false)
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files || [])
+    setFiles(selected)
+    setFile(selected[0] || null)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!file || !title || !category) return
+    if (!category) return
 
     setLoading(true)
     try {
-      await documentAPI.uploadDocument(file, title, category, description)
+      if (files.length > 1) {
+        // 다중 업로드 (제목은 파일명 자동 사용)
+        await documentAPI.uploadDocumentsBulk(files, category, description)
+      } else {
+        // 단일 업로드 (기존과 동일)
+        if (!file || !title) return
+        await documentAPI.uploadDocument(file, title, category, description)
+      }
       onSuccess()
     } catch (error) {
       console.error('Upload failed:', error)
@@ -377,16 +407,19 @@ function UploadModal({ categories, onClose, onSuccess }: any) {
       >
         <h2 className="text-2xl font-bold text-gray-900 mb-6">문서 업로드</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">제목 *</label>
-            <input
-              type="text"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            />
-          </div>
+          {/* 단일 업로드 시에만 제목 입력 */}
+          {files.length <= 1 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">제목 *</label>
+              <input
+                type="text"
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">카테고리 *</label>
             <select
@@ -411,14 +444,18 @@ function UploadModal({ categories, onClose, onSuccess }: any) {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">파일 *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">파일 {files.length > 1 ? `(${files.length}개 선택됨)` : '*'} </label>
             <input
               type="file"
-              required
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              required={files.length === 0}
+              onChange={handleFileChange}
+              multiple
               accept=".pdf,.txt,.docx,.doc,.xlsx,.xls,.pptx,.ppt"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg"
             />
+            {files.length > 1 && (
+              <p className="mt-2 text-xs text-gray-500">여러 파일 선택 시 제목은 각 파일명으로 자동 설정됩니다.</p>
+            )}
           </div>
           <div className="flex space-x-3 pt-4">
             <button
@@ -433,7 +470,7 @@ function UploadModal({ categories, onClose, onSuccess }: any) {
               disabled={loading}
               className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
             >
-              {loading ? '업로드 중...' : '업로드'}
+              {loading ? '업로드 중...' : (files.length > 1 ? `${files.length}개 업로드` : '업로드')}
             </button>
           </div>
         </form>
