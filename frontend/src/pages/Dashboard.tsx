@@ -17,7 +17,13 @@ import {
   PencilIcon,
   ChartBarIcon,
   LightBulbIcon,
-  StarIcon
+  StarIcon,
+  PlusIcon,
+  UserGroupIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  InformationCircleIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline'
 import { 
   RadarChart, 
@@ -35,6 +41,15 @@ export default function Dashboard() {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [currentTime, setCurrentTime] = useState(new Date())
+  
+  // 관리자 매칭 관련 상태
+  const [matchingData, setMatchingData] = useState<any>(null)
+  const [showMatchingSection, setShowMatchingSection] = useState(false)
+  const [selectedMentor, setSelectedMentor] = useState<any>(null)
+  const [selectedMentee, setSelectedMentee] = useState<any>(null)
+  const [showAssignModal, setShowAssignModal] = useState(false)
+  const [assignNotes, setAssignNotes] = useState('')
+  const [assigning, setAssigning] = useState(false)
 
   useEffect(() => {
     loadDashboard()
@@ -58,14 +73,65 @@ export default function Dashboard() {
       if (user?.role === 'mentee') {
         const dashboardData = await dashboardAPI.getMenteeDashboard()
         setData(dashboardData)
-      } else if (user?.role === 'mentor' || user?.role === 'admin') {
+      } else if (user?.role === 'mentor') {
         const dashboardData = await dashboardAPI.getMentorDashboard()
         setData(dashboardData)
+      } else if (user?.role === 'admin') {
+        // 관리자는 매칭 대시보드 데이터 로드
+        const response = await dashboardAPI.getMatchingDashboard()
+        setMatchingData(response)
       }
     } catch (error) {
       console.error('Failed to load dashboard:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // 관리자 매칭 관련 함수들
+  const loadMatchingData = async () => {
+    try {
+      const response = await dashboardAPI.getMatchingDashboard()
+      setMatchingData(response)
+    } catch (error) {
+      console.error('매칭 데이터 로드 실패:', error)
+    }
+  }
+
+  const handleAssignClick = (mentor: any, mentee: any) => {
+    setSelectedMentor(mentor)
+    setSelectedMentee(mentee)
+    setShowAssignModal(true)
+  }
+
+  const handleAssignConfirm = async () => {
+    if (!selectedMentor || !selectedMentee) return
+
+    try {
+      setAssigning(true)
+      await dashboardAPI.assignMentor(selectedMentee.id, selectedMentor.id, assignNotes || '')
+      alert('멘토-멘티 매칭이 성공적으로 완료되었습니다!')
+      setShowAssignModal(false)
+      setAssignNotes('')
+      await loadMatchingData() // 데이터 새로고침
+    } catch (error) {
+      console.error('매칭 실패:', error)
+      alert('매칭에 실패했습니다.')
+    } finally {
+      setAssigning(false)
+    }
+  }
+
+  const handleUnassign = async (relationId: number) => {
+    if (!confirm('정말로 이 매칭을 해제하시겠습니까?')) return
+
+    try {
+      await dashboardAPI.unassignMentor(relationId)
+      alert('매칭이 해제되었습니다.')
+      await loadMatchingData() // 데이터 새로고침
+    } catch (error) {
+      console.error('매칭 해제 실패:', error)
+      alert('매칭 해제에 실패했습니다.')
     }
   }
 
@@ -79,8 +145,27 @@ export default function Dashboard() {
 
   if (user?.role === 'mentee') {
     return <MenteeDashboard data={data} currentTime={currentTime} />
-  } else if (user?.role === 'mentor' || user?.role === 'admin') {
+  } else if (user?.role === 'mentor') {
     return <MentorDashboard data={data} />
+  } else if (user?.role === 'admin') {
+      return (
+        <AdminDashboard
+          matchingData={matchingData}
+          onAssignClick={handleAssignClick}
+          onUnassign={handleUnassign}
+          showMatchingSection={showMatchingSection}
+          setShowMatchingSection={setShowMatchingSection}
+          showAssignModal={showAssignModal}
+          setShowAssignModal={setShowAssignModal}
+          selectedMentor={selectedMentor}
+          selectedMentee={selectedMentee}
+          setSelectedMentee={setSelectedMentee}
+          assignNotes={assignNotes}
+          setAssignNotes={setAssignNotes}
+          onAssignConfirm={handleAssignConfirm}
+          assigning={assigning}
+        />
+      )
   }
 
   return null
@@ -198,12 +283,12 @@ function MenteeDashboard({ data, currentTime }: any) {
       </motion.div>
 
       {/* Mentor Info */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-xl shadow-md p-6"
-      >
-        <h2 className="text-xl font-bold text-gray-900 mb-4">담당 멘토</h2>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-xl shadow-md p-6"
+        >
+          <h2 className="text-xl font-bold text-gray-900 mb-4">담당 멘토</h2>
         {data?.mentor_info ? (
           <div className="flex items-start space-x-4">
             {data.mentor_info.photo_url ? (
@@ -244,11 +329,11 @@ function MenteeDashboard({ data, currentTime }: any) {
       </motion.div>
 
       {/* Recent Feedbacks */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-xl shadow-md p-6"
-      >
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-xl shadow-md p-6"
+        >
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-gray-900">멘토 피드백</h2>
           {data?.recent_feedbacks && data.recent_feedbacks.length > 0 && (
@@ -305,12 +390,12 @@ function MenteeDashboard({ data, currentTime }: any) {
       </motion.div>
 
       {/* Recent Chats */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-xl shadow-md p-6"
-      >
-        <h2 className="text-xl font-bold text-gray-900 mb-4">최근 대화</h2>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-xl shadow-md p-6"
+        >
+          <h2 className="text-xl font-bold text-gray-900 mb-4">최근 대화</h2>
         {data?.recent_chats && data.recent_chats.length > 0 ? (
           <div className="space-y-4">
             {data.recent_chats.slice(0, 5).map((chat: any, idx: number) => (
@@ -337,6 +422,12 @@ function MentorDashboard({ data }: any) {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [showPerformanceModal, setShowPerformanceModal] = useState(false)
   const [feedbackText, setFeedbackText] = useState('')
+  
+  // 멘티 선택 관련 상태
+  const [showMenteeSelectModal, setShowMenteeSelectModal] = useState(false)
+  const [availableMentees, setAvailableMentees] = useState<any[]>([])
+  const [loadingMentees, setLoadingMentees] = useState(false)
+  const [selectingMentee, setSelectingMentee] = useState(false)
 
   const handleGiveFeedback = (mentee: any) => {
     setSelectedMentee(mentee)
@@ -346,6 +437,57 @@ function MentorDashboard({ data }: any) {
   const handleViewPerformance = (mentee: any) => {
     setSelectedMentee(mentee)
     setShowPerformanceModal(true)
+  }
+
+  // 멘티 선택 관련 함수들
+  const handleSelectMenteeClick = async () => {
+    try {
+      setLoadingMentees(true)
+      const response = await dashboardAPI.getAvailableMentees()
+      setAvailableMentees(response.available_mentees)
+      setShowMenteeSelectModal(true)
+    } catch (error) {
+      console.error('멘티 목록 로드 실패:', error)
+      alert('멘티 목록을 불러오는데 실패했습니다.')
+    } finally {
+      setLoadingMentees(false)
+    }
+  }
+
+  const handleMenteeSelect = async (mentee: any) => {
+    if (!confirm(`${mentee.name} 멘티를 선택하시겠습니까?`)) {
+      return
+    }
+
+    try {
+      setSelectingMentee(true)
+      await dashboardAPI.selectMentee(mentee.id)
+      alert(`${mentee.name} 멘티가 성공적으로 선택되었습니다!`)
+      setShowMenteeSelectModal(false)
+      // 페이지 새로고침으로 업데이트된 데이터 반영
+      window.location.reload()
+    } catch (error) {
+      console.error('멘티 선택 실패:', error)
+      alert('멘티 선택에 실패했습니다.')
+    } finally {
+      setSelectingMentee(false)
+    }
+  }
+
+  const handleUnassignMentee = async (mentee: any) => {
+    if (!confirm(`${mentee.name} 멘티와의 관계를 해제하시겠습니까?`)) {
+      return
+    }
+
+    try {
+      await dashboardAPI.unassignMentor(mentee.id)
+      alert(`${mentee.name} 멘티와의 관계가 성공적으로 해제되었습니다!`)
+      // 페이지 새로고침으로 업데이트된 데이터 반영
+      window.location.reload()
+    } catch (error) {
+      console.error('멘티 해제 실패:', error)
+      alert('멘티 해제에 실패했습니다.')
+    }
   }
 
   const submitFeedback = async () => {
@@ -408,7 +550,17 @@ function MentorDashboard({ data }: any) {
         animate={{ opacity: 1, y: 0 }}
         className="bg-white rounded-xl shadow-md p-6"
       >
-        <h2 className="text-xl font-bold text-gray-900 mb-6">담당 멘티 관리</h2>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-gray-900">담당 멘티 관리</h2>
+          <button
+            onClick={handleSelectMenteeClick}
+            disabled={loadingMentees}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center space-x-2"
+          >
+            <PlusIcon className="w-4 h-4" />
+            <span>{loadingMentees ? '로딩 중...' : '멘티 선택하기'}</span>
+          </button>
+                  </div>
         <div className="grid gap-6">
           {data?.mentees?.map((mentee: any) => (
             <MenteeCard 
@@ -416,6 +568,7 @@ function MentorDashboard({ data }: any) {
               mentee={mentee} 
               onGiveFeedback={handleGiveFeedback}
               onViewPerformance={handleViewPerformance}
+              onUnassign={handleUnassignMentee}
             />
           ))}
           {(!data?.mentees || data.mentees.length === 0) && (
@@ -447,6 +600,16 @@ function MentorDashboard({ data }: any) {
         />
       )}
 
+      {/* Mentee Select Modal */}
+      {showMenteeSelectModal && (
+        <MenteeSelectModal
+          availableMentees={availableMentees}
+          onSelect={handleMenteeSelect}
+          onClose={() => setShowMenteeSelectModal(false)}
+          selecting={selectingMentee}
+        />
+      )}
+
       {/* Frequent Questions */}
       {data?.frequent_questions && data.frequent_questions.length > 0 && (
         <motion.div
@@ -473,7 +636,7 @@ function MentorDashboard({ data }: any) {
 }
 
 // 멘티 카드 컴포넌트
-function MenteeCard({ mentee, onGiveFeedback, onViewPerformance }: any) {
+function MenteeCard({ mentee, onGiveFeedback, onViewPerformance, onUnassign }: any) {
   const getScoreColor = (score: number) => {
     if (score >= 90) return 'text-green-600'
     if (score >= 80) return 'text-blue-600'
@@ -488,6 +651,18 @@ function MenteeCard({ mentee, onGiveFeedback, onViewPerformance }: any) {
     return '개선 필요'
   }
 
+  // 프로필 사진 URL 처리 함수
+  const getDisplayPhotoUrl = (photoUrl: string | null) => {
+    if (!photoUrl) return null
+    // /uploads로 시작하는 경우 /api를 추가하여 프록시 경로로 변환
+    if (photoUrl.startsWith('/uploads')) {
+      return `/api${photoUrl}`
+    }
+    return photoUrl
+  }
+
+  const displayPhotoUrl = getDisplayPhotoUrl(mentee.photo_url)
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -496,8 +671,21 @@ function MenteeCard({ mentee, onGiveFeedback, onViewPerformance }: any) {
     >
       <div className="flex items-start justify-between">
         <div className="flex items-start space-x-4">
-          {mentee.photo_url ? (
-            <img src={mentee.photo_url} alt={mentee.name} className="w-16 h-16 rounded-full" />
+          {displayPhotoUrl ? (
+            <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100">
+              <img 
+                src={displayPhotoUrl} 
+                alt={mentee.name} 
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                  e.currentTarget.nextElementSibling.style.display = 'flex'
+                }}
+              />
+              <div className="w-full h-full bg-primary-100 rounded-full flex items-center justify-center hidden">
+                <UserIcon className="w-8 h-8 text-primary-600" />
+              </div>
+            </div>
           ) : (
             <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center">
               <UserIcon className="w-8 h-8 text-primary-600" />
@@ -508,6 +696,40 @@ function MenteeCard({ mentee, onGiveFeedback, onViewPerformance }: any) {
             <p className="text-gray-600 mb-2">
               {mentee.team} • MBTI: {mentee.mbti || '미설정'}
             </p>
+            {mentee.interests && (
+              <div className="mb-2">
+                <div className="flex items-start">
+                  <p className="text-xs text-gray-500 mb-1 mr-2 flex-shrink-0">관심사:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {(() => {
+                      let interestsArray = []
+                      if (Array.isArray(mentee.interests)) {
+                        interestsArray = mentee.interests
+                      } else if (typeof mentee.interests === 'string') {
+                        // JSON 배열 문자열인 경우 파싱
+                        try {
+                          const parsed = JSON.parse(mentee.interests)
+                          if (Array.isArray(parsed)) {
+                            interestsArray = parsed
+                          } else {
+                            interestsArray = [mentee.interests]
+                          }
+                        } catch {
+                          // JSON이 아닌 경우 컴마로 분리
+                          interestsArray = mentee.interests.split(',').map(s => s.trim()).filter(s => s)
+                        }
+                      }
+                      
+                      return interestsArray.map((interest: string, idx: number) => (
+                        <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                          {interest}
+                        </span>
+                      ))
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="flex items-center space-x-4 text-sm text-gray-500">
               <span className="flex items-center">
                 <ChatBubbleBottomCenterTextIcon className="w-4 h-4 mr-1" />
@@ -524,7 +746,7 @@ function MenteeCard({ mentee, onGiveFeedback, onViewPerformance }: any) {
         <div className="text-right">
           <div className="flex items-center space-x-2 mb-2">
             <span className="text-sm text-gray-600">최근 점수</span>
-            <span className={`text-2xl font-bold ${getScoreColor(mentee.recent_score || 0)}`}>
+            <span className={`text-2xl font-bold ${mentee.recent_score ? getScoreColor(mentee.recent_score) : 'text-blue-600'}`}>
               {mentee.recent_score?.toFixed(1) || 'N/A'}
             </span>
           </div>
@@ -542,6 +764,13 @@ function MenteeCard({ mentee, onGiveFeedback, onViewPerformance }: any) {
             >
               <PencilIcon className="w-4 h-4 mr-1" />
               피드백
+            </button>
+            <button
+              onClick={() => onUnassign(mentee)}
+              className="flex items-center px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm"
+            >
+              <XMarkIcon className="w-4 h-4 mr-1" />
+              해제
             </button>
           </div>
         </div>
@@ -1034,6 +1263,409 @@ function StatCard({ icon: Icon, title, value, color }: any) {
       <Icon className="w-12 h-12 mb-4 opacity-80" />
       <p className="text-white/80 mb-1">{title}</p>
       <p className="text-3xl font-bold">{value}</p>
+    </div>
+  )
+}
+
+// 관리자 대시보드 컴포넌트
+function AdminDashboard({ 
+  matchingData, 
+  onAssignClick, 
+  onUnassign, 
+  showMatchingSection, 
+  setShowMatchingSection,
+  showAssignModal,
+  setShowAssignModal,
+  selectedMentor,
+  selectedMentee,
+  setSelectedMentee,
+  assignNotes,
+  setAssignNotes,
+  onAssignConfirm,
+  assigning
+}: any) {
+  return (
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold text-gray-900">관리자 대시보드</h1>
+
+      {/* 매칭 관리 섹션 */}
+      <AdminMatchingSection
+        matchingData={matchingData}
+        onAssignClick={onAssignClick}
+        onUnassign={onUnassign}
+        showMatchingSection={showMatchingSection}
+        setShowMatchingSection={setShowMatchingSection}
+      />
+
+      {/* 매칭 모달 */}
+      {showAssignModal && (
+        <AssignModal
+          selectedMentor={selectedMentor}
+          selectedMentee={selectedMentee}
+          setSelectedMentee={setSelectedMentee}
+          assignNotes={assignNotes}
+          setAssignNotes={setAssignNotes}
+          onConfirm={onAssignConfirm}
+          onClose={() => {
+            setShowAssignModal(false)
+            setSelectedMentee(null)
+            setAssignNotes('')
+          }}
+          assigning={assigning}
+          matchingData={matchingData}
+        />
+      )}
+    </div>
+  )
+}
+
+// 관리자 매칭 섹션 컴포넌트
+function AdminMatchingSection({ 
+  matchingData, 
+  onAssignClick, 
+  onUnassign, 
+  showMatchingSection, 
+  setShowMatchingSection 
+}: any) {
+  if (!matchingData) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    )
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white rounded-xl shadow-md p-6"
+    >
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold text-gray-900 flex items-center">
+          <UserGroupIcon className="w-6 h-6 mr-2 text-blue-600" />
+          멘토-멘티 매칭 관리
+        </h2>
+        <button
+          onClick={() => setShowMatchingSection(!showMatchingSection)}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          {showMatchingSection ? '숨기기' : '관리하기'}
+        </button>
+      </div>
+
+      {/* 통계 카드 */}
+      <div className="grid md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-blue-50 rounded-lg p-4">
+          <div className="flex items-center">
+            <UserIcon className="w-8 h-8 text-blue-600 mr-3" />
+            <div>
+              <p className="text-sm text-blue-600">총 멘토</p>
+              <p className="text-2xl font-bold text-blue-800">{matchingData.statistics?.total_mentors || 0}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-blue-50 rounded-lg p-4">
+          <div className="flex items-center">
+            <AcademicCapIcon className="w-8 h-8 text-blue-600 mr-3" />
+            <div>
+              <p className="text-sm text-blue-600">총 멘티</p>
+              <p className="text-2xl font-bold text-blue-800">{matchingData.statistics?.total_mentees || 0}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-blue-50 rounded-lg p-4">
+          <div className="flex items-center">
+            <CheckCircleIcon className="w-8 h-8 text-blue-600 mr-3" />
+            <div>
+              <p className="text-sm text-blue-600">매칭 완료</p>
+              <p className="text-2xl font-bold text-blue-800">{matchingData.statistics?.assigned_mentees || 0}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-blue-50 rounded-lg p-4">
+          <div className="flex items-center">
+            <XCircleIcon className="w-8 h-8 text-blue-600 mr-3" />
+            <div>
+              <p className="text-sm text-blue-600">미매칭</p>
+              <p className="text-2xl font-bold text-blue-800">{matchingData.statistics?.unassigned_mentees || 0}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {showMatchingSection && (
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* 멘토 목록 */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">멘토 목록</h3>
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {matchingData.mentors.map((mentor: any) => (
+                <div key={mentor.id} className="p-4 border border-gray-200 rounded-lg">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-semibold text-gray-900">{mentor.name}</h4>
+                      <p className="text-sm text-gray-600">{mentor.email}</p>
+                      <p className="text-xs text-gray-500">담당 멘티: {mentor.current_mentee_count}명</p>
+                    </div>
+                    <div className="flex flex-col space-y-1">
+                      {mentor.is_available && (
+                        <button
+                          onClick={() => onAssignClick(mentor, null)}
+                          className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                        >
+                          멘티 배정
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 멘티 목록 */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">멘티 목록</h3>
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {matchingData.mentees.map((mentee: any) => (
+                <div key={mentee.id} className="p-4 border border-gray-200 rounded-lg">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-semibold text-gray-900">{mentee.name}</h4>
+                      <p className="text-sm text-gray-600">{mentee.email}</p>
+                      <p className="text-xs text-gray-500">
+                        {mentee.current_mentor ? `담당 멘토: ${mentee.current_mentor.name}` : '미배정'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 현재 매칭 현황 */}
+      {showMatchingSection && matchingData.current_matches && matchingData.current_matches.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">현재 매칭 현황</h3>
+          <div className="space-y-3">
+            {matchingData.current_matches.map((match: any) => (
+              <div key={match.relation_id} className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex justify-between items-center">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <span className="font-semibold text-blue-900">{match.mentor?.name || '알 수 없음'}</span>
+                      <span className="text-blue-500">↔</span>
+                      <span className="font-semibold text-blue-900">{match.mentee?.name || '알 수 없음'}</span>
+                    </div>
+                    {match.notes && (
+                      <p className="text-sm text-blue-700 bg-blue-100 p-2 rounded">
+                        <span className="font-medium">메모:</span> {match.notes}
+                      </p>
+                    )}
+                    <p className="text-xs text-blue-600 mt-1">
+                      매칭일: {match.matched_at ? new Date(match.matched_at).toLocaleDateString('ko-KR') : '알 수 없음'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => onUnassign(match.relation_id)}
+                    className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 ml-4"
+                  >
+                    해제
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </motion.div>
+  )
+}
+
+// 매칭 모달 컴포넌트
+function AssignModal({
+  selectedMentor,
+  selectedMentee,
+  setSelectedMentee,
+  assignNotes,
+  setAssignNotes,
+  onConfirm,
+  onClose,
+  assigning,
+  matchingData
+}: any) {
+  // 미매칭된 멘티들만 필터링
+  const availableMentees = matchingData?.mentees?.filter((mentee: any) => !mentee.is_assigned) || []
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+        <h3 className="text-lg font-bold text-gray-900 mb-4">멘토-멘티 매칭</h3>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">멘토</label>
+            <p className="text-gray-900">{selectedMentor?.name || '선택된 멘토 없음'}</p>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">멘티</label>
+            <select
+              value={selectedMentee?.id || ''}
+              onChange={(e) => {
+                const menteeId = parseInt(e.target.value)
+                const mentee = availableMentees.find((m: any) => m.id === menteeId)
+                setSelectedMentee(mentee)
+              }}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">멘티를 선택하세요</option>
+              {availableMentees.map((mentee: any) => (
+                <option key={mentee.id} value={mentee.id}>
+                  {mentee.name} ({mentee.email})
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">메모 (선택사항)</label>
+            <textarea
+              value={assignNotes}
+              onChange={(e) => setAssignNotes(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              rows={3}
+              placeholder="매칭 관련 메모를 입력하세요..."
+            />
+          </div>
+        </div>
+        
+        <div className="flex justify-end space-x-3 mt-6">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            disabled={assigning}
+          >
+            취소
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={assigning || !selectedMentor || !selectedMentee}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
+            {assigning ? '매칭 중...' : '매칭 완료'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
+// 멘티 선택 모달 컴포넌트
+function MenteeSelectModal({ 
+  availableMentees, 
+  onSelect, 
+  onClose, 
+  selecting 
+}: any) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+        <h3 className="text-lg font-bold text-gray-900 mb-4">멘티 선택하기</h3>
+        
+        <div className="flex-1 overflow-y-auto">
+          {availableMentees.length === 0 ? (
+            <div className="text-center py-8">
+              <UserIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 text-lg">선택 가능한 멘티가 없습니다</p>
+              <p className="text-gray-400 text-sm">모든 멘티가 이미 배정되었습니다</p>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {availableMentees.map((mentee: any) => (
+                <div key={mentee.id} className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900">{mentee.name}</h4>
+                      <p className="text-sm text-gray-600">{mentee.email}</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                          {mentee.team} {mentee.team_number}
+                        </span>
+                        {mentee.mbti && (
+                          <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                            {mentee.mbti}
+                          </span>
+                        )}
+                        {mentee.join_year && (
+                          <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+                            {mentee.join_year}년 입사
+                          </span>
+                        )}
+                      </div>
+                      {mentee.interests && (
+                        <div className="mt-2">
+                          <div className="flex items-start">
+                            <p className="text-xl text-gray-500 mb-1 mr-2 flex-shrink-0">관심사:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {(() => {
+                                let interestsArray = []
+                                if (Array.isArray(mentee.interests)) {
+                                  interestsArray = mentee.interests
+                                } else if (typeof mentee.interests === 'string') {
+                                  // JSON 배열 문자열인 경우 파싱
+                                  try {
+                                    const parsed = JSON.parse(mentee.interests)
+                                    if (Array.isArray(parsed)) {
+                                      interestsArray = parsed
+                                    } else {
+                                      interestsArray = [mentee.interests]
+                                    }
+                                  } catch {
+                                    // JSON이 아닌 경우 컴마로 분리
+                                    interestsArray = mentee.interests.split(',').map(s => s.trim()).filter(s => s)
+                                  }
+                                }
+                                
+                                return interestsArray.map((interest: string, idx: number) => (
+                                  <span key={idx} className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">
+                                    {interest}
+                                  </span>
+                                ))
+                              })()}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => onSelect(mentee)}
+                      disabled={selecting}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    >
+                      {selecting ? '선택 중...' : '선택하기'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        <div className="flex justify-end mt-6 pt-4 border-t border-gray-200">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            disabled={selecting}
+          >
+            취소
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

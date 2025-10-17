@@ -279,11 +279,11 @@ export default function MyPage() {
           <div className="flex flex-col items-center mb-6">
             <div className="relative w-32 h-32 mb-4">
               <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-gray-100 bg-gray-50 flex items-center justify-center">
-                {photoUrl ? (
+          {photoUrl ? (
                   <img src={getDisplayPhotoUrl(photoUrl)} alt={user.name} className="w-full h-full object-cover" />
-                ) : (
+          ) : (
                   <UserCircleIcon className="w-20 h-20 text-gray-300" />
-                )}
+          )}
               </div>
           <button
                 className="absolute bottom-2 right-2 bg-blue-500 text-white rounded-full p-2 shadow-lg hover:bg-blue-600 focus:outline-none transition-colors"
@@ -314,10 +314,10 @@ export default function MyPage() {
                   alert('기본 상태로 되돌리기에 실패했습니다.')
                 }
               }}
-              type="button"
-            >
+            type="button"
+          >
               <ArrowPathIcon className="w-4 h-4" />
-            </button>
+          </button>
           )}
           <input
             type="file"
@@ -509,7 +509,7 @@ export default function MyPage() {
               ) : (
                 <div className="text-gray-900">{user.phone || '-'}</div>
               )}
-            </div>
+      </div>
 
             {/* 내선 번호 */}
             <div>
@@ -570,12 +570,12 @@ export default function MyPage() {
                       </option>
                     ))}
                   </select>
-                </div>
+        </div>
               ) : (
                 <div className="text-gray-900">
-                  {user.team && user.team_number
-                    ? `${user.team} ${user.team_number}`
-                    : user.team || user.team_number || '-'}
+            {user.team && user.team_number
+              ? `${user.team} ${user.team_number}`
+              : user.team || user.team_number || '-'}
                 </div>
               )}
             </div>
@@ -688,7 +688,7 @@ export default function MyPage() {
                   <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/20 border border-green-400/30 rounded-full">
                     <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                     <p className="text-xs text-green-100 font-medium">유효한 사원증</p>
-                  </div>
+        </div>
                 </div>
               </div>
 
