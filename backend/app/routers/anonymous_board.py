@@ -5,6 +5,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from typing import List
+from datetime import datetime, timedelta
 
 from app.database import get_session
 from app.models.user import User
@@ -114,6 +115,48 @@ async def get_posts(
             created_at=post.created_at,
             updated_at=post.updated_at,
             author_alias="익명1"  # 목록에서는 익명1로 표시
+        ))
+    
+    return result
+
+
+@router.get("/popular", response_model=List[PostRead])
+async def get_popular_posts(
+    limit: int = 3,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    최근 일주일 조회수 높은 게시물 조회 (홈페이지용)
+    - 최근 7일간의 게시물만 대상
+    - 조회수 높은 순으로 정렬
+    """
+    # 일주일 전 날짜 계산
+    week_ago = datetime.utcnow() - timedelta(days=7)
+    
+    statement = (
+        select(Post)
+        .where(
+            Post.is_deleted == False,
+            Post.created_at >= week_ago
+        )
+        .order_by(Post.view_count.desc())
+        .limit(limit)
+    )
+    
+    posts = session.exec(statement).all()
+    
+    result = []
+    for post in posts:
+        result.append(PostRead(
+            id=post.id,
+            title=post.title,
+            content=post.content,
+            view_count=post.view_count,
+            comment_count=post.comment_count,
+            created_at=post.created_at,
+            updated_at=post.updated_at,
+            author_alias=""  # 목록에서는 작성자 정보 숨김
         ))
     
     return result

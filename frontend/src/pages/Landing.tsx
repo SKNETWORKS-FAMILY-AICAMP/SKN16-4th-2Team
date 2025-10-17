@@ -48,7 +48,7 @@ export default function Landing() {
             <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
               AI 기반 지능형 온보딩 시스템으로 빠르게 적응하세요.
               <br />
-              체계적인 교육과 멘토링으로 성공적인 은행원의 첫걸음을 시작하세요.
+              체계적인 교육과 온보딩으로 성공적인 은행원의 첫걸음을 시작하세요.
             </p>
             <div className="flex justify-center space-x-4">
               <Link
@@ -127,8 +127,8 @@ export default function Landing() {
           />
           <FeatureCard
             icon={UserGroupIcon}
-            title="멘토 매칭 시스템"
-            description="개인별 특성에 맞는 전담 멘토가 배정되어 맞춤형 온보딩을 지원합니다."
+            title="개인별 온보딩 시스템"
+            description="개인별 특성에 맞는 전담 가이드가 배정되어 맞춤형 온보딩을 지원합니다."
             color="amber"
           />
           <FeatureCard

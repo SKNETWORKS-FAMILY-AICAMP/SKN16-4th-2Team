@@ -355,18 +355,6 @@ export default function Login() {
           </div>
         </div>
 
-        {/* Demo Accounts */}
-        <div className="mt-6 bg-white rounded-xl p-4 text-sm text-primary-700 border border-primary-100 shadow-lg">
-          <p className="font-semibold mb-2 flex items-center">
-            <img src="/assets/bear.png" alt="하경은행" className="w-4 h-4 mr-2 rounded-full" />
-            하경은행 테스트 계정:
-          </p>
-          <ul className="space-y-1">
-            <li>• 관리자: admin@hakyung.com / admin123</li>
-            <li>• 멘토: mentor@hakyung.com / mentor123</li>
-            <li>• 신입사원: mentee@hakyung.com / mentee123</li>
-          </ul>
-        </div>
       </div>
     </div>
   )

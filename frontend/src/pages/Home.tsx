@@ -2,21 +2,28 @@
  * 홈 페이지
  * 로그인 후 메인 화면
  */
-import { Link } from 'react-router-dom'
-import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { useAuthStore } from '../store/authStore'
 import { motion } from 'framer-motion'
 import {
   DocumentTextIcon,
   ChatBubbleBottomCenterIcon,
   ChartBarIcon,
-  SparklesIcon
+  SparklesIcon,
+  EyeIcon,
+  CalendarIcon
 } from '@heroicons/react/24/outline'
 import ChatBot from '../components/ChatBot'
+import { documentAPI, postAPI } from '../utils/api'
 
 export default function Home() {
   const { user } = useAuthStore()
+  const navigate = useNavigate()
   const [isChatBotOpen, setIsChatBotOpen] = useState(false)
+  const [recentDocuments, setRecentDocuments] = useState([])
+  const [popularPosts, setPopularPosts] = useState([])
+  const [loading, setLoading] = useState(true)
 
   const handleOpenChatBot = () => {
     setIsChatBotOpen(true)
@@ -25,6 +32,34 @@ export default function Home() {
   const handleCloseChatBot = () => {
     setIsChatBotOpen(false)
   }
+
+  const handleDocumentClick = () => {
+    navigate('/documents')
+  }
+
+  const handlePostClick = (postId: number) => {
+    navigate(`/board/${postId}`)
+  }
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        const [documentsResponse, postsResponse] = await Promise.all([
+          documentAPI.getRecentDocuments(3),
+          postAPI.getPopularPosts(3)
+        ])
+        setRecentDocuments(documentsResponse)
+        setPopularPosts(postsResponse)
+      } catch (error) {
+        console.error('Failed to fetch home data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
 
   return (
     <div className="space-y-8">
@@ -57,22 +92,139 @@ export default function Home() {
         </div>
       </motion.div>
 
+      {/* 자료실 섹션 */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-2xl shadow-lg p-8 border border-primary-100"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <DocumentTextIcon className="w-8 h-8 text-bank-600 mr-3" />
+            <h2 className="text-2xl font-bold text-bank-800">자료실</h2>
+          </div>
+          <button
+            onClick={handleDocumentClick}
+            className="text-bank-600 hover:text-bank-700 font-medium flex items-center"
+          >
+            전체보기
+            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+        
+        {loading ? (
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            ))}
+          </div>
+        ) : recentDocuments.length > 0 ? (
+          <div className="space-y-4">
+            {recentDocuments.map((doc: any) => (
+              <div
+                key={doc.id}
+                onClick={handleDocumentClick}
+                className="p-4 bg-gradient-to-r from-bank-50 to-primary-50 rounded-xl border border-bank-100 hover:shadow-md transition-all cursor-pointer group"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-bank-800 group-hover:text-bank-900 mb-1">
+                      {doc.title}
+                    </h4>
+                    <p className="text-bank-600 text-sm mb-2">{doc.description || '설명 없음'}</p>
+                    <div className="flex items-center text-xs text-bank-500">
+                      <CalendarIcon className="w-3 h-3 mr-1" />
+                      {new Date(doc.upload_date).toLocaleDateString('ko-KR')}
+                      <span className="mx-2">•</span>
+                      <span>{doc.category}</span>
+                    </div>
+                  </div>
+                  <DocumentTextIcon className="w-6 h-6 text-bank-400 group-hover:text-bank-600 transition-colors" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            <DocumentTextIcon className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+            <p>최근 업로드된 자료가 없습니다.</p>
+          </div>
+        )}
+      </motion.div>
+
+      {/* 대나무숲 섹션 */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-2xl shadow-lg p-8 border border-primary-100"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <ChatBubbleBottomCenterIcon className="w-8 h-8 text-primary-600 mr-3" />
+            <h2 className="text-2xl font-bold text-primary-800">대나무숲</h2>
+          </div>
+          <Link
+            to="/board"
+            className="text-primary-600 hover:text-primary-700 font-medium flex items-center"
+          >
+            전체보기
+            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
+        </div>
+        
+        {loading ? (
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            ))}
+          </div>
+        ) : popularPosts.length > 0 ? (
+          <div className="space-y-4">
+            {popularPosts.map((post: any) => (
+              <div
+                key={post.id}
+                onClick={() => handlePostClick(post.id)}
+                className="p-4 bg-gradient-to-r from-primary-50 to-amber-50 rounded-xl border border-primary-100 hover:shadow-md transition-all cursor-pointer group"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-primary-800 group-hover:text-primary-900 mb-1">
+                      {post.title}
+                    </h4>
+                    <p className="text-primary-600 text-sm mb-2 line-clamp-2">{post.content}</p>
+                    <div className="flex items-center text-xs text-primary-500">
+                      <EyeIcon className="w-3 h-3 mr-1" />
+                      {post.view_count}회 조회
+                      <span className="mx-2">•</span>
+                      <CalendarIcon className="w-3 h-3 mr-1" />
+                      {new Date(post.created_at).toLocaleDateString('ko-KR')}
+                    </div>
+                  </div>
+                  <ChatBubbleBottomCenterIcon className="w-6 h-6 text-primary-400 group-hover:text-primary-600 transition-colors" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            <ChatBubbleBottomCenterIcon className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+            <p>최근 인기 게시물이 없습니다.</p>
+          </div>
+        )}
+      </motion.div>
+
       {/* Quick Links */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <QuickLinkCard
-          to="/documents"
-          icon={DocumentTextIcon}
-          title="스마트 자료실"
-          description="업무 관련 문서 및 학습 자료"
-          color="bank"
-        />
-        <QuickLinkCard
-          to="/board"
-          icon={ChatBubbleBottomCenterIcon}
-          title="소통공간"
-          description="익명으로 소통하는 안전한 공간"
-          color="primary"
-        />
+      <div className="grid md:grid-cols-2 gap-6">
         <QuickLinkCard
           to="/dashboard"
           icon={ChartBarIcon}
@@ -85,7 +237,7 @@ export default function Home() {
           className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-6 text-white cursor-pointer hover:shadow-lg transition-all hover:scale-105"
         >
           <SparklesIcon className="w-12 h-12 mb-4" />
-          <h3 className="text-xl font-semibold mb-2">AI 챗봇</h3>
+          <h3 className="text-xl font-semibold mb-2">AI 하리보</h3>
           <p className="text-orange-100">클릭하여 챗봇 시작하기</p>
         </div>
       </div>
@@ -103,7 +255,7 @@ export default function Home() {
             time="방금 전"
           />
           <ActivityItem
-            title="스마트 자료실 탐방하기"
+            title="자료실 탐방하기"
             description="업무에 필요한 모든 학습 자료가 체계적으로 정리되어 있습니다."
             time="1분 전"
           />
@@ -130,13 +282,13 @@ export default function Home() {
               </li>
               <li className="flex items-start">
                 <span className="text-amber-500 mr-2">📚</span>
-                스마트 자료실에서 필요한 문서를 검색할 수 있습니다
+                자료실에서 필요한 문서를 검색할 수 있습니다
               </li>
             </ul>
             <ul className="space-y-3 text-primary-700">
               <li className="flex items-start">
                 <span className="text-amber-500 mr-2">💬</span>
-                소통공간에서 익명으로 고민을 나눌 수 있습니다
+                대나무숲에서 익명으로 고민을 나눌 수 있습니다
               </li>
               <li className="flex items-start">
                 <span className="text-amber-500 mr-2">📊</span>

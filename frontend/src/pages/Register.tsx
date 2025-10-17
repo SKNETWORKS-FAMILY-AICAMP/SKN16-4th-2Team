@@ -115,7 +115,7 @@ export default function Register() {
             <UserPlusIcon className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-3xl font-bold text-gray-900">회원가입</h2>
-          <p className="text-gray-600 mt-2">멘토 시스템에 가입하세요</p>
+          <p className="text-gray-600 mt-2">온보딩 플랫폼에 가입하세요</p>
         </div>
 
         {/* Register Form */}
