@@ -107,6 +107,28 @@ async def get_documents(
     return documents
 
 
+@router.get("/recent", response_model=List[DocumentRead])
+async def get_recent_documents(
+    limit: int = 3,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    최근 업로드된 문서 조회 (홈페이지용)
+    - RAG 카테고리 제외
+    - 최신 업로드 순으로 정렬
+    """
+    statement = (
+        select(Document)
+        .where(Document.category != "RAG")
+        .order_by(Document.upload_date.desc())
+        .limit(limit)
+    )
+    
+    documents = session.exec(statement).all()
+    return documents
+
+
 @router.get("/{document_id}", response_model=DocumentRead)
 async def get_document(
     document_id: int,

@@ -136,4 +136,9 @@ async def get_current_active_mentor(current_user: User = Depends(get_current_use
     return current_user
 
 
+async def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    """관리자 권한 확인 (별칭)"""
+    return await get_current_active_admin(current_user)
+
+
 

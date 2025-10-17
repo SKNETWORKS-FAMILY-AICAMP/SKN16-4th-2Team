@@ -188,20 +188,22 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 px-4 py-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-secondary-50 to-amber-50 px-4 py-8">
       <div className="max-w-md w-full">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl mb-4">
-            {loginMode === 'normal' ? (
-            <LockClosedIcon className="w-8 h-8 text-white" />
-            ) : (
-              <QrCodeIcon className="w-8 h-8 text-white" />
-            )}
+          <div className="flex items-center justify-center mb-4">
+            <img src="/assets/bear.png" alt="하경은행" className="w-16 h-16 mr-3 rounded-full shadow-lg" />
+            <div className="text-left">
+              <h2 className="text-3xl font-bold text-bank-800">하경은행</h2>
+              <p className="text-primary-600 text-sm font-medium">온보딩 플랫폼</p>
+            </div>
           </div>
-          <h2 className="text-3xl font-bold text-gray-900">로그인</h2>
-          <p className="text-gray-600 mt-2">
-            {loginMode === 'normal' ? '멘토 시스템에 오신 것을 환영합니다' : '사원증 QR 코드로 빠르게 로그인하세요'}
+          <h3 className="text-2xl font-semibold text-bank-800 mb-2">
+            {loginMode === 'normal' ? '로그인' : 'QR 로그인'}
+          </h3>
+          <p className="text-primary-700">
+            {loginMode === 'normal' ? '하경은행 온보딩 플랫폼에 오신 것을 환영합니다' : '사원증 QR 코드로 빠르게 로그인하세요'}
           </p>
         </div>
 
@@ -209,10 +211,10 @@ export default function Login() {
         <div className="flex gap-2 mb-6">
           <button
             onClick={switchToNormalLogin}
-            className={`flex-1 py-3 rounded-lg font-semibold transition-colors ${
+            className={`flex-1 py-3 rounded-xl font-semibold transition-all duration-200 ${
               loginMode === 'normal'
-                ? 'bg-white text-primary-600 shadow-lg'
-                : 'bg-white/50 text-gray-600 hover:bg-white/70'
+                ? 'bg-white text-primary-600 shadow-lg border-2 border-primary-200'
+                : 'bg-white/50 text-primary-600 hover:bg-white/70 border-2 border-transparent'
             }`}
           >
             <LockClosedIcon className="w-5 h-5 inline mr-2" />
@@ -220,10 +222,10 @@ export default function Login() {
           </button>
           <button
             onClick={switchToQRLogin}
-            className={`flex-1 py-3 rounded-lg font-semibold transition-colors ${
+            className={`flex-1 py-3 rounded-xl font-semibold transition-all duration-200 ${
               loginMode === 'qr'
-                ? 'bg-white text-primary-600 shadow-lg'
-                : 'bg-white/50 text-gray-600 hover:bg-white/70'
+                ? 'bg-white text-primary-600 shadow-lg border-2 border-primary-200'
+                : 'bg-white/50 text-primary-600 hover:bg-white/70 border-2 border-transparent'
             }`}
           >
             <QrCodeIcon className="w-5 h-5 inline mr-2" />
@@ -232,7 +234,7 @@ export default function Login() {
         </div>
 
         {/* Login Form */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        <div className="bg-white rounded-2xl shadow-xl p-8 border border-primary-100">
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
               {error}
@@ -254,7 +256,7 @@ export default function Login() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-primary-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white/50"
                 placeholder="your@email.com"
               />
             </div>
@@ -271,7 +273,7 @@ export default function Login() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-primary-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white/50"
                 placeholder="••••••••"
               />
             </div>
@@ -279,7 +281,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 bg-gradient-to-r from-primary-600 to-primary-500 text-white rounded-xl font-semibold hover:from-primary-700 hover:to-primary-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
             >
               {loading ? '로그인 중...' : '로그인'}
             </button>
@@ -307,7 +309,7 @@ export default function Login() {
               {loading && !qrScanning && (
                 <div className="flex flex-col items-center justify-center py-12">
                   <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-600 mb-4"></div>
-                  <p className="text-gray-600 font-medium">로그인 중...</p>
+                  <p className="text-primary-700 font-medium">로그인 중...</p>
                 </div>
               )}
             </div>
@@ -315,15 +317,15 @@ export default function Login() {
 
           <div className="mt-6 text-center space-y-3">
             <div className="flex justify-center gap-4 text-sm">
-              <Link to="/find-id" className="text-gray-600 hover:text-primary-600">
+              <Link to="/find-id" className="text-primary-600 hover:text-primary-700 font-medium">
                 아이디 찾기
               </Link>
-              <span className="text-gray-300">|</span>
-              <Link to="/find-password" className="text-gray-600 hover:text-primary-600">
+              <span className="text-primary-300">|</span>
+              <Link to="/find-password" className="text-primary-600 hover:text-primary-700 font-medium">
                 비밀번호 찾기
               </Link>
             </div>
-            <p className="text-gray-600">
+            <p className="text-primary-700">
               계정이 없으신가요?{' '}
               <Link to="/register" className="text-primary-600 font-semibold hover:text-primary-700">
                 회원가입
@@ -332,15 +334,6 @@ export default function Login() {
           </div>
         </div>
 
-        {/* Demo Accounts */}
-        <div className="mt-6 bg-white rounded-lg p-4 text-sm text-gray-600">
-          <p className="font-semibold mb-2">테스트 계정:</p>
-          <ul className="space-y-1">
-            <li>• 관리자: admin@bank.com / admin123</li>
-            <li>• 멘토: mentor@bank.com / mentor123</li>
-            <li>• 멘티: mentee@bank.com / mentee123</li>
-          </ul>
-        </div>
       </div>
     </div>
   )
