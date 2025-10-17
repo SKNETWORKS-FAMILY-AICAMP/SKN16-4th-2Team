@@ -168,6 +168,18 @@ export const documentAPI = {
     })
     return response.data
   },
+
+  uploadDocumentsBulk: async (files: File[], category: string, description?: string) => {
+    const formData = new FormData()
+    files.forEach((file) => formData.append('files', file))
+    formData.append('category', category)
+    if (description) formData.append('description', description)
+
+    const response = await api.post('/documents/upload-bulk', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return response.data
+  },
   
   downloadDocument: async (id: number) => {
     const response = await api.get(`/documents/${id}/download`, {

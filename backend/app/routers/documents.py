@@ -276,6 +276,54 @@ async def upload_multiple_documents(
     return uploaded_documents
 
 
+@router.post("/upload-bulk", response_model=List[DocumentRead])
+async def upload_documents_bulk(
+    files: List[UploadFile] = File(...),
+    category: str = Form(...),
+    description: Optional[str] = Form(None),
+    current_user: User = Depends(get_current_active_admin),
+    session: Session = Depends(get_session)
+):
+    """
+    관리자 전용 다중 문서 업로드
+    - 여러 파일을 한 번에 업로드
+    - 제목은 파일명(확장자 제외)으로 자동 설정
+    - 동일 카테고리로 저장
+    """
+    uploaded_documents: List[Document] = []
+
+    for file in files:
+        try:
+            file_path, file_size = await save_upload_file(
+                file,
+                category,
+                settings.UPLOAD_DIR
+            )
+
+            document = Document(
+                title=Path(file.filename).stem,
+                category=category,
+                file_path=file_path,
+                file_type=Path(file.filename).suffix.lower(),
+                file_size=file_size,
+                description=description,
+                uploaded_by=current_user.id
+            )
+            session.add(document)
+            uploaded_documents.append(document)
+        except Exception as e:
+            print(f"Bulk upload error for {file.filename}: {e}")
+            continue
+
+    session.commit()
+
+    # 새로 생성된 문서에 대해 refresh
+    for doc in uploaded_documents:
+        session.refresh(doc)
+
+    return uploaded_documents
+
+
 @router.post("/reindex-rag")
 async def reindex_rag_documents(
     current_user: User = Depends(get_current_user),
