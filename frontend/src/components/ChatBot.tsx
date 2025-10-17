@@ -4,6 +4,7 @@
  */
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 import { 
   ChatBubbleLeftRightIcon, 
   XMarkIcon, 
@@ -21,6 +22,7 @@ interface Message {
 }
 
 export default function ChatBot() {
+  const navigate = useNavigate()
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -89,6 +91,13 @@ export default function ChatBot() {
     }
   }
 
+  const handleSourceClick = (sourceTitle: string) => {
+    // "RAG - " 접두사 제거
+    const cleanTitle = sourceTitle.replace('RAG - ', '')
+    // 자료실로 이동하면서 검색어를 URL 파라미터로 전달
+    navigate(`/documents?search=${encodeURIComponent(cleanTitle)}`)
+  }
+
   return (
     <>
       {/* Chat Window */}
@@ -137,11 +146,21 @@ export default function ChatBot() {
                     {message.sources && message.sources.length > 0 && (
                       <div className="mt-2 pt-2 border-t border-gray-300">
                         <p className="text-xs text-gray-600 mb-1">참고 자료:</p>
-                        {message.sources.slice(0, 3).map((source, idx) => (
-                          <p key={idx} className="text-xs text-gray-500">
-                            • {source.category} - {source.title}
-                          </p>
-                        ))}
+                        {(() => {
+                          // 중복 제거 (title 기준)
+                          const uniqueSources = message.sources.filter((source, index, self) => 
+                            index === self.findIndex(s => s.title === source.title)
+                          );
+                          return uniqueSources.slice(0, 3).map((source, idx) => (
+                            <p 
+                              key={idx} 
+                              className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer hover:underline"
+                              onClick={() => handleSourceClick(source.title)}
+                            >
+                              • {source.title.replace('RAG - ', '')}
+                            </p>
+                          ));
+                        })()}
                       </div>
                     )}
                   </div>
