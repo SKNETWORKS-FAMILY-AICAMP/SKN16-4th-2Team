@@ -112,3 +112,27 @@ async def provide_feedback(
     
     return {"message": "Feedback recorded"}
 
+
+@router.post("/test", response_model=ChatResponse)
+async def test_chat(
+    request: ChatRequest,
+    session: Session = Depends(get_session)
+):
+    """
+    테스트용 챗봇 엔드포인트 (인증 없음)
+    """
+    try:
+        rag_service = RAGService(session)
+        result = await rag_service.process_query(request.message)
+        
+        return ChatResponse(
+            answer=result["answer"],
+            sources=result["sources"],
+            response_time=result["response_time"]
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Chat processing error: {str(e)}"
+        )
+

@@ -312,62 +312,13 @@ class RAGService:
             # 토스뱅크를 하경은행으로 변경
             answer = answer.replace("토스뱅크", "하경은행")
             
-            # 참고자료 구성 (강화된 관련성 필터링)
-            filtered_sources = []
-            question_lower = question.lower()
-            
+            # 참고자료 구성 - 임시로 모든 문서 포함 (디버깅용)
+            sources = []
             for doc in similar_docs:
-                title_lower = doc["title"].lower()
-                
-                # 특정 키워드별 문서 필터링
-                if any(keyword in question_lower for keyword in ["대출", "상품", "추천", "상담"]):
-                    # 70대 고객 질문인 경우 개인 대출만 허용
-                    if "70대" in question_lower or "70세" in question_lower:
-                        # 개인 대출 관련 키워드가 있는 문서만 포함 (모든 기업/사업자용 상품 제외)
-                        if any(keyword in title_lower for keyword in ["가계대출", "주택담보대출", "전월세보증금대출", "개인대출", "신용대출"]):
-                            # 모든 기업/사업자/보증 관련 상품 제외
-                            if not any(exclude_keyword in title_lower for exclude_keyword in ["기업", "사업자", "사장님", "모바일우대", "보증대출", "햇살론", "대환", "갱신보증"]):
-                                filtered_sources.append({
-                                    "title": doc["title"],
-                                    "content": doc["content"][:200] + "..." if len(doc["content"]) > 200 else doc["content"]
-                                })
-                    else:
-                        # 일반 대출 질문인 경우 개인 대출 관련 키워드가 있는 문서만 포함 (기업대출 제외)
-                        if any(keyword in title_lower for keyword in ["가계대출", "주택담보대출", "전월세보증금대출", "개인대출", "신용대출"]):
-                            # 개인사업자/기업용 상품 제외
-                            if not any(exclude_keyword in title_lower for exclude_keyword in ["기업", "사업자", "모바일우대", "보증대출", "햇살론"]):
-                                filtered_sources.append({
-                                    "title": doc["title"],
-                                    "content": doc["content"][:200] + "..." if len(doc["content"]) > 200 else doc["content"]
-                                })
-                        # 상품설명서 중에서도 개인 대출 관련만 (기업 제외)
-                        elif "상품설명서" in title_lower and any(keyword in title_lower for keyword in ["가계", "주택", "전월세", "개인"]) and not any(exclude_keyword in title_lower for exclude_keyword in ["기업", "사업자", "모바일우대", "보증대출"]):
-                            filtered_sources.append({
-                                "title": doc["title"],
-                                "content": doc["content"][:200] + "..." if len(doc["content"]) > 200 else doc["content"]
-                            })
-                elif any(keyword in question_lower for keyword in ["증권계좌", "증권계좌개설", "증권", "계좌개설"]):
-                    # 증권계좌 관련 질문인 경우 증권계좌 관련 문서만 포함
-                    if any(keyword in title_lower for keyword in ["증권계좌", "증권계좌개설", "증권"]):
-                        filtered_sources.append({
-                            "title": doc["title"],
-                            "content": doc["content"][:200] + "..." if len(doc["content"]) > 200 else doc["content"]
-                        })
-                elif any(keyword in question_lower for keyword in ["위임장", "이의신청서", "해촉증명서", "양식", "서식"]):
-                    # 양식/서류 관련 질문인 경우 해당 문서만 포함
-                    if any(keyword in title_lower for keyword in ["위임장", "이의신청서", "해촉증명서", "양식", "서식", "신청서", "확인서", "동의서"]):
-                        filtered_sources.append({
-                            "title": doc["title"],
-                            "content": doc["content"][:200] + "..." if len(doc["content"]) > 200 else doc["content"]
-                        })
-                else:
-                    # 일반 질문인 경우 모든 문서 포함
-                    filtered_sources.append({
-                        "title": doc["title"],
-                        "content": doc["content"][:200] + "..." if len(doc["content"]) > 200 else doc["content"]
-                    })
-            
-            sources = filtered_sources
+                sources.append({
+                    "title": doc["title"],
+                    "content": doc["content"][:200] + "..." if len(doc["content"]) > 200 else doc["content"]
+                })
             
             # 참고자료를 답변에 추가 (중복 제거)
             if sources:
