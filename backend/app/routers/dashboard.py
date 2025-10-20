@@ -1332,11 +1332,20 @@ async def process_bulk_exam_results(
     import os
     from datetime import datetime
     
-    # CSV 파일 경로
-    csv_path = "/app/data/mentee_exam_result.csv"  # Docker 컨테이너 내 경로
+    # 여러 경로 시도 (로컬/AWS 환경 모두 지원)
+    possible_paths = [
+        "/app/data/mentee_exam_result.csv",  # Docker 컨테이너 경로
+        os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "mentee_exam_result.csv"),  # 상대 경로
+    ]
     
-    if not os.path.exists(csv_path):
-        raise HTTPException(status_code=404, detail="CSV 파일을 찾을 수 없습니다")
+    csv_path = None
+    for path in possible_paths:
+        if os.path.exists(path):
+            csv_path = path
+            break
+    
+    if not csv_path:
+        raise HTTPException(status_code=404, detail=f"CSV 파일을 찾을 수 없습니다. 확인한 경로: {possible_paths}")
     
     processed_count = 0
     errors = []
@@ -1435,9 +1444,20 @@ def load_exam_questions():
     import os
     import json
     
-    exam_path = "/app/data/bank_training_exam.json"
+    # 여러 경로 시도 (로컬/AWS 환경 모두 지원)
+    possible_paths = [
+        "/app/data/bank_training_exam.json",  # Docker 컨테이너 경로
+        os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "bank_training_exam.json"),  # 상대 경로
+    ]
     
-    if not os.path.exists(exam_path):
+    exam_path = None
+    for path in possible_paths:
+        if os.path.exists(path):
+            exam_path = path
+            break
+    
+    if not exam_path:
+        print(f"⚠️ bank_training_exam.json not found in: {possible_paths}")
         return {}
     
     with open(exam_path, 'r', encoding='utf-8') as f:
@@ -1459,9 +1479,20 @@ def load_learning_materials():
     import os
     import re
     
-    materials_path = "/app/data/learning_materials_for_RAG.txt"
+    # 여러 경로 시도 (로컬/AWS 환경 모두 지원)
+    possible_paths = [
+        "/app/data/learning_materials_for_RAG.txt",  # Docker 컨테이너 경로
+        os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "learning_materials_for_RAG.txt"),  # 상대 경로
+    ]
     
-    if not os.path.exists(materials_path):
+    materials_path = None
+    for path in possible_paths:
+        if os.path.exists(path):
+            materials_path = path
+            break
+    
+    if not materials_path:
+        print(f"⚠️ learning_materials_for_RAG.txt not found in: {possible_paths}")
         return {}
     
     with open(materials_path, 'r', encoding='utf-8') as f:
