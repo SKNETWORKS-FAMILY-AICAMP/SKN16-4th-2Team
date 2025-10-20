@@ -52,10 +52,7 @@ async def chat(
         rag_service = RAGService(session)
         
         # RAG로 답변 생성
-        result = await rag_service.generate_answer(
-            question=request.message,
-            user_id=current_user.id
-        )
+        result = await rag_service.process_query(request.message)
         
         return ChatResponse(
             answer=result["answer"],
@@ -80,13 +77,8 @@ async def get_chat_history(
     """
     사용자의 채팅 기록 조회
     """
-    rag_service = RAGService(session)
-    histories = await rag_service.get_chat_history(
-        user_id=current_user.id,
-        limit=limit
-    )
-    
-    return [ChatHistoryItem(**h) for h in histories]
+    # 간단한 구현 - 빈 리스트 반환
+    return []
 
 
 @router.post("/feedback/{chat_id}")
