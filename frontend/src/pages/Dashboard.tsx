@@ -75,12 +75,12 @@ const FeedbackPagination = ({ feedback }: { feedback: string }) => {
       }
     }
     
-    // 섹션별로 분리 (은행업무 (95점), 상품지식 (100점) 등) - 종합 평가 제외
+    // 문제별로 분리 (은행업무 - BO014 (95점), 상품지식 - PK032 (100점) 등) - 종합 평가 제외
     const endIndex = footerStartIndex >= 0 ? footerStartIndex : lines.length
     for (let i = headerEndIndex + 1; i < endIndex; i++) {
       const line = lines[i]
-      // 영역 시작 (은행업무 (95점), 상품지식 (100점) 등)
-      if (line.trim().match(/^[가-힣]+ \(\d+점\)$/)) {
+      // 문제 시작 (은행업무 - BO014 (95점), 상품지식 - PK032 (100점) 등)
+      if (line.trim().match(/^[가-힣]+ - [A-Z]{2}\d+ \(\d+점\)$/)) {
         if (currentSection.trim()) {
           sections.push(currentSection.trim())
         }
@@ -185,9 +185,9 @@ const FeedbackPagination = ({ feedback }: { feedback: string }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {currentSections.map((section, index) => {
           const lines = section.split('\n')
-          const rawTitle = lines[0] || `영역 ${startIndex + index + 1}`
-          // 제목에서 숫자 제거 (예: "1. 은행업무 (95점)" -> "은행업무 (95점)")
-          const title = rawTitle.replace(/^\d+\.\s*/, '')
+          const rawTitle = lines[0] || `문제 ${startIndex + index + 1}`
+          // 제목에서 문제 ID 제거 (예: "은행업무 - BO014 (95점)" -> "은행업무 (95점)")
+          const title = rawTitle.replace(/ - [A-Z]{2}\d+/, '') // Remove problem ID
           const content = lines.slice(1)
           
           return (

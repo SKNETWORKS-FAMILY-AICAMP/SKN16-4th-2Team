@@ -1534,30 +1534,35 @@ def generate_personalized_feedback(mentee_name: str, performance_scores: dict, w
     
     feedback = ""
     
-    # 모든 섹션에 대해 피드백 생성 (오답이 있는 섹션과 만점 섹션 모두 포함)
-    sections = ['은행업무', '상품지식', '고객응대', '법규준수', 'IT활용', '영업실적']
-    
-    for i, section in enumerate(sections, 1):
-        score = performance_scores[section]
-        feedback += f"{section} ({score}점)\n"
-        
-        # 해당 섹션의 오답 문제들 찾기
-        section_wrong_questions = [answer for answer in wrong_answers if (
-            (section == '은행업무' and answer.startswith('BO')) or
-            (section == '상품지식' and answer.startswith('PK')) or
-            (section == '고객응대' and answer.startswith('CS')) or
-            (section == '법규준수' and answer.startswith('CO')) or
-            (section == 'IT활용' and answer.startswith('IT')) or
-            (section == '영업실적' and answer.startswith('SP'))
-        )]
-        
-        if section_wrong_questions:
-            # 오답이 있는 경우 - 학습 자료 제공
-            section_content = get_learning_content_for_question(section_wrong_questions[0], learning_materials)
+    if wrong_answers:
+        # 틀린 문제별로 개별 피드백 생성
+        for i, wrong_question in enumerate(wrong_answers, 1):
+            # 문제 ID에서 섹션 정보 추출
+            section_name = ""
+            if wrong_question.startswith('BO'):
+                section_name = '은행업무'
+            elif wrong_question.startswith('PK'):
+                section_name = '상품지식'
+            elif wrong_question.startswith('CS'):
+                section_name = '고객응대'
+            elif wrong_question.startswith('CO'):
+                section_name = '법규준수'
+            elif wrong_question.startswith('IT'):
+                section_name = 'IT활용'
+            elif wrong_question.startswith('SP'):
+                section_name = '영업실적'
             
-            if section_content:
-                # 학습 자료에서 전체 섹션 내용을 정리하여 추출
-                lines = section_content.split('\n')
+            # 해당 섹션의 점수
+            section_score = performance_scores.get(section_name, 0)
+            
+            feedback += f"{section_name} - {wrong_question} ({section_score}점)\n"
+            
+            # 해당 문제에 대한 학습 자료 찾기
+            question_content = get_learning_content_for_question(wrong_question, learning_materials)
+            
+            if question_content:
+                # 학습 자료에서 내용 추출
+                lines = question_content.split('\n')
                 content_lines = []
                 
                 for line in lines:
@@ -1578,20 +1583,16 @@ def generate_personalized_feedback(mentee_name: str, performance_scores: dict, w
                             seen.add(content)
                             unique_content.append(content)
                     
-                    # 섹션별로 한 번만 표시
+                    # 문제별 학습 내용 표시
                     feedback += f"   📚 학습 내용:\n"
-                    for content in unique_content:  # 모든 항목 표시
+                    for content in unique_content:
                         feedback += f"     • {content}\n"
             else:
-                # 학습 자료에 없으면 첫 번째 문제의 설명 사용
-                first_question = section_wrong_questions[0]
-                explanation = question_explanations.get(first_question, {}).get('explanation', '해당 영역의 기본 개념 복습 필요')
-                feedback += f"   • {first_question}: {explanation}\n"
-        else:
-            # 만점인 경우 - 칭찬 메시지
-            feedback += f"   ✅ 우수한 성적입니다! 해당 영역에 대한 이해도가 높습니다.\n"
-        
-        feedback += "\n"
+                # 학습 자료에 없으면 문제 설명 사용
+                explanation = question_explanations.get(wrong_question, {}).get('explanation', '해당 문제의 기본 개념 복습 필요')
+                feedback += f"   • 문제 설명: {explanation}\n"
+            
+            feedback += "\n"
     
     # 종합 평가
     total_score = sum(performance_scores.values())
