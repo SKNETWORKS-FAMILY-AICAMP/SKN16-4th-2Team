@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react'
 import { usePersonaStore } from '../store/usePersonaStore'
-import { getRpmAvatarUrl } from '../lib/rpm/rpmHelper'
+import { getRpmAvatarUrl, getPersonaAvatarUrl } from '../lib/rpm/rpmHelper'
+import Avatar3D from './Avatar3D'
 
 interface CustomerAvatarProps {
   className?: string
@@ -23,7 +24,7 @@ export default function CustomerAvatar({ className = '' }: CustomerAvatarProps) 
     )
   }
 
-  const avatarUrl = getRpmAvatarUrl(persona)
+  const avatarUrl = getPersonaAvatarUrl(persona.persona_id)
 
   // 오디오 자동 재생
   useEffect(() => {
@@ -53,9 +54,12 @@ export default function CustomerAvatar({ className = '' }: CustomerAvatarProps) 
   return (
     <div className={`relative bg-white rounded-lg shadow-lg overflow-hidden ${className}`}>
       {/* 아바타 3D 렌더링 영역 */}
-      <div className="aspect-square bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center relative">
+      <div className="aspect-square bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center relative rounded-lg overflow-hidden">
         {avatarUrl ? (
-          // TODO: Three.js로 RPM GLB 로드
+          // 3D 아바타 렌더링
+          <Avatar3D avatarUrl={avatarUrl} />
+        ) : (
+          // 폴백: 이모지 아바타
           <div className="text-center p-8 w-full h-full flex flex-col items-center justify-center">
             <div className="text-9xl mb-8 animate-pulse">
               {persona.gender === 'female' ? '👩' : '👨'}
@@ -63,16 +67,7 @@ export default function CustomerAvatar({ className = '' }: CustomerAvatarProps) 
             <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6 shadow-lg">
               <p className="text-2xl font-bold text-gray-800 mb-2">{persona.type}</p>
               <p className="text-sm text-gray-600">{persona.age_group} • {persona.gender === 'female' ? '여성' : '남성'}</p>
-            </div>
-          </div>
-        ) : (
-          <div className="text-center p-8">
-            <div className="text-9xl mb-8 animate-bounce">
-              {persona.gender === 'female' ? '👩' : '👨'}
-            </div>
-            <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6 shadow-lg">
-              <p className="text-xl font-semibold text-gray-800">{persona.type}</p>
-              <p className="text-sm text-gray-600 mt-2">{persona.age_group} • {persona.gender === 'female' ? '여성' : '남성'}</p>
+              <p className="text-xs text-gray-500 mt-2">3D 모델 준비 중...</p>
             </div>
           </div>
         )}
