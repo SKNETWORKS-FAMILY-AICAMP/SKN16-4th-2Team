@@ -42,12 +42,13 @@ def compose_llm_messages(
 은행 직원에게 자연스럽고 정확하게 질문하거나 요청하는 것이다.
 
 [말하기 원칙 - 고객 입장]
-- 직원의 말에 자연스럽게 이어서 대화한다. 갑작스럽게 핵심 질문부터 시작하지 않는다.
-- 처음에는 인사나 간단한 반응으로 시작하고, 점진적으로 본론으로 들어간다.
-- "안녕하세요", "네", "그렇군요" 같은 자연스러운 반응 후 질문이나 요청.
-- 대화 맥락을 고려해서 단계적으로 진행 (인사 → 목적 언급 → 구체적 질문).
-- 불만형도 처음부터 화내지 않고, 상황에 따라 점진적으로 감정 표현.
-- 1~2문장으로 간결하게, 자연스러운 대화 흐름 유지.
+- 🔥 중요: 이전 대화 내용을 절대 반복하지 마세요. 이미 말한 인사나 목적을 다시 언급하지 마세요.
+- 직원의 말에 자연스럽게 이어서 대화한다. 대화가 진행 중이면 바로 본론으로 들어간다.
+- 첫 대화가 아니라면 "안녕하세요"나 "~알아보러 왔어요" 같은 말을 반복하지 않는다.
+- 직원이 제시한 내용에 대해 구체적으로 질문하거나 반응한다.
+- "네", "그렇군요", "아 그래요?" 같은 자연스러운 반응 후 추가 질문.
+- 대화가 진행될수록 더 구체적이고 세부적인 질문을 한다.
+- 1~2문장으로 간결하게, 이전 대화를 참고한 연속성 있는 응답.
 
 [페르소나 가이드 - 고객 입장]
 - 성별/나이/직업/고객타입/금융이해도에 맞춰 말투, 속도감, 전문용어 수준을 조정한다.
@@ -84,13 +85,14 @@ def compose_llm_messages(
         f"[은행 직원 발화]\n{user_text}\n",
         f"[선택된 페르소나]\n{persona.get('gender', '')}, {persona.get('age_group', '')}, {persona.get('occupation', '')}, 고객타입={persona.get('type', '')}, tone={persona.get('tone', '')}, style={json.dumps(persona.get('style', {}))}\n",
         f"[선택된 시츄에이션]\nid={situation.get('id', '')}, goals={json.dumps(situation.get('goals', []))}, required_slots={json.dumps(situation.get('required_slots', []))}, forbidden_claims={json.dumps(situation.get('forbidden_claims', []))}, style_rules={json.dumps(situation.get('style_rules', []))}, disclaimer=\"{situation.get('disclaimer', '')}\"\n",
-        "[대화 단계별 가이드]\n- 첫 인사: '안녕하세요' 같은 간단한 인사 응답\n- 목적 언급: '예금 상품 알아보러 왔어요' 같은 방문 목적\n- 구체적 질문: 세부 사항에 대한 질문\n- 감정 표현: 필요시 점진적으로 감정 드러내기\n"
+        "[대화 단계별 가이드]\n- 첫 대화: 인사 + 목적 ('안녕하세요. 예금 상품 알아보러 왔어요')\n- 2번째 이후: 직원 말에 직접 반응 ('그 상품들 이자율이 어떻게 되나요?')\n- 진행 중: 더 구체적인 질문 ('기간은 얼마나 되나요?', '최소 금액이 있나요?')\n- 마무리: 결정이나 추가 문의 ('좀 더 생각해볼게요', '신청하려면 어떻게 하나요?')\n"
     ]
     
     # 대화 히스토리
     if history:
         hist_lines = [f"- {item.get('role', 'unknown')}: {item.get('text', '')}" for item in history]
-        user_parts.append(f"[최근 대화(최대 4턴)]\n" + "\n".join(hist_lines) + "\n")
+        user_parts.append(f"[최근 대화 맥락(최대 4턴)]\n" + "\n".join(hist_lines) + "\n")
+        user_parts.append("[중요] 위 대화 맥락을 참고하여 이미 나눈 대화를 반복하지 말고, 자연스럽게 이어지는 응답을 하세요.\n")
     
     # RAG 검색 결과
     if rag_hits:

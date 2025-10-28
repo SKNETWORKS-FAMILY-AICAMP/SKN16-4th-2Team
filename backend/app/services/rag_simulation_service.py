@@ -367,6 +367,8 @@ class RAGSimulationService:
             })
             
             print(f"대화 히스토리: {len(conversation_history)}턴")
+            for i, msg in enumerate(conversation_history[-4:]):
+                print(f"  {i+1}. {msg.get('role', 'unknown')}: {msg.get('text', '')[:50]}...")
             
             # 프롬프트 오케스트레이터로 메시지 구성
             messages = compose_llm_messages(
