@@ -39,6 +39,7 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [stream, setStream] = useState<MediaStream | null>(null) // 오디오 스트림 추가
+  const [isInitializing, setIsInitializing] = useState(true) // 초기화 상태 추가
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
@@ -64,6 +65,25 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
           text: simulationData.initial_message.content || '',
           mouthCues: []
         })
+        
+        // 초기 메시지를 대화 히스토리에 추가
+        const initialMessage: ChatMessage = {
+          id: `initial_${Date.now()}`,
+          role: 'customer',
+          text: simulationData.initial_message.content || '',
+          audio: simulationData.initial_message.audio_url,
+          timestamp: new Date()
+        }
+        
+        setChatHistory([initialMessage])
+        
+        // 초기 메시지 자동 재생
+        setTimeout(() => {
+          playFromAnyAudioPayload(simulationData.initial_message.audio_url, 'audio/mpeg')
+          setIsInitializing(false) // 초기화 완료
+        }, 500)
+      } else {
+        setIsInitializing(false) // 초기 메시지가 없어도 초기화 완료
       }
     }
   }, [simulationData])
@@ -391,7 +411,7 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
             </div>
             <div>
               <h3 className="font-medium text-gray-700">시나리오</h3>
-              <p className="text-gray-600">{simulationData?.scenario?.title}</p>
+              <p className="text-gray-600">{simulationData?.situation?.title}</p>
             </div>
           </div>
         </div>
@@ -402,7 +422,14 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
           
           {/* 대화 히스토리 */}
           <div className="space-y-4 max-h-96 overflow-y-auto" style={{ scrollBehavior: 'smooth' }}>
-            {chatHistory.length === 0 ? (
+            {isInitializing ? (
+              <div className="text-center text-gray-500 py-8">
+                <div className="flex items-center justify-center">
+                  <ArrowPathIcon className="w-5 h-5 mr-2 animate-spin" />
+                  고객의 첫 인사를 준비하고 있습니다...
+                </div>
+              </div>
+            ) : chatHistory.length === 0 ? (
               <div className="text-center text-gray-500 py-8">
                 대화를 시작하세요. 녹음 버튼을 누르거나 텍스트를 입력하세요.
               </div>
@@ -471,11 +498,11 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
             {!isRecording ? (
               <button
                 onClick={startRecording}
-                disabled={loading}
+                disabled={loading || isInitializing}
                 className="flex items-center px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
               >
                 <MicrophoneIcon className="w-5 h-5 mr-2" />
-                녹음 시작
+                {isInitializing ? '준비 중...' : '녹음 시작'}
               </button>
             ) : (
               <button
@@ -496,12 +523,13 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
                 type="text"
                 value={userMessage}
                 onChange={(e) => setUserMessage(e.target.value)}
-                placeholder="메시지를 입력하세요..."
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder={isInitializing ? "고객의 첫 인사를 기다리는 중..." : "메시지를 입력하세요..."}
+                disabled={isInitializing}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               />
               <button
                 onClick={handleTextSubmit}
-                disabled={loading || !userMessage.trim()}
+                disabled={loading || !userMessage.trim() || isInitializing}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
               >
                 전송

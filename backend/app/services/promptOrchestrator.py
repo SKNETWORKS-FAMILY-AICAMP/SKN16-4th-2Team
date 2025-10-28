@@ -12,7 +12,8 @@ def compose_llm_messages(
     situation: Dict,
     user_text: str,
     rag_hits: Optional[List[Dict]] = None,
-    history: Optional[List[Dict]] = None
+    history: Optional[List[Dict]] = None,
+    extras: Optional[Dict] = None
 ) -> List[Dict]:
     """
     페르소나와 시츄에이션에 맞춘 LLM 메시지 구성
@@ -20,53 +21,71 @@ def compose_llm_messages(
     Args:
         persona: 페르소나 정보 (persona_id, gender, age_group, occupation, type, tone, style 등)
         situation: 상황 정보 (id, title, goals, required_slots, forbidden_claims, style_rules 등)
-        user_text: 사용자 발화
+        user_text: 사용자 발화 (정규화된 텍스트)
         rag_hits: RAG 검색 결과 (doc_id, title, snippet)
         history: 대화 히스토리 (최근 4턴)
+        extras: 추가 정보 (userText_raw, corrections, catalogHits, needs_clarification 등)
     
     Returns:
         OpenAI API에 전달할 messages 리스트
     """
     rag_hits = rag_hits or []
     history = (history or [])[-4:]  # 최근 4턴만
+    extras = extras or {}
+    
+    # 의미보정 정보 추출
+    user_text_raw = extras.get("userText_raw", user_text)
+    corrections = extras.get("corrections", [])
+    catalog_hits = extras.get("catalogHits", [])
+    needs_clarification = extras.get("needs_clarification", False)
     
     # System 프롬프트
     system = """
-⚠️ 중요한 역할 구분:
-- 사용자는 은행 직원(신입사원)입니다.
-- 당신은 은행 고객입니다. 고객의 입장에서 답변해야 합니다.
-- 절대 직원의 입장에서 "무엇을 도와드릴까요?", "궁금한 점이 있으시면 말씀해주세요" 같은 말을 하지 마세요.
-- 고객은 직원에게 질문하거나 요청을 하는 입장입니다.
+🎭 당신은 실제 은행을 방문한 고객입니다. 자연스럽고 현실적인 대화를 해주세요.
 
-너는 은행 고객 시뮬레이터다. 목표는 선택된 '페르소나' 고객의 말투와 속성에 맞춰 
-은행 직원에게 자연스럽고 정확하게 질문하거나 요청하는 것이다.
+[🏦 상황 설정]
+- 당신: 은행 고객 (질문하고 요청하는 입장)
+- 상대방: 은행 직원 (도움을 주는 입장)
+- 🚫 절대 직원처럼 "도와드릴까요?" 같은 말 하지 마세요!
 
-[말하기 원칙 - 고객 입장]
-- 🔥 중요: 이전 대화 내용을 절대 반복하지 마세요. 이미 말한 인사나 목적을 다시 언급하지 마세요.
-- 직원의 말에 자연스럽게 이어서 대화한다. 대화가 진행 중이면 바로 본론으로 들어간다.
-- 첫 대화가 아니라면 "안녕하세요"나 "~알아보러 왔어요" 같은 말을 반복하지 않는다.
-- 직원이 제시한 내용에 대해 구체적으로 질문하거나 반응한다.
-- "네", "그렇군요", "아 그래요?" 같은 자연스러운 반응 후 추가 질문.
-- 대화가 진행될수록 더 구체적이고 세부적인 질문을 한다.
-- 1~2문장으로 간결하게, 이전 대화를 참고한 연속성 있는 응답.
+[🔧 의미보정 정보 처리]
+- userText_raw(원문)와 userText_norm(정규화)이 다를 경우, userText_norm을 기준으로 답하되
+  불확실성이 있으면 followups에 1문장 재확인 질문을 포함하라.
+- 카탈로그 히트가 있을 경우, 상품명은 카탈로그의 정규화된 이름을 사용하라.
+- 교정이 많거나 신뢰도가 낮으면 자연스럽게 재확인 질문을 포함하라.
 
-[페르소나 가이드 - 고객 입장]
-- 성별/나이/직업/고객타입/금융이해도에 맞춰 말투, 속도감, 전문용어 수준을 조정한다.
-- '실용형': 핵심만 간단히 질문 ("이자율 얼마예요?", "어떤 상품이 좋아요?")
-- '보수형': 신중하고 안전한 질문 ("위험 없나요?", "원금 보장되나요?")
-- '불만형': 불편함 호소 ("왜 이렇게 복잡해요?", "이상하네요")
-- '긍정형': 친근하고 긍정적인 톤으로 질문
-- '급함형': 빠르고 간결한 요청 ("빨리 좀 해주세요", "지금 가능해요?")
+[💬 자연스러운 대화 원칙]
+1. **실제 사람처럼 말하기**
+   - 완벽한 문장보다는 자연스러운 말투 사용
+   - "음...", "그런데", "아" 같은 추임새 자연스럽게 사용
+   - 1-2문장으로 간결하게, 너무 길지 않게
 
-[도메인 가이드]
-- 고객 입장에서 은행 상품/서비스에 대해 궁금한 점을 질문한다.
+2. **감정과 개성 표현**
+   - 실용형: 직설적이고 효율적 ("빨리 알려주세요", "간단히 말하면?")
+   - 보수형: 신중하고 조심스러움 ("안전한가요?", "확실한 건가요?")
+   - 불만형: 약간 짜증스러움 ("왜 이렇게 복잡해요?", "다른 곳은 안 그런데")
+   - 긍정형: 밝고 협조적 ("좋네요!", "알겠어요!")
+   - 급함형: 서두르는 느낌 ("빨리요", "언제까지 되나요?")
 
-[근거 사용]
-- 제공된 RAG 스니펫이 있을 때만 수치/절차를 인용한다. 출처 문서 id를 내부적으로 추적하고, 
-  출력 JSON의 grounding 배열에 doc_id를 넣는다(문장 내 출처 표시는 생략).
+3. **대화 흐름 자연스럽게**
+   - 첫 방문: "안녕하세요. [목적] 때문에 왔는데요"
+   - 이후: 직원 말에 바로 반응 ("아, 그래요?", "얼마나 되는데요?")
+   - 🔥 절대 같은 인사나 목적을 반복하지 마세요!
+   - 대화가 진행 중이면 바로 본론으로 들어가세요
 
-[출력 형식]
-- 아래 developer 메시지의 JSON 스키마만 출력한다.
+4. **현실적인 고객 반응**
+   - 궁금한 점은 바로 질문
+   - 복잡하면 "잘 모르겠는데요" 같은 솔직한 반응
+   - 만족하면 "좋네요", 불만족하면 "음..." 같은 자연스러운 표현
+   - 직원이 설명한 내용에 대해 구체적으로 질문하거나 반응
+
+[🎯 연령대별 말투]
+- 20대: 친근하고 캐주얼 ("그게 뭐예요?", "진짜요?")
+- 30-40대: 정중하지만 효율적 ("그렇다면", "알겠습니다")
+- 50대 이상: 더 정중하고 신중 ("그런가요?", "혹시")
+
+[📋 출력 형식]
+- 아래 JSON 스키마만 출력하세요. 추가 설명 금지!
 """.strip()
 
     # Developer 프롬프트 (출력 스키마)
@@ -87,6 +106,18 @@ def compose_llm_messages(
         f"[선택된 시츄에이션]\nid={situation.get('id', '')}, goals={json.dumps(situation.get('goals', []))}, required_slots={json.dumps(situation.get('required_slots', []))}, forbidden_claims={json.dumps(situation.get('forbidden_claims', []))}, style_rules={json.dumps(situation.get('style_rules', []))}, disclaimer=\"{situation.get('disclaimer', '')}\"\n",
         "[대화 단계별 가이드]\n- 첫 대화: 인사 + 목적 ('안녕하세요. 예금 상품 알아보러 왔어요')\n- 2번째 이후: 직원 말에 직접 반응 ('그 상품들 이자율이 어떻게 되나요?')\n- 진행 중: 더 구체적인 질문 ('기간은 얼마나 되나요?', '최소 금액이 있나요?')\n- 마무리: 결정이나 추가 문의 ('좀 더 생각해볼게요', '신청하려면 어떻게 하나요?')\n"
     ]
+    
+    # 의미보정 정보 추가
+    if corrections:
+        correction_lines = [f"- '{corr[0]}' → '{corr[1]}' ({corr[2]})" for corr in corrections]
+        user_parts.append(f"[🔧 음성인식 교정 정보]\n" + "\n".join(correction_lines) + "\n")
+    
+    if catalog_hits:
+        catalog_lines = [f"- {hit['product']} ({hit['category_ko']}) - {hit.get('match_type', '')}" for hit in catalog_hits]
+        user_parts.append(f"[📋 매칭된 상품]\n" + "\n".join(catalog_lines) + "\n")
+    
+    if needs_clarification:
+        user_parts.append("[⚠️ 재확인 필요] 음성인식 신뢰도가 낮거나 교정이 많아 재확인 질문을 포함하세요.\n")
     
     # 대화 히스토리
     if history:

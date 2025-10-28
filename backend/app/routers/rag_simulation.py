@@ -18,7 +18,7 @@ router = APIRouter(prefix="/rag-simulation", tags=["RAG Simulation"])
 class StartRAGSimulationRequest(BaseModel):
     """RAG 시뮬레이션 시작 요청"""
     persona_id: str
-    scenario_id: str
+    situation_id: str
     gender: Optional[str] = 'male'  # 성별 추가
 
 
@@ -26,7 +26,7 @@ class RAGSimulationResponse(BaseModel):
     """RAG 시뮬레이션 응답"""
     session_id: str
     persona: Dict
-    scenario: Dict
+    situation: Dict
     initial_message: Dict
 
 
@@ -82,36 +82,24 @@ async def get_rag_personas(
         )
 
 
-@router.get("/scenarios")
-async def get_rag_scenarios(
-    difficulty: Optional[str] = None,
-    persona_id: Optional[str] = None,
-    category: Optional[str] = None,
+@router.get("/business-categories")
+async def get_business_categories(
     session: Session = Depends(get_session)
 ):
-    """RAG 시나리오 목록 조회"""
+    """비즈니스 카테고리 목록 조회"""
     try:
         service = RAGSimulationService(session)
-        
-        filters = {}
-        if difficulty:
-            filters["difficulty"] = difficulty
-        if persona_id:
-            filters["persona"] = persona_id
-        if category:
-            filters["category"] = category
-        
-        scenarios = service.get_scenarios(filters)
+        categories = service.get_business_categories()
         
         return {
-            "scenarios": scenarios,
-            "total_count": len(scenarios)
+            "categories": categories,
+            "total_count": len(categories)
         }
     
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"시나리오 조회 중 오류가 발생했습니다: {str(e)}"
+            detail=f"카테고리 조회 중 오류가 발생했습니다: {str(e)}"
         )
 
 
@@ -154,7 +142,7 @@ async def start_rag_simulation(
         result = service.start_voice_simulation(
             current_user.id,
             request.persona_id,
-            request.scenario_id,
+            request.situation_id,
             request.gender
         )
         
