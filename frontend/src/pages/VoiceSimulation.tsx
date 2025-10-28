@@ -139,9 +139,19 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
       setLoading(true)
       setError('')
 
+      // 세션 데이터에 대화 히스토리 포함
+      const sessionDataWithHistory = {
+        ...simulationData,
+        conversation_history: chatHistory.map(msg => ({
+          role: msg.role === 'user' ? 'employee' : 'customer',
+          text: msg.text,
+          timestamp: msg.timestamp.toISOString()
+        }))
+      }
+
       const formData = new FormData()
       formData.append('audio_file', audioBlob, 'recording.webm')  // 서버가 audio_file을 기대
-      formData.append('session_data', JSON.stringify(simulationData))
+      formData.append('session_data', JSON.stringify(sessionDataWithHistory))
 
       console.log('FormData 준비 완료, 전송 시작...');
 
@@ -235,9 +245,19 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
       console.log('세션 데이터:', simulationData);
       console.log('세션 데이터 키:', Object.keys(simulationData || {}));
 
+      // 세션 데이터에 대화 히스토리 포함
+      const sessionDataWithHistory = {
+        ...simulationData,
+        conversation_history: chatHistory.map(msg => ({
+          role: msg.role === 'user' ? 'employee' : 'customer',
+          text: msg.text,
+          timestamp: msg.timestamp.toISOString()
+        }))
+      }
+
       // JSON으로 전송
       const requestData = {
-        session_data: simulationData,
+        session_data: sessionDataWithHistory,
         user_message: userMessage
       };
 

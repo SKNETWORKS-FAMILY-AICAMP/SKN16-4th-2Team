@@ -347,21 +347,23 @@ class RAGSimulationService:
                     'disclaimer': '실제 조건은 심사 결과 및 정책에 따라 달라질 수 있습니다.'
                 }
             
-            # 대화 히스토리 구성 (세션 데이터에서 추출)
-            conversation_history = []
+            # 대화 히스토리 구성 (세션 데이터에서 추출 및 누적)
+            conversation_history = session_data.get("conversation_history", [])
             
-            # 초기 메시지가 있으면 히스토리에 추가
-            if session_data.get("initial_message"):
+            # 초기 메시지가 있고 히스토리가 비어있으면 추가
+            if session_data.get("initial_message") and not conversation_history:
                 initial_msg = session_data["initial_message"]
                 conversation_history.append({
                     "role": "customer", 
-                    "text": initial_msg.get("content", "")
+                    "text": initial_msg.get("content", ""),
+                    "timestamp": datetime.now().isoformat()
                 })
             
             # 현재 직원 발화를 히스토리에 추가
             conversation_history.append({
                 "role": "employee", 
-                "text": transcribed_text
+                "text": transcribed_text,
+                "timestamp": datetime.now().isoformat()
             })
             
             print(f"대화 히스토리: {len(conversation_history)}턴")
@@ -389,8 +391,15 @@ class RAGSimulationService:
             
             print(f"고객 응답 (script): '{parsed.get('script', '')}'")
             
-            # TTS: 고객 응답을 음성으로 변환
+            # 고객 응답을 히스토리에 추가
             customer_response_text = parsed.get('script', '')
+            conversation_history.append({
+                "role": "customer",
+                "text": customer_response_text,
+                "timestamp": datetime.now().isoformat()
+            })
+            
+            # TTS: 고객 응답을 음성으로 변환
             print(f"TTS 처리 시작")
             customer_audio = self._text_to_speech(customer_response_text, response_persona)
             print(f"TTS 완료: 오디오 길이 {len(customer_audio) if customer_audio else 0}")
@@ -406,7 +415,8 @@ class RAGSimulationService:
                 "followups": parsed.get('followups', []),
                 "safety_notes": parsed.get('safety_notes', ''),
                 "conversation_phase": "ongoing",
-                "session_score": self._calculate_session_score(session_data)
+                "session_score": self._calculate_session_score(session_data),
+                "conversation_history": conversation_history  # 업데이트된 히스토리 포함
             }
             
             print("음성 상호작용 처리 완료")
