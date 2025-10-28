@@ -56,6 +56,15 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
         age_group: simulationData.persona.age_group || '',
         type: simulationData.persona.type || ''
       })
+
+      // 🔥 초기 메시지가 있으면 아바타가 말하도록 설정
+      if (simulationData?.initial_message?.audio_url) {
+        setAudio({
+          audioUrl: simulationData.initial_message.audio_url,
+          text: simulationData.initial_message.content || '',
+          mouthCues: []
+        })
+      }
     }
   }, [simulationData])
 
@@ -170,6 +179,15 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
           audio: customer_audio,
           timestamp: new Date()
         }])
+
+        // 🔥 아바타가 말하도록 설정
+        if (customer_audio) {
+          setAudio({
+            audioUrl: customer_audio,
+            text: customer_response,
+            mouthCues: [] // TODO: Rhubarb로 생성
+          })
+        }
       }
 
       // 사용자 입력 필드 초기화
@@ -261,6 +279,15 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
           audio: customer_audio,
           timestamp: new Date()
         }])
+
+        // 🔥 아바타가 말하도록 설정
+        if (customer_audio) {
+          setAudio({
+            audioUrl: customer_audio,
+            text: customer_response,
+            mouthCues: [] // TODO: Rhubarb로 생성
+          })
+        }
       }
 
       // 사용자 입력 필드 초기화
