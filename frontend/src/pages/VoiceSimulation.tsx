@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useAuthStore } from '../store/authStore'
+import { usePersonaStore } from '../store/usePersonaStore'
 import api from '../utils/api'
 import { playFromAnyAudioPayload } from '../utils/audio'
 import { AudioVisualizer } from '../components/AudioVisualizer'
+import CustomerAvatar from '../components/CustomerAvatar'
 import {
   MicrophoneIcon,
   StopIcon,
@@ -28,6 +30,7 @@ interface ChatMessage {
 
 const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBack }) => {
   const { user } = useAuthStore()
+  const { setPersona, setAudio } = usePersonaStore()
   const [isRecording, setIsRecording] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [userMessage, setUserMessage] = useState('')
@@ -41,6 +44,20 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
   const audioChunksRef = useRef<Blob[]>([])
   const audioRef = useRef<HTMLAudioElement>(null)
   const chatEndRef = useRef<HTMLDivElement>(null) // 스크롤 자동 이동용
+
+  // 페르소나 설정 (시뮬레이션 시작 시)
+  useEffect(() => {
+    if (simulationData?.persona) {
+      setPersona({
+        persona_id: simulationData.persona.id || '',
+        avatarUrl: '', // TODO: RPM URL
+        voicePreset: simulationData.persona.type || '',
+        gender: simulationData.persona.occupation?.includes('female') ? 'female' : 'male',
+        age_group: simulationData.persona.age_group || '',
+        type: simulationData.persona.type || ''
+      })
+    }
+  }, [simulationData])
 
   // 새 메시지 추가 시 스크롤
   useEffect(() => {
@@ -294,7 +311,14 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-100 p-6">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto grid grid-cols-3 gap-6">
+        {/* 좌측: 고객 아바타 */}
+        <div className="col-span-1">
+          <CustomerAvatar className="h-full" />
+        </div>
+
+        {/* 우측: 대화 및 제어 */}
+        <div className="col-span-2">
         {/* 헤더 */}
         <div className="flex items-center justify-between mb-8">
           <button
@@ -448,6 +472,7 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
 
         {/* 오디오 엘리먼트 */}
         <audio ref={audioRef} />
+        </div>
       </div>
     </div>
   )
