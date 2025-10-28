@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useAuthStore } from '../store/authStore'
+import { usePersonaStore } from '../store/usePersonaStore'
 import api from '../utils/api'
 import { playFromAnyAudioPayload } from '../utils/audio'
 import { AudioVisualizer } from '../components/AudioVisualizer'
+import CustomerAvatar from '../components/CustomerAvatar'
 import {
   MicrophoneIcon,
   StopIcon,
@@ -28,6 +30,7 @@ interface ChatMessage {
 
 const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBack }) => {
   const { user } = useAuthStore()
+  const { setPersona, setAudio } = usePersonaStore()
   const [isRecording, setIsRecording] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [userMessage, setUserMessage] = useState('')
@@ -36,11 +39,54 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [stream, setStream] = useState<MediaStream | null>(null) // 오디오 스트림 추가
+  const [isInitializing, setIsInitializing] = useState(true) // 초기화 상태 추가
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const audioRef = useRef<HTMLAudioElement>(null)
   const chatEndRef = useRef<HTMLDivElement>(null) // 스크롤 자동 이동용
+
+  // 페르소나 설정 (시뮬레이션 시작 시)
+  useEffect(() => {
+    if (simulationData?.persona) {
+      setPersona({
+        persona_id: simulationData.persona.id || '',
+        avatarUrl: '', // TODO: RPM URL
+        voicePreset: simulationData.persona.type || '',
+        gender: simulationData.persona.occupation?.includes('female') ? 'female' : 'male',
+        age_group: simulationData.persona.age_group || '',
+        type: simulationData.persona.type || ''
+      })
+
+      // 🔥 초기 메시지가 있으면 아바타가 말하도록 설정
+      if (simulationData?.initial_message?.audio_url) {
+        setAudio({
+          audioUrl: simulationData.initial_message.audio_url,
+          text: simulationData.initial_message.content || '',
+          mouthCues: []
+        })
+        
+        // 초기 메시지를 대화 히스토리에 추가
+        const initialMessage: ChatMessage = {
+          id: `initial_${Date.now()}`,
+          role: 'customer',
+          text: simulationData.initial_message.content || '',
+          audio: simulationData.initial_message.audio_url,
+          timestamp: new Date()
+        }
+        
+        setChatHistory([initialMessage])
+        
+        // 초기 메시지 자동 재생
+        setTimeout(() => {
+          playFromAnyAudioPayload(simulationData.initial_message.audio_url, 'audio/mpeg')
+          setIsInitializing(false) // 초기화 완료
+        }, 500)
+      } else {
+        setIsInitializing(false) // 초기 메시지가 없어도 초기화 완료
+      }
+    }
+  }, [simulationData])
 
   // 새 메시지 추가 시 스크롤
   useEffect(() => {
@@ -113,9 +159,19 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
       setLoading(true)
       setError('')
 
+      // 세션 데이터에 대화 히스토리 포함
+      const sessionDataWithHistory = {
+        ...simulationData,
+        conversation_history: chatHistory.map(msg => ({
+          role: msg.role === 'user' ? 'employee' : 'customer',
+          text: msg.text,
+          timestamp: msg.timestamp.toISOString()
+        }))
+      }
+
       const formData = new FormData()
       formData.append('audio_file', audioBlob, 'recording.webm')  // 서버가 audio_file을 기대
-      formData.append('session_data', JSON.stringify(simulationData))
+      formData.append('session_data', JSON.stringify(sessionDataWithHistory))
 
       console.log('FormData 준비 완료, 전송 시작...');
 
@@ -153,6 +209,15 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
           audio: customer_audio,
           timestamp: new Date()
         }])
+
+        // 🔥 아바타가 말하도록 설정
+        if (customer_audio) {
+          setAudio({
+            audioUrl: customer_audio,
+            text: customer_response,
+            mouthCues: [] // TODO: Rhubarb로 생성
+          })
+        }
       }
 
       // 사용자 입력 필드 초기화
@@ -200,9 +265,19 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
       console.log('세션 데이터:', simulationData);
       console.log('세션 데이터 키:', Object.keys(simulationData || {}));
 
+      // 세션 데이터에 대화 히스토리 포함
+      const sessionDataWithHistory = {
+        ...simulationData,
+        conversation_history: chatHistory.map(msg => ({
+          role: msg.role === 'user' ? 'employee' : 'customer',
+          text: msg.text,
+          timestamp: msg.timestamp.toISOString()
+        }))
+      }
+
       // JSON으로 전송
       const requestData = {
-        session_data: simulationData,
+        session_data: sessionDataWithHistory,
         user_message: userMessage
       };
 
@@ -244,6 +319,15 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
           audio: customer_audio,
           timestamp: new Date()
         }])
+
+        // 🔥 아바타가 말하도록 설정
+        if (customer_audio) {
+          setAudio({
+            audioUrl: customer_audio,
+            text: customer_response,
+            mouthCues: [] // TODO: Rhubarb로 생성
+          })
+        }
       }
 
       // 사용자 입력 필드 초기화
@@ -294,7 +378,14 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-100 p-6">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto grid grid-cols-3 gap-6">
+        {/* 좌측: 고객 아바타 */}
+        <div className="col-span-1">
+          <CustomerAvatar className="h-full" />
+        </div>
+
+        {/* 우측: 대화 및 제어 */}
+        <div className="col-span-2">
         {/* 헤더 */}
         <div className="flex items-center justify-between mb-8">
           <button
@@ -320,7 +411,7 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
             </div>
             <div>
               <h3 className="font-medium text-gray-700">시나리오</h3>
-              <p className="text-gray-600">{simulationData?.scenario?.title}</p>
+              <p className="text-gray-600">{simulationData?.situation?.title}</p>
             </div>
           </div>
         </div>
@@ -331,7 +422,14 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
           
           {/* 대화 히스토리 */}
           <div className="space-y-4 max-h-96 overflow-y-auto" style={{ scrollBehavior: 'smooth' }}>
-            {chatHistory.length === 0 ? (
+            {isInitializing ? (
+              <div className="text-center text-gray-500 py-8">
+                <div className="flex items-center justify-center">
+                  <ArrowPathIcon className="w-5 h-5 mr-2 animate-spin" />
+                  고객의 첫 인사를 준비하고 있습니다...
+                </div>
+              </div>
+            ) : chatHistory.length === 0 ? (
               <div className="text-center text-gray-500 py-8">
                 대화를 시작하세요. 녹음 버튼을 누르거나 텍스트를 입력하세요.
               </div>
@@ -400,11 +498,11 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
             {!isRecording ? (
               <button
                 onClick={startRecording}
-                disabled={loading}
+                disabled={loading || isInitializing}
                 className="flex items-center px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
               >
                 <MicrophoneIcon className="w-5 h-5 mr-2" />
-                녹음 시작
+                {isInitializing ? '준비 중...' : '녹음 시작'}
               </button>
             ) : (
               <button
@@ -425,12 +523,13 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
                 type="text"
                 value={userMessage}
                 onChange={(e) => setUserMessage(e.target.value)}
-                placeholder="메시지를 입력하세요..."
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder={isInitializing ? "고객의 첫 인사를 기다리는 중..." : "메시지를 입력하세요..."}
+                disabled={isInitializing}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               />
               <button
                 onClick={handleTextSubmit}
-                disabled={loading || !userMessage.trim()}
+                disabled={loading || !userMessage.trim() || isInitializing}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
               >
                 전송
@@ -448,6 +547,7 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
 
         {/* 오디오 엘리먼트 */}
         <audio ref={audioRef} />
+        </div>
       </div>
     </div>
   )
