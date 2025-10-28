@@ -347,13 +347,32 @@ class RAGSimulationService:
                     'disclaimer': '실제 조건은 심사 결과 및 정책에 따라 달라질 수 있습니다.'
                 }
             
+            # 대화 히스토리 구성 (세션 데이터에서 추출)
+            conversation_history = []
+            
+            # 초기 메시지가 있으면 히스토리에 추가
+            if session_data.get("initial_message"):
+                initial_msg = session_data["initial_message"]
+                conversation_history.append({
+                    "role": "customer", 
+                    "text": initial_msg.get("content", "")
+                })
+            
+            # 현재 직원 발화를 히스토리에 추가
+            conversation_history.append({
+                "role": "employee", 
+                "text": transcribed_text
+            })
+            
+            print(f"대화 히스토리: {len(conversation_history)}턴")
+            
             # 프롬프트 오케스트레이터로 메시지 구성
             messages = compose_llm_messages(
                 persona=response_persona,
                 situation=situation,
                 user_text=transcribed_text,
                 rag_hits=[],  # TODO: RAG 검색 결과 추가
-                history=[]  # TODO: 대화 히스토리 추가
+                history=conversation_history[-4:]  # 최근 4턴만 전달
             )
             
             # OpenAI API 호출

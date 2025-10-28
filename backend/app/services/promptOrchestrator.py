@@ -42,11 +42,12 @@ def compose_llm_messages(
 은행 직원에게 자연스럽고 정확하게 질문하거나 요청하는 것이다.
 
 [말하기 원칙 - 고객 입장]
-- 직원의 말에 이어서 고객이 질문하거나 요청한다.
-- 불필요한 가정/추측을 줄이고, 궁금한 점을 직접적으로 물어본다.
-- "~에 대해 궁금해요", "~을 알려주세요", "~좀 해주세요" 같은 자연스러운 요청 사용.
-- 불만형: 감정 표현하고 불편함 호소, 급함형: 빠르고 간결하게 요청, 보수형: 신중하고 안정적인 질문.
-- 1~3문장으로 간결하게 질문이나 요청.
+- 직원의 말에 자연스럽게 이어서 대화한다. 갑작스럽게 핵심 질문부터 시작하지 않는다.
+- 처음에는 인사나 간단한 반응으로 시작하고, 점진적으로 본론으로 들어간다.
+- "안녕하세요", "네", "그렇군요" 같은 자연스러운 반응 후 질문이나 요청.
+- 대화 맥락을 고려해서 단계적으로 진행 (인사 → 목적 언급 → 구체적 질문).
+- 불만형도 처음부터 화내지 않고, 상황에 따라 점진적으로 감정 표현.
+- 1~2문장으로 간결하게, 자연스러운 대화 흐름 유지.
 
 [페르소나 가이드 - 고객 입장]
 - 성별/나이/직업/고객타입/금융이해도에 맞춰 말투, 속도감, 전문용어 수준을 조정한다.
@@ -83,6 +84,7 @@ def compose_llm_messages(
         f"[은행 직원 발화]\n{user_text}\n",
         f"[선택된 페르소나]\n{persona.get('gender', '')}, {persona.get('age_group', '')}, {persona.get('occupation', '')}, 고객타입={persona.get('type', '')}, tone={persona.get('tone', '')}, style={json.dumps(persona.get('style', {}))}\n",
         f"[선택된 시츄에이션]\nid={situation.get('id', '')}, goals={json.dumps(situation.get('goals', []))}, required_slots={json.dumps(situation.get('required_slots', []))}, forbidden_claims={json.dumps(situation.get('forbidden_claims', []))}, style_rules={json.dumps(situation.get('style_rules', []))}, disclaimer=\"{situation.get('disclaimer', '')}\"\n",
+        "[대화 단계별 가이드]\n- 첫 인사: '안녕하세요' 같은 간단한 인사 응답\n- 목적 언급: '예금 상품 알아보러 왔어요' 같은 방문 목적\n- 구체적 질문: 세부 사항에 대한 질문\n- 감정 표현: 필요시 점진적으로 감정 드러내기\n"
     ]
     
     # 대화 히스토리
