@@ -13,6 +13,11 @@ import openai
 from pathlib import Path
 
 from app.models.user import User
+from app.services.promptOrchestrator import (
+    compose_llm_messages,
+    parse_llm_response,
+    get_situation_defaults
+)
 
 
 class RAGSimulationService:
@@ -317,21 +322,58 @@ class RAGSimulationService:
             
             print(f"최종 텍스트: '{transcribed_text}'")
             
-            # 고객 응답 생성 (RAG 기반)
+            # 고객 응답 생성 (프롬프트 오케스트레이터 사용)
             print("고객 응답 생성 시작")
             
             # 실제 페르소나와 시나리오 데이터 사용
             response_persona = actual_persona if actual_persona else persona
             response_scenario = actual_scenario if actual_scenario else scenario
             
-            customer_response = self._generate_customer_response_with_rag(
-                transcribed_text, response_persona, response_scenario
+            # 시츄에이션 정보 추출 (또는 기본값 사용)
+            situation = response_scenario.get('situation', {})
+            if not situation or not situation.get('id'):
+                # situation_id를 scenario의 제목에서 추출하거나 기본값 사용
+                situation_category = response_scenario.get('situation', {}).get('category_ko', 'deposit')
+                situation = get_situation_defaults(situation_category)
+            else:
+                # 시츄에이션 기본 구조 확보
+                situation = {
+                    'id': situation.get('category_ko', 'deposit'),
+                    'title': situation.get('category_ko', '상담'),
+                    'goals': ['고객 요구사항 파악', '핵심 정보 안내'],
+                    'required_slots': [],
+                    'forbidden_claims': [],
+                    'style_rules': ['숫자는 예시로만', '확정 불가 시 확인 안내'],
+                    'disclaimer': '실제 조건은 심사 결과 및 정책에 따라 달라질 수 있습니다.'
+                }
+            
+            # 프롬프트 오케스트레이터로 메시지 구성
+            messages = compose_llm_messages(
+                persona=response_persona,
+                situation=situation,
+                user_text=transcribed_text,
+                rag_hits=[],  # TODO: RAG 검색 결과 추가
+                history=[]  # TODO: 대화 히스토리 추가
             )
-            print(f"고객 응답: '{customer_response.get('text', '')}'")
+            
+            # OpenAI API 호출
+            llm_response = self.openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                temperature=0.2,
+                max_tokens=500
+            )
+            
+            # LLM 응답 파싱
+            content = llm_response.choices[0].message.content
+            parsed = parse_llm_response(content)
+            
+            print(f"고객 응답 (script): '{parsed.get('script', '')}'")
             
             # TTS: 고객 응답을 음성으로 변환
-            print("TTS 처리 시작")
-            customer_audio = self._text_to_speech(customer_response["text"], persona)
+            customer_response_text = parsed.get('script', '')
+            print(f"TTS 처리 시작")
+            customer_audio = self._text_to_speech(customer_response_text, response_persona)
             print(f"TTS 완료: 오디오 길이 {len(customer_audio) if customer_audio else 0}")
             
             # 응답 평가
@@ -339,10 +381,12 @@ class RAGSimulationService:
             
             result = {
                 "transcribed_text": transcribed_text,
-                "customer_response": customer_response["text"],
+                "customer_response": customer_response_text,
                 "customer_audio": customer_audio,
                 "feedback": evaluation,
-                "conversation_phase": customer_response.get("phase", "ongoing"),
+                "followups": parsed.get('followups', []),
+                "safety_notes": parsed.get('safety_notes', ''),
+                "conversation_phase": "ongoing",
                 "session_score": self._calculate_session_score(session_data)
             }
             
