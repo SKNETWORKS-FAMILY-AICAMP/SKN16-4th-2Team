@@ -9,6 +9,7 @@ import FindPassword from './pages/FindPassword'
 
 import Home from './pages/Home'
 import Documents from './pages/Documents'
+import IQStyleSimulation from './pages/IQStyleSimulation'
 import RAG from './pages/RAG'
 import AnonymousBoard from './pages/AnonymousBoard'
 import PostDetail from './pages/PostDetail'
@@ -50,6 +51,8 @@ function App() {
         <Route element={<Layout />}>
           <Route path="/home" element={isAuthenticated ? <Home /> : <Navigate to="/login" />} />
           <Route path="/documents" element={isAuthenticated ? <Documents /> : <Navigate to="/login" />} />
+          <Route path="/simulation" element={isAuthenticated ? <IQStyleSimulation /> : <Navigate to="/login" />} />
+          <Route path="/iq-simulation" element={isAuthenticated ? <IQStyleSimulation /> : <Navigate to="/login" />} />
           <Route path="/rag" element={<AdminOnlyRoute><RAG /></AdminOnlyRoute>} />
           <Route path="/board" element={<AnonymousBoard />} />
           <Route path="/board/:postId" element={isAuthenticated ? <PostDetail /> : <Navigate to="/login" />} />
