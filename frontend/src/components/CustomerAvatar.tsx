@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react'
+import { useRef, useEffect } from 'react'
 import { usePersonaStore } from '../store/usePersonaStore'
 import { getRpmAvatarUrl } from '../lib/rpm/rpmHelper'
 
@@ -25,55 +25,74 @@ export default function CustomerAvatar({ className = '' }: CustomerAvatarProps) 
 
   const avatarUrl = getRpmAvatarUrl(persona)
 
-  // 오디오 재생
-  const handlePlayAudio = () => {
-    if (!currentAudio?.audioUrl) return
-
-    if (audioRef.current) {
-      audioRef.current.pause()
-    }
+  // 오디오 자동 재생
+  useEffect(() => {
+    if (!currentAudio?.audioUrl || !audioRef.current) return
 
     const audio = new Audio(currentAudio.audioUrl)
     audioRef.current = audio
-    audio.play().catch(e => console.error('오디오 재생 실패:', e))
+    
+    audio.play().catch(e => {
+      console.error('오디오 자동 재생 실패:', e)
+    })
+
+    return () => {
+      audio.pause()
+      audio.src = ''
+    }
+  }, [currentAudio?.audioUrl])
+
+  // 수동 재생
+  const handlePlayAudio = () => {
+    if (!currentAudio?.audioUrl) return
+    if (audioRef.current) {
+      audioRef.current.play().catch(e => console.error('오디오 재생 실패:', e))
+    }
   }
 
   return (
     <div className={`relative bg-white rounded-lg shadow-lg overflow-hidden ${className}`}>
-      {/* 아바타 이미지/모델 영역 */}
-      <div className="aspect-square bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
-        {/* TODO: RPM GLB 로드 및 렌더링 */}
-        <div className="text-center">
-          <div className="text-6xl mb-4">
-            {persona.gender === 'female' ? '👩' : '👨'}
+      {/* 아바타 3D 렌더링 영역 */}
+      <div className="aspect-square bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center relative">
+        {avatarUrl ? (
+          // TODO: Three.js로 RPM GLB 로드
+          <div className="text-center p-8 w-full h-full flex flex-col items-center justify-center">
+            <div className="text-9xl mb-8 animate-pulse">
+              {persona.gender === 'female' ? '👩' : '👨'}
+            </div>
+            <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6 shadow-lg">
+              <p className="text-2xl font-bold text-gray-800 mb-2">{persona.type}</p>
+              <p className="text-sm text-gray-600">{persona.age_group} • {persona.gender === 'female' ? '여성' : '남성'}</p>
+            </div>
           </div>
-          <p className="text-sm text-gray-600">{persona.type}</p>
-          <p className="text-xs text-gray-500">{persona.age_group}</p>
-        </div>
-
-        {/* 임시: iframe으로 RPM 아바타 표시 */}
-        {avatarUrl && (
-          <iframe
-            src={avatarUrl}
-            className="w-full h-full border-0"
-            title="Customer Avatar"
-          />
+        ) : (
+          <div className="text-center p-8">
+            <div className="text-9xl mb-8 animate-bounce">
+              {persona.gender === 'female' ? '👩' : '👨'}
+            </div>
+            <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6 shadow-lg">
+              <p className="text-xl font-semibold text-gray-800">{persona.type}</p>
+              <p className="text-sm text-gray-600 mt-2">{persona.age_group} • {persona.gender === 'female' ? '여성' : '남성'}</p>
+            </div>
+          </div>
         )}
       </div>
 
-      {/* 컨트롤 패널 */}
+      {/* 고객 메시지 표시 (오버레이) */}
       {currentAudio && (
-        <div className="absolute bottom-4 left-4 right-4 space-y-2">
-          <div className="bg-white bg-opacity-90 rounded-lg p-3 shadow">
-            <p className="text-sm text-gray-700 mb-2 truncate">
-              {currentAudio.text}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-6 pt-12">
+          <div className="bg-white/95 backdrop-blur-md rounded-xl p-4 shadow-2xl">
+            <p className="text-sm text-gray-800 mb-3 line-clamp-3 italic">
+              "{currentAudio.text}"
             </p>
-            <button
-              onClick={handlePlayAudio}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-            >
-              🔊 다시 듣기
-            </button>
+            {currentAudio.audioUrl && (
+              <button
+                onClick={handlePlayAudio}
+                className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-sm font-medium flex items-center justify-center shadow-lg hover:shadow-xl"
+              >
+                🔊 다시 듣기
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -83,4 +102,3 @@ export default function CustomerAvatar({ className = '' }: CustomerAvatarProps) 
     </div>
   )
 }
-
