@@ -399,3 +399,42 @@ async def upload_recording(
             status_code=500,
             detail=f"녹화 파일 업로드 중 오류가 발생했습니다: {str(e)}"
         )
+
+
+class GenerateFeedbackRequest(BaseModel):
+    """피드백 생성 요청"""
+    conversation_history: List[Dict]
+    persona: Dict
+    situation: Dict
+
+
+@router.post("/generate-feedback")
+async def generate_simulation_feedback(
+    request: GenerateFeedbackRequest,
+    session: Session = Depends(get_session)
+):
+    """
+    시뮬레이션 종합 평가 및 피드백 생성
+    6가지 역량(지식, 기술, 공감도, 명확성, 친절도, 자신감) 기반 평가
+    """
+    try:
+        service = RAGSimulationService(session)
+        
+        feedback_data = service.generate_comprehensive_feedback(
+            conversation_history=request.conversation_history,
+            persona=request.persona,
+            situation=request.situation
+        )
+        
+        return {
+            "success": True,
+            "feedback": feedback_data
+        }
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"피드백 생성 중 오류가 발생했습니다: {str(e)}"
+        )
