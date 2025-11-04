@@ -26,7 +26,8 @@ import {
   ChatBubbleLeftIcon,
   FaceSmileIcon,
   BoltIcon,
-  TrophyIcon
+  TrophyIcon,
+  ArrowLeftIcon
 } from '@heroicons/react/24/outline'
 
 interface CompetencyScore {
@@ -57,6 +58,7 @@ const SimulationFeedback: React.FC = () => {
   const location = useLocation()
   const [feedbackData, setFeedbackData] = useState<FeedbackData | null>(null)
   const [loading, setLoading] = useState(true)
+  const fromHistory = location.state?.fromHistory || false // 히스토리에서 온 경우인지 확인
 
   useEffect(() => {
     // location.state에서 피드백 데이터를 받아오거나, API에서 조회
@@ -191,6 +193,19 @@ const SimulationFeedback: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-5xl mx-auto">
+        {/* 히스토리에서 온 경우 상단에 뒤로가기 버튼 */}
+        {fromHistory && (
+          <div className="mb-6">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+            >
+              <ArrowLeftIcon className="w-5 h-5" />
+              <span className="font-medium">대시보드로 돌아가기</span>
+            </button>
+          </div>
+        )}
+
         {/* 종합 점수 섹션 */}
         <div className="bg-white rounded-lg shadow-md p-8 mb-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-4 text-center">종합 점수</h2>
@@ -427,21 +442,23 @@ const SimulationFeedback: React.FC = () => {
           </div>
         </div>
 
-        {/* 하단 액션 버튼 */}
-        <div className="flex justify-center gap-4 mt-8">
-          <button
-            onClick={() => navigate('/simulation')}
-            className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-          >
-            새로운 시뮬레이션 시작
-          </button>
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="px-8 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium"
-          >
-            대시보드로 이동
-          </button>
-        </div>
+        {/* 하단 액션 버튼 (히스토리에서 온 경우 표시하지 않음) */}
+        {!fromHistory && (
+          <div className="flex justify-center gap-4 mt-8">
+            <button
+              onClick={() => navigate('/simulation')}
+              className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+            >
+              새로운 시뮬레이션 시작
+            </button>
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="px-8 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium"
+            >
+              대시보드로 이동
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

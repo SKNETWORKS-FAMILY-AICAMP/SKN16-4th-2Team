@@ -469,7 +469,10 @@ function MenteeDashboard({ data, currentTime, recordings }: any) {
     try {
       const response = await api.get(`/rag-simulation/feedback/${feedbackId}`)
       navigate('/simulation-feedback', {
-        state: { feedbackData: response.data.feedback }
+        state: { 
+          feedbackData: response.data.feedback,
+          fromHistory: true // 히스토리에서 온 것을 표시
+        }
       })
     } catch (error) {
       console.error('피드백 상세 조회 실패:', error)
