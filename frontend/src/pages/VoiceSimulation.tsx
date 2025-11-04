@@ -11,7 +11,8 @@ import {
   PlayIcon,
   SpeakerWaveIcon,
   ArrowPathIcon,
-  ArrowLeftIcon
+  ArrowLeftIcon,
+  VideoCameraIcon
 } from '@heroicons/react/24/outline'
 
 interface VoiceSimulationProps {
@@ -38,22 +39,87 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
   const [subtitle, setSubtitle] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [stream, setStream] = useState<MediaStream | null>(null) // 오디오 스트림 추가
-  const [isInitializing, setIsInitializing] = useState(true) // 초기화 상태 추가
+  const [stream, setStream] = useState<MediaStream | null>(null) // 오디오 스트림
+  const [videoStream, setVideoStream] = useState<MediaStream | null>(null) // 비디오 스트림
+  const [isInitializing, setIsInitializing] = useState(true) // 초기화 상태
+  const [isStarted, setIsStarted] = useState(false) // 시뮬레이션 시작 여부
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
+  const videoRecorderRef = useRef<MediaRecorder | null>(null) // 화면 녹화용
+  const videoChunksRef = useRef<Blob[]>([]) // 화면 녹화 데이터
   const audioRef = useRef<HTMLAudioElement>(null)
   const chatEndRef = useRef<HTMLDivElement>(null) // 스크롤 자동 이동용
+  const videoRef = useRef<HTMLVideoElement>(null) // 비디오 엘리먼트 참조
 
-  // 페르소나 설정 (시뮬레이션 시작 시)
+  // 카메라 스트림 초기화
   useEffect(() => {
+    if (isStarted) {
+      const initCamera = async () => {
+        try {
+          console.log('🎥 카메라 초기화 시작...')
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: {
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+              facingMode: 'user'
+            },
+            audio: false // 비디오만 가져오기 (오디오는 별도로)
+          })
+          console.log('✅ 카메라 스트림 획득 성공:', stream)
+          setVideoStream(stream)
+          
+          // 스트림을 비디오 엘리먼트에 할당
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream
+            videoRef.current.play().catch(err => {
+              console.error('비디오 재생 실패:', err)
+            })
+            console.log('✅ 비디오 엘리먼트에 스트림 할당 완료')
+          } else {
+            console.warn('⚠️ videoRef.current가 null입니다')
+          }
+        } catch (error: any) {
+          console.error('❌ 카메라 접근 실패:', error)
+          setError(`카메라 접근 권한이 필요합니다: ${error.message}`)
+        }
+      }
+      initCamera()
+    }
+
+    // 컴포넌트 언마운트 시 정리
+    return () => {
+      if (videoStream) {
+        console.log('🧹 카메라 스트림 정리 중...')
+        videoStream.getTracks().forEach(track => {
+          track.stop()
+          console.log('✅ 트랙 정리 완료:', track.kind)
+        })
+        setVideoStream(null)
+      }
+    }
+  }, [isStarted])
+
+  // videoStream이 변경될 때 비디오 엘리먼트 업데이트
+  useEffect(() => {
+    if (videoStream && videoRef.current) {
+      console.log('🔄 비디오 스트림 업데이트 중...')
+      videoRef.current.srcObject = videoStream
+      videoRef.current.play().catch(err => {
+        console.error('비디오 재생 실패:', err)
+      })
+    }
+  }, [videoStream])
+
+  // 페르소나 설정 및 (시작 버튼 이후) 초기 멘트 처리
+  useEffect(() => {
+    if (!isStarted) return
     if (simulationData?.persona) {
       setPersona({
         persona_id: simulationData.persona.id || '',
         avatarUrl: '', // TODO: RPM URL
         voicePreset: simulationData.persona.type || '',
-        gender: simulationData.persona.occupation?.includes('female') ? 'female' : 'male',
+        gender: simulationData.persona.gender || 'male',
         age_group: simulationData.persona.age_group || '',
         type: simulationData.persona.type || ''
       })
@@ -86,16 +152,55 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
         setIsInitializing(false) // 초기 메시지가 없어도 초기화 완료
       }
     }
-  }, [simulationData])
+  }, [simulationData, isStarted])
 
   // 새 메시지 추가 시 스크롤
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatHistory])
 
-  // 음성 녹음 시작
+  // 녹화 파일 업로드
+  const uploadRecording = async (videoBlob: Blob) => {
+    try {
+      console.log('📤 녹화 파일 업로드 시작...')
+      
+      const formData = new FormData()
+      formData.append('video', videoBlob, `simulation_${Date.now()}.webm`)
+      formData.append('session_data', JSON.stringify({
+        simulation_id: simulationData?.session_id || Date.now(),
+        persona_id: simulationData?.persona?.id,
+        situation_id: simulationData?.situation?.id,
+        user_id: user?.id,
+        timestamp: new Date().toISOString()
+      }))
+
+      // FormData는 브라우저가 자동으로 Content-Type을 설정하므로 헤더 제거
+      const response = await api.post('/rag-simulation/upload-recording', formData, {
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+            console.log(`업로드 진행률: ${percentCompleted}%`)
+          }
+        }
+      })
+
+      console.log('✅ 녹화 파일 업로드 완료:', response.data)
+      
+      // 사용자에게 알림 (선택사항)
+      if (response.data?.video_url) {
+        console.log('📹 녹화 파일 URL:', response.data.video_url)
+        // 필요시 상태 업데이트 또는 토스트 메시지 표시
+      }
+    } catch (error) {
+      console.error('❌ 녹화 파일 업로드 실패:', error)
+      // 업로드 실패해도 시뮬레이션은 계속 진행
+    }
+  }
+
+  // 음성 녹음 시작 (화면 녹화 포함)
   const startRecording = async () => {
     try {
+      // 오디오 스트림 가져오기
       const audioStream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: true,
@@ -107,6 +212,7 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
       // 스트림을 state에 저장 (시각화용)
       setStream(audioStream)
       
+      // 오디오 녹음용 MediaRecorder (STT용)
       mediaRecorderRef.current = new MediaRecorder(audioStream, {
         mimeType: 'audio/webm;codecs=opus'
       })
@@ -125,7 +231,7 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
         console.log('녹음된 오디오 Blob:', audioBlob)
         console.log('Blob 크기:', audioBlob.size)
         
-        // 스트림 정리
+        // 오디오 스트림 정리
         audioStream.getTracks().forEach(track => track.stop())
         setStream(null)
         
@@ -133,6 +239,56 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
       }
 
       mediaRecorderRef.current.start()
+      
+      // 화면 녹화 시작 (비디오 + 오디오 함께)
+      if (videoStream && audioStream) {
+        console.log('🎬 화면 녹화 시작...')
+        
+        // 비디오 트랙과 오디오 트랙 합치기
+        const combinedStream = new MediaStream()
+        videoStream.getVideoTracks().forEach(track => {
+          combinedStream.addTrack(track)
+          console.log('✅ 비디오 트랙 추가:', track.label)
+        })
+        audioStream.getAudioTracks().forEach(track => {
+          combinedStream.addTrack(track)
+          console.log('✅ 오디오 트랙 추가:', track.label)
+        })
+
+        // 화면 녹화용 MediaRecorder
+        const videoMimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') 
+          ? 'video/webm;codecs=vp9,opus'
+          : MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')
+          ? 'video/webm;codecs=vp8,opus'
+          : 'video/webm'
+        
+        videoRecorderRef.current = new MediaRecorder(combinedStream, {
+          mimeType: videoMimeType,
+          videoBitsPerSecond: 2500000 // 2.5 Mbps
+        })
+        videoChunksRef.current = []
+
+        videoRecorderRef.current.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            videoChunksRef.current.push(event.data)
+            console.log('📹 화면 녹화 데이터 수신:', event.data.size, 'bytes')
+          }
+        }
+
+        videoRecorderRef.current.onstop = async () => {
+          const videoBlob = new Blob(videoChunksRef.current, { 
+            type: videoRecorderRef.current?.mimeType || 'video/webm'
+          })
+          console.log('✅ 화면 녹화 완료:', videoBlob.size, 'bytes')
+          
+          // 백엔드로 업로드
+          await uploadRecording(videoBlob)
+        }
+
+        videoRecorderRef.current.start(1000) // 1초마다 데이터 수집
+        console.log('✅ 화면 녹화 시작됨')
+      }
+
       setIsRecording(true)
       setSubtitle('말씀해주세요...')
     } catch (error) {
@@ -141,12 +297,18 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
     }
   }
 
-  // 음성 녹음 중지
+  // 음성 녹음 중지 (화면 녹화도 함께 중지)
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop()
       setIsRecording(false)
       setSubtitle('음성을 처리 중입니다...')
+    }
+    
+    // 화면 녹화도 중지
+    if (videoRecorderRef.current && videoRecorderRef.current.state !== 'inactive') {
+      console.log('🛑 화면 녹화 중지 중...')
+      videoRecorderRef.current.stop()
     }
   }
 
@@ -248,8 +410,6 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
       console.groupEnd();
     }
   }
-
-  // (기존 atob 기반 함수들은 제거되고 playFromAnyAudioPayload로 대체됨)
 
   // 텍스트 입력으로도 시뮬레이션 가능
   const handleTextSubmit = async () => {
@@ -377,177 +537,254 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
   }, [])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-100 p-6">
-      <div className="max-w-6xl mx-auto grid grid-cols-3 gap-6">
-        {/* 좌측: 고객 아바타 */}
-        <div className="col-span-1">
-          <CustomerAvatar className="h-full" />
-        </div>
-
-        {/* 우측: 대화 및 제어 */}
-        <div className="col-span-2">
-        {/* 헤더 */}
-        <div className="flex items-center justify-between mb-8">
+    <div className="min-h-screen bg-gray-100 flex">
+      {/* 왼쪽: 시뮬레이션 정보 패널 */}
+      <div className="w-80 bg-white border-r border-gray-200 p-6 overflow-y-auto">
+        <div className="mb-6">
           <button
             onClick={onBack}
-            className="flex items-center text-gray-600 hover:text-gray-800 transition-colors"
+            className="flex items-center text-gray-600 hover:text-gray-800 transition-colors mb-4"
           >
             <ArrowLeftIcon className="w-5 h-5 mr-2" />
             뒤로가기
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">음성 시뮬레이션</h1>
-          <div></div>
+          <h2 className="text-xl font-bold text-gray-900">시뮬레이션 정보</h2>
         </div>
 
-        {/* 시뮬레이션 정보 */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">시뮬레이션 정보</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <h3 className="font-medium text-gray-700">고객 정보</h3>
-              <p className="text-gray-600">
-                {simulationData?.persona?.age_group} | {simulationData?.persona?.occupation} | {simulationData?.persona?.type}
-              </p>
+        {/* 고객 정보 */}
+        <div className="mb-6">
+          <h3 className="font-semibold text-gray-700 mb-3">고객 정보</h3>
+          <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+            <div className="flex justify-between">
+              <span className="text-gray-600">성별:</span>
+              <span className="font-medium text-gray-900">
+                {simulationData?.persona?.gender || '미설정'}
+              </span>
             </div>
-            <div>
-              <h3 className="font-medium text-gray-700">시나리오</h3>
-              <p className="text-gray-600">{simulationData?.situation?.title}</p>
+            <div className="flex justify-between">
+              <span className="text-gray-600">연령대:</span>
+              <span className="font-medium text-gray-900">
+                {simulationData?.persona?.age_group || '미설정'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">직업:</span>
+              <span className="font-medium text-gray-900">
+                {simulationData?.persona?.occupation || '미설정'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">고객 타입:</span>
+              <span className="font-medium text-gray-900">
+                {simulationData?.persona?.type || '미설정'}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* 대화 영역 */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">대화</h2>
-          
-          {/* 대화 히스토리 */}
-          <div className="space-y-4 max-h-96 overflow-y-auto" style={{ scrollBehavior: 'smooth' }}>
-            {isInitializing ? (
-              <div className="text-center text-gray-500 py-8">
-                <div className="flex items-center justify-center">
-                  <ArrowPathIcon className="w-5 h-5 mr-2 animate-spin" />
-                  고객의 첫 인사를 준비하고 있습니다...
-                </div>
+        {/* 상황 정보 */}
+        <div>
+          <h3 className="font-semibold text-gray-700 mb-3">상황 정보</h3>
+          <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+            <div className="flex justify-between">
+              <span className="text-gray-600">업무 카테고리:</span>
+              <span className="font-medium text-gray-900">
+                {simulationData?.situation?.category || '미설정'}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-600">상황 제목:</span>
+              <div className="font-medium text-gray-900 mt-1">
+                {simulationData?.situation?.title || '미설정'}
               </div>
-            ) : chatHistory.length === 0 ? (
-              <div className="text-center text-gray-500 py-8">
-                대화를 시작하세요. 녹음 버튼을 누르거나 텍스트를 입력하세요.
+            </div>
+            {simulationData?.situation?.goals && simulationData.situation.goals.length > 0 && (
+              <div className="mt-3">
+                <span className="text-gray-600 text-sm block mb-1">목표:</span>
+                <ul className="space-y-1">
+                  {simulationData.situation.goals.map((goal: string, index: number) => (
+                    <li key={index} className="text-sm text-gray-700">• {goal}</li>
+                  ))}
+                </ul>
               </div>
-            ) : (
-              chatHistory.map((message) => (
-                <div
-                  key={message.id}
-                  className={`p-4 rounded-lg ${
-                    message.role === 'user' ? 'bg-blue-50 ml-8' : 'bg-green-50 mr-8'
-                  }`}
-                >
-                  <div className="flex items-center mb-2">
-                    <span className={`font-medium ${
-                      message.role === 'user' ? 'text-blue-800' : 'text-green-800'
-                    }`}>
-                      {message.role === 'user' ? '신입사원 (나)' : '고객'}
-                    </span>
-                    <span className="text-xs text-gray-500 ml-2">
-                      {message.timestamp.toLocaleTimeString()}
-                    </span>
-                  </div>
-                  <p className={message.role === 'user' ? 'text-blue-700' : 'text-green-700'}>
-                    {message.text}
-                  </p>
-                  {message.role === 'customer' && message.audio && (
-                    <button
-                      onClick={() => {
-                        if (message.audio) {
-                          playFromAnyAudioPayload(message.audio, 'audio/mpeg')
-                        }
-                      }}
-                      className="mt-2 flex items-center px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
-                    >
-                      <SpeakerWaveIcon className="w-3 h-3 mr-1" />
-                      다시 듣기
-                    </button>
-                  )}
-                </div>
-              ))
             )}
-            <div ref={chatEndRef} />
           </div>
         </div>
+      </div>
 
-        {/* 실시간 자막 */}
-        {subtitle && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center">
-              <span className="font-medium text-yellow-800 mr-2">실시간 자막:</span>
-              <span className="text-yellow-700">{subtitle}</span>
+      {/* 오른쪽: 메인 시뮬레이션 영역 */}
+      <div className="flex-1 flex flex-col bg-white">
+        {/* 시작 전 화면 */}
+        {!isStarted && (
+          <div className="flex-1 flex items-center justify-center bg-gray-50">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold text-gray-900 mb-4">시뮬레이션 준비</h1>
+              <p className="text-gray-600 mb-8">시뮬레이션을 시작하려면 아래 버튼을 눌러주세요.</p>
+              <button
+                onClick={() => {
+                  setIsStarted(true)
+                  setIsInitializing(true)
+                }}
+                className="px-12 py-4 bg-blue-600 text-white text-xl font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-lg"
+              >
+                시뮬레이션 시작하기
+              </button>
             </div>
           </div>
         )}
 
-        {/* 오디오 파형 시각화 */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">오디오 파형</h2>
-          <AudioVisualizer isRecording={isRecording} stream={stream} />
-        </div>
+        {/* 시작 후 화면 */}
+        {isStarted && (
+          <>
+            {/* 비디오 영역 */}
+            <div className="flex-1 flex items-center justify-center bg-gray-900 relative min-h-0">
+              {/* 사용자 카메라 */}
+              <div className="absolute inset-0 w-full h-full flex items-center justify-center">
+                {videoStream ? (
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                    style={{ transform: 'scaleX(-1)' }}
+                  />
+                ) : (
+                  <div className="text-white text-center z-10">
+                    <VideoCameraIcon className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                    <p className="text-gray-400">카메라를 불러오는 중...</p>
+                    {error && (
+                      <p className="text-red-400 mt-2 text-sm">{error}</p>
+                    )}
+                  </div>
+                )}
+                
+                {/* 고객 아바타 오버레이 (우측 하단) */}
+                <div className="absolute bottom-4 right-4 w-48 h-48">
+                  <CustomerAvatar className="w-full h-full" />
+                </div>
+              </div>
 
-        {/* 음성 제어 */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">음성 제어</h2>
-          
-          <div className="flex items-center justify-center space-x-4 mb-6">
-            {!isRecording ? (
-              <button
-                onClick={startRecording}
-                disabled={loading || isInitializing}
-                className="flex items-center px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-              >
-                <MicrophoneIcon className="w-5 h-5 mr-2" />
-                {isInitializing ? '준비 중...' : '녹음 시작'}
-              </button>
-            ) : (
-              <button
-                onClick={stopRecording}
-                className="flex items-center px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                <StopIcon className="w-5 h-5 mr-2" />
-                녹음 중지
-              </button>
-            )}
-          </div>
+              {/* 녹음 버튼 (하단 중앙) */}
+              <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
+                {!isRecording ? (
+                  <button
+                    onClick={startRecording}
+                    disabled={loading || isInitializing}
+                    className="flex items-center px-8 py-4 bg-red-600 text-white rounded-full hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors shadow-2xl"
+                  >
+                    <MicrophoneIcon className="w-6 h-6 mr-2" />
+                    {isInitializing ? '준비 중...' : '녹음 시작'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={stopRecording}
+                    className="flex items-center px-8 py-4 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors shadow-2xl animate-pulse"
+                  >
+                    <StopIcon className="w-6 h-6 mr-2" />
+                    녹음 중지
+                  </button>
+                )}
+              </div>
 
-          {/* 텍스트 입력 (대안) */}
-          <div className="border-t pt-4">
-            <h3 className="font-medium text-gray-700 mb-2">또는 텍스트로 입력</h3>
-            <div className="flex space-x-2">
-              <input
-                type="text"
-                value={userMessage}
-                onChange={(e) => setUserMessage(e.target.value)}
-                placeholder={isInitializing ? "고객의 첫 인사를 기다리는 중..." : "메시지를 입력하세요..."}
-                disabled={isInitializing}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-              />
-              <button
-                onClick={handleTextSubmit}
-                disabled={loading || !userMessage.trim() || isInitializing}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-              >
-                전송
-              </button>
+              {/* 실시간 자막 */}
+              {subtitle && (
+                <div className="absolute top-8 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white px-6 py-3 rounded-lg">
+                  {subtitle}
+                </div>
+              )}
             </div>
-          </div>
-        </div>
+
+            {/* 채팅 히스토리 */}
+            <div className="h-48 bg-white border-t border-gray-200 p-4 overflow-y-auto">
+              <h3 className="font-semibold text-gray-900 mb-4">대화</h3>
+              
+              <div className="space-y-3" style={{ scrollBehavior: 'smooth' }}>
+                {isInitializing ? (
+                  <div className="text-center text-gray-500 py-8">
+                    <div className="flex items-center justify-center">
+                      <ArrowPathIcon className="w-5 h-5 mr-2 animate-spin" />
+                      고객의 첫 인사를 준비하고 있습니다...
+                    </div>
+                  </div>
+                ) : chatHistory.length === 0 ? (
+                  <div className="text-center text-gray-500 py-8">
+                    대화를 시작하세요. 녹음 버튼을 누르거나 텍스트를 입력하세요.
+                  </div>
+                ) : (
+                  chatHistory.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`p-4 rounded-lg ${
+                        message.role === 'user' ? 'bg-blue-50 ml-8' : 'bg-green-50 mr-8'
+                      }`}
+                    >
+                      <div className="flex items-center mb-2">
+                        <span className={`font-medium ${
+                          message.role === 'user' ? 'text-blue-800' : 'text-green-800'
+                        }`}>
+                          {message.role === 'user' ? '신입사원 (나)' : '고객'}
+                        </span>
+                        <span className="text-xs text-gray-500 ml-2">
+                          {message.timestamp.toLocaleTimeString()}
+                        </span>
+                      </div>
+                      <p className={message.role === 'user' ? 'text-blue-700' : 'text-green-700'}>
+                        {message.text}
+                      </p>
+                      {message.role === 'customer' && message.audio && (
+                        <button
+                          onClick={() => {
+                            if (message.audio) {
+                              playFromAnyAudioPayload(message.audio, 'audio/mpeg')
+                            }
+                          }}
+                          className="mt-2 flex items-center px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                        >
+                          <SpeakerWaveIcon className="w-3 h-3 mr-1" />
+                          다시 듣기
+                        </button>
+                      )}
+                    </div>
+                  ))
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* 텍스트 입력 (하단) */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={userMessage}
+                    onChange={(e) => setUserMessage(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleTextSubmit()}
+                    placeholder={isInitializing ? "고객의 첫 인사를 기다리는 중..." : "메시지를 입력하세요..."}
+                    disabled={isInitializing}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  />
+                  <button
+                    onClick={handleTextSubmit}
+                    disabled={loading || !userMessage.trim() || isInitializing}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                  >
+                    전송
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* 오류 메시지 */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="fixed bottom-4 right-4 bg-red-50 border border-red-200 rounded-lg p-4 shadow-lg">
             <p className="text-red-600">{error}</p>
           </div>
         )}
 
         {/* 오디오 엘리먼트 */}
         <audio ref={audioRef} />
-        </div>
       </div>
     </div>
   )

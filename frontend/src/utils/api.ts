@@ -345,6 +345,12 @@ export const dashboardAPI = {
     return response.data
   },
   
+  // 시뮬레이션 녹화 목록 조회 (멘티만)
+  getMenteeRecordings: async () => {
+    const response = await api.get('/dashboard/mentee/recordings')
+    return response.data
+  },
+  
   addExamScore: async (menteeId: number, examName: string, scoreData: any, totalScore: number, grade?: string) => {
     const response = await api.post('/dashboard/exam-score', {
       mentee_id: menteeId,

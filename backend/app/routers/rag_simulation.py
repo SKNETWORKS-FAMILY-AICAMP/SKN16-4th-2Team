@@ -6,11 +6,17 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, R
 from sqlmodel import Session
 from typing import List, Dict, Optional
 from pydantic import BaseModel
+import os
+import json
+from pathlib import Path
+from datetime import datetime
 
 from app.database import get_session
 from app.models.user import User
+from app.models.mentor import SimulationRecording
 from app.services.rag_simulation_service import RAGSimulationService
 from app.utils.auth import get_current_user
+from app.config import settings
 
 router = APIRouter(prefix="/rag-simulation", tags=["RAG Simulation"])
 
@@ -314,4 +320,82 @@ async def get_sample_data(session: Session = Depends(get_session)):
         raise HTTPException(
             status_code=500,
             detail=f"샘플 데이터 조회 중 오류가 발생했습니다: {str(e)}"
+        )
+
+
+@router.post("/upload-recording")
+async def upload_recording(
+    video: UploadFile = File(...),
+    session_data: str = Form(...),
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """시뮬레이션 녹화 파일 업로드"""
+    try:
+        # 세션 데이터 파싱
+        try:
+            session_data_dict = json.loads(session_data)
+        except json.JSONDecodeError:
+            raise HTTPException(
+                status_code=400,
+                detail="세션 데이터 형식이 올바르지 않습니다."
+            )
+        
+        # 업로드 디렉토리 설정 (시뮬레이션 녹화 파일용)
+        recordings_dir = Path(settings.UPLOAD_DIR) / "simulations" / "recordings"
+        recordings_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 고유한 파일명 생성
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        user_id = session_data_dict.get("user_id", current_user.id if current_user else "anonymous")
+        simulation_id = session_data_dict.get("simulation_id", timestamp)
+        filename = f"sim_{simulation_id}_user_{user_id}_{timestamp}.webm"
+        
+        file_path = recordings_dir / filename
+        
+        # 파일 저장
+        with open(file_path, "wb") as f:
+            content = await video.read()
+            f.write(content)
+        
+        # 파일 크기 확인
+        file_size = file_path.stat().st_size
+        
+        # 공개 URL 생성
+        public_url = f"/uploads/simulations/recordings/{filename}"
+        
+        # 데이터베이스에 녹화 기록 저장 (멘티만)
+        if current_user and current_user.role == "mentee":
+            recording = SimulationRecording(
+                mentee_id=current_user.id,
+                simulation_id=simulation_id,
+                persona_id=session_data_dict.get("persona_id"),
+                situation_id=session_data_dict.get("situation_id"),
+                video_url=public_url,
+                filename=filename,
+                file_size=file_size,
+                duration=None  # TODO: 비디오 길이 계산
+            )
+            session.add(recording)
+            session.commit()
+            session.refresh(recording)
+            print(f"✅ 녹화 기록이 데이터베이스에 저장되었습니다: ID={recording.id}")
+        
+        return {
+            "success": True,
+            "video_url": public_url,
+            "filename": filename,
+            "file_size": file_size,
+            "simulation_id": simulation_id,
+            "uploaded_at": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"녹화 파일 업로드 중 오류가 발생했습니다: {str(e)}"
         )

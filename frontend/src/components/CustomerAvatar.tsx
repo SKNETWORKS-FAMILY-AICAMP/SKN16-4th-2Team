@@ -1,4 +1,3 @@
-import { useRef, useEffect } from 'react'
 import { usePersonaStore } from '../store/usePersonaStore'
 import { getPersonaAvatarUrl } from '../lib/rpm/rpmHelper'
 // import Avatar3D from './Avatar3D' // 임시로 비활성화 (패키지 충돌)
@@ -14,24 +13,8 @@ interface CustomerAvatarProps {
 export default function CustomerAvatar({ className = '' }: CustomerAvatarProps) {
   // ✅ 훅들을 항상 최상단에서 동일한 순서로 호출
   const { persona, currentAudio } = usePersonaStore()
-  const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  // ✅ 오디오 자동 재생 - 항상 호출하고 내부에서 가드
-  useEffect(() => {
-    if (!currentAudio?.audioUrl || !audioRef.current) return
-
-    const audio = new Audio(currentAudio.audioUrl)
-    audioRef.current = audio
-    
-    audio.play().catch(e => {
-      console.error('오디오 자동 재생 실패:', e)
-    })
-
-    return () => {
-      audio.pause()
-      audio.src = ''
-    }
-  }, [currentAudio?.audioUrl])
+  // ✅ 오디오 자동 재생 제거 - VoiceSimulation에서 재생하므로 중복 방지
 
   // ✅ 페르소나가 없으면 표시하지 않음 - 훅 호출 이후에 조건부 렌더링
   if (!persona) {
@@ -44,13 +27,7 @@ export default function CustomerAvatar({ className = '' }: CustomerAvatarProps) 
 
   const avatarUrl = getPersonaAvatarUrl(persona.persona_id)
 
-  // 수동 재생
-  const handlePlayAudio = () => {
-    if (!currentAudio?.audioUrl) return
-    if (audioRef.current) {
-      audioRef.current.play().catch(e => console.error('오디오 재생 실패:', e))
-    }
-  }
+  // 수동 재생 함수 제거 - 대화 히스토리에서만 재생
 
   return (
     <div className={`relative bg-white rounded-lg shadow-lg overflow-hidden ${className}`}>
@@ -93,27 +70,7 @@ export default function CustomerAvatar({ className = '' }: CustomerAvatarProps) 
         </div>
       </div>
 
-      {/* 고객 메시지 표시 (오버레이) */}
-      {currentAudio && (
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-6 pt-12">
-          <div className="bg-white/95 backdrop-blur-md rounded-xl p-4 shadow-2xl">
-            <p className="text-sm text-gray-800 mb-3 line-clamp-3 italic">
-              "{currentAudio.text}"
-            </p>
-            {currentAudio.audioUrl && (
-              <button
-                onClick={handlePlayAudio}
-                className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-sm font-medium flex items-center justify-center shadow-lg hover:shadow-xl"
-              >
-                🔊 다시 듣기
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 숨은 오디오 요소 */}
-      <audio ref={audioRef} />
+      {/* 고객 메시지 하단 오버레이 제거 (대화 영역에서만 다시 듣기 제공) */}
     </div>
   )
 }

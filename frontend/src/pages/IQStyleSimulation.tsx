@@ -57,6 +57,7 @@ const IQStyleSimulation: React.FC = () => {
       title: '연령대',
       question: '고객의 연령대를 선택해주세요.',
       options: [
+        { id: '10대', label: '10대', icon: '🧒', description: '청소년 연령대' },
         { id: '20대', label: '20대', icon: '😊', description: '젊고 활기찬 연령대' },
         { id: '30대', label: '30대', icon: '😎', description: '안정적이고 성숙한 연령대' },
         { id: '40대', label: '40대', icon: '🧐', description: '경험이 풍부한 연령대' },
@@ -87,8 +88,6 @@ const IQStyleSimulation: React.FC = () => {
       title: '고객 성향',
       question: '고객의 성향을 선택해주세요.',
       options: [
-        { id: '실용형', label: '실용형', icon: '🎯', description: '효율적이고 결과 중심적' },
-        { id: '보수형', label: '보수형', icon: '🛡️', description: '안전성을 중시하고 신중함' },
         { id: '불만형', label: '불만형', icon: '😠', description: '불만이 많고 까다로운 성향' },
         { id: '긍정형', label: '긍정형', icon: '😊', description: '밝고 긍정적인 성향' },
         { id: '급함형', label: '급함형', icon: '⏰', description: '시간에 쪽박하고 급한 성향' },
@@ -106,11 +105,7 @@ const IQStyleSimulation: React.FC = () => {
         { id: 'loan', label: '여신', icon: '💳', description: '대출, 신용대출, 담보대출 등' },
         { id: 'card', label: '카드', icon: '💳', description: '발급, 분실, 재발급, 결제 등' },
         { id: 'fx', label: '외환/송금', icon: '🌍', description: '환전, 해외송금 등' },
-        { id: 'digital', label: '디지털 뱅킹', icon: '📱', description: '앱, 인터넷뱅킹, 인증서 등' },
         { id: 'complaint', label: '민원/불만 처리', icon: '📢', description: '고객 민원 및 불만 처리' },
-        { id: 'insurance', label: '보험', icon: '🛡️', description: '생명/손해/연금/펀드 등' },
-        { id: 'investment', label: '투자', icon: '📈', description: '펀드/ETF/채권/ISA 등' },
-        { id: 'fx_savings', label: '외화예금/펀드', icon: '💱', description: '외화예금/펀드 등' },
         { id: 'random', label: '랜덤', icon: '🎲', description: '랜덤으로 선택' }
       ],
       required: true,
@@ -363,50 +358,178 @@ const IQStyleSimulation: React.FC = () => {
               </p>
             </div>
             
-            {/* 랜덤 선택 버튼 (선택 모드일 때만 표시) */}
-            {currentStepData.id !== 'mode' && (
-              <div className="flex justify-center mb-8">
-                <button
-                  onClick={handleRandomSelection}
-                  className="px-12 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xl font-bold rounded-full hover:from-purple-600 hover:to-pink-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
-                >
-                  🎲 랜덤으로 선택하기
-                </button>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-              {currentStepData.options.map((option) => {
-                const isRandomOption = option.id === 'random'
+            {(() => {
+              const optionCount = currentStepData.options.length
+              const isAgeGroup = currentStepData.id === 'ageGroup'
+              
+              // 연령대 특별 레이아웃: 3개-3개-1개
+              if (isAgeGroup && optionCount === 7) {
+                const firstThree = currentStepData.options.slice(0, 3)  // 10대, 20대, 30대
+                const secondThree = currentStepData.options.slice(3, 6)  // 40대, 50대, 60대 이상
+                const lastOne = currentStepData.options.slice(6)  // 랜덤
+                
                 return (
-                  <button
-                    key={option.id}
-                    onClick={() => handleAnswer(option.id)}
-                    className={`p-8 rounded-2xl border-2 transition-all duration-300 hover:scale-105 ${
-                      answers[currentStepData.id] === option.id
-                        ? isRandomOption 
-                          ? 'border-purple-500 bg-purple-50 shadow-lg'
-                          : 'border-blue-500 bg-blue-50 shadow-lg'
-                        : isRandomOption
-                          ? 'border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 hover:border-purple-300 hover:shadow-md'
-                          : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-md'
-                    }`}
-                  >
-                    <div className="text-6xl mb-4">{option.icon}</div>
-                    <h3 className={`text-2xl font-semibold mb-2 ${
-                      isRandomOption ? 'text-purple-800' : 'text-gray-800'
-                    }`}>
-                      {option.label}
-                    </h3>
-                    <p className={`${
-                      isRandomOption ? 'text-purple-600' : 'text-gray-600'
-                    }`}>
-                      {option.description}
-                    </p>
-                  </button>
+                  <div className="mb-12 space-y-6">
+                    {/* 첫 번째 줄: 3개 */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                      {firstThree.map((option) => {
+                        const isRandomOption = option.id === 'random'
+                        return (
+                          <button
+                            key={option.id}
+                            onClick={() => handleAnswer(option.id)}
+                            className={`p-8 rounded-2xl border-2 transition-all duration-300 hover:scale-105 ${
+                              answers[currentStepData.id] === option.id
+                                ? isRandomOption 
+                                  ? 'border-purple-500 bg-purple-50 shadow-lg'
+                                  : 'border-blue-500 bg-blue-50 shadow-lg'
+                                : isRandomOption
+                                  ? 'border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 hover:border-purple-300 hover:shadow-md'
+                                  : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-md'
+                            }`}
+                          >
+                            <div className="text-6xl mb-4">{option.icon}</div>
+                            <h3 className={`text-2xl font-semibold mb-2 ${
+                              isRandomOption ? 'text-purple-800' : 'text-gray-800'
+                            }`}>
+                              {option.label}
+                            </h3>
+                            <p className={`${
+                              isRandomOption ? 'text-purple-600' : 'text-gray-600'
+                            }`}>
+                              {option.description}
+                            </p>
+                          </button>
+                        )
+                      })}
+                    </div>
+                    
+                    {/* 두 번째 줄: 3개 (가운데 정렬) */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                      {secondThree.map((option) => {
+                        const isRandomOption = option.id === 'random'
+                        return (
+                          <button
+                            key={option.id}
+                            onClick={() => handleAnswer(option.id)}
+                            className={`p-8 rounded-2xl border-2 transition-all duration-300 hover:scale-105 ${
+                              answers[currentStepData.id] === option.id
+                                ? isRandomOption 
+                                  ? 'border-purple-500 bg-purple-50 shadow-lg'
+                                  : 'border-blue-500 bg-blue-50 shadow-lg'
+                                : isRandomOption
+                                  ? 'border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 hover:border-purple-300 hover:shadow-md'
+                                  : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-md'
+                            }`}
+                          >
+                            <div className="text-6xl mb-4">{option.icon}</div>
+                            <h3 className={`text-2xl font-semibold mb-2 ${
+                              isRandomOption ? 'text-purple-800' : 'text-gray-800'
+                            }`}>
+                              {option.label}
+                            </h3>
+                            <p className={`${
+                              isRandomOption ? 'text-purple-600' : 'text-gray-600'
+                            }`}>
+                              {option.description}
+                            </p>
+                          </button>
+                        )
+                      })}
+                    </div>
+                    
+                    {/* 세 번째 줄: 1개 (가운데 정렬) */}
+                    <div className="flex justify-center">
+                      {lastOne.map((option) => {
+                        const isRandomOption = option.id === 'random'
+                        return (
+                          <button
+                            key={option.id}
+                            onClick={() => handleAnswer(option.id)}
+                            className={`w-full md:w-[300px] p-8 rounded-2xl border-2 transition-all duration-300 hover:scale-105 ${
+                              answers[currentStepData.id] === option.id
+                                ? isRandomOption 
+                                  ? 'border-purple-500 bg-purple-50 shadow-lg'
+                                  : 'border-blue-500 bg-blue-50 shadow-lg'
+                                : isRandomOption
+                                  ? 'border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 hover:border-purple-300 hover:shadow-md'
+                                  : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-md'
+                            }`}
+                          >
+                            <div className="text-6xl mb-4">{option.icon}</div>
+                            <h3 className={`text-2xl font-semibold mb-2 ${
+                              isRandomOption ? 'text-purple-800' : 'text-gray-800'
+                            }`}>
+                              {option.label}
+                            </h3>
+                            <p className={`${
+                              isRandomOption ? 'text-purple-600' : 'text-gray-600'
+                            }`}>
+                              {option.description}
+                            </p>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
                 )
-              })}
-            </div>
+              }
+              
+              // 일반 레이아웃: 옵션 개수에 따라 조정
+              let gridClass = ''
+              let itemClass = ''
+              
+              if (optionCount === 2) {
+                // 2개: flex로 가운데 정렬, 각 옵션은 고정 너비
+                gridClass = 'flex flex-wrap justify-center gap-6 mb-12'
+                itemClass = 'w-full md:w-[400px]'
+              } else if (optionCount === 4) {
+                // 4개: 2x2 그리드 (고객 성향)
+                gridClass = 'grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 max-w-3xl mx-auto'
+              } else if (optionCount === 6) {
+                // 6개: 2x3 그리드 (업무 카테고리)
+                gridClass = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12 max-w-5xl mx-auto'
+              } else {
+                // 기본: 3열 그리드
+                gridClass = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12'
+              }
+              
+              return (
+                <div className={gridClass}>
+                  {currentStepData.options.map((option) => {
+                    const isRandomOption = option.id === 'random'
+                    
+                    return (
+                      <button
+                        key={option.id}
+                        onClick={() => handleAnswer(option.id)}
+                        className={`${itemClass} p-8 rounded-2xl border-2 transition-all duration-300 hover:scale-105 ${
+                          answers[currentStepData.id] === option.id
+                            ? isRandomOption 
+                              ? 'border-purple-500 bg-purple-50 shadow-lg'
+                              : 'border-blue-500 bg-blue-50 shadow-lg'
+                            : isRandomOption
+                              ? 'border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 hover:border-purple-300 hover:shadow-md'
+                              : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-md'
+                        }`}
+                      >
+                        <div className="text-6xl mb-4">{option.icon}</div>
+                        <h3 className={`text-2xl font-semibold mb-2 ${
+                          isRandomOption ? 'text-purple-800' : 'text-gray-800'
+                        }`}>
+                          {option.label}
+                        </h3>
+                        <p className={`${
+                          isRandomOption ? 'text-purple-600' : 'text-gray-600'
+                        }`}>
+                          {option.description}
+                        </p>
+                      </button>
+                    )
+                  })}
+                </div>
+              )
+            })()}
           </div>
         )}
 

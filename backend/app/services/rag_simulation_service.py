@@ -19,6 +19,7 @@ from app.services.promptOrchestrator import (
     get_situation_defaults
 )
 from app.services.banking_normalizer import normalize_text, expand_search_query
+from app.services.persona_voice import get_voice_params, build_ssml
 
 
 class RAGSimulationService:
@@ -329,6 +330,7 @@ class RAGSimulationService:
             "persona": {
                 "id": persona["persona_id"],
                 "name": persona.get("persona_id", "Unknown"),
+                "gender": persona.get("gender", ""),
                 "age_group": persona.get("age_group", ""),
                 "occupation": persona.get("occupation", ""),
                 "type": persona.get("type", ""),
@@ -393,17 +395,10 @@ class RAGSimulationService:
             
             print(f"최종 텍스트: '{transcribed_text}'")
             
-            # 1. 의미 보정: STT 결과를 은행 도메인에 맞게 정규화
-            print("🔧 의미 보정 시작")
-            normalize_result = self.normalize_user_text(transcribed_text, confidence=0.9)
-            normalized_text = normalize_result["normalized"]
-            corrections = normalize_result["corrections"]
-            needs_clarification = normalize_result["needs_clarification"]
-            
-            print(f"원본: '{normalize_result['original']}'")
-            print(f"정규화: '{normalized_text}'")
-            print(f"교정: {corrections}")
-            print(f"재확인 필요: {needs_clarification}")
+            # STT에서 이미 정규화가 완료되었으므로 추가 처리 불필요
+            normalized_text = transcribed_text
+            corrections = []  # 이미 STT에서 처리됨
+            needs_clarification = False  # 이미 STT에서 처리됨
             
             # 2. 상품 카탈로그 매칭
             print("📋 상품 카탈로그 매칭 시작")
@@ -532,7 +527,7 @@ class RAGSimulationService:
             raise
     
     def _speech_to_text(self, audio_data: bytes) -> str:
-        """음성을 텍스트로 변환 (STT) - whisper-1 사용"""
+        """하이브리드 STT: whisper 기본 + gpt-4o-transcribe 보정용"""
         if not self.openai_client:
             return "OpenAI API 키가 설정되지 않았습니다."
             
@@ -540,24 +535,63 @@ class RAGSimulationService:
             return "오디오 데이터가 없습니다."
 
         try:
-            # OpenAI Whisper API 사용
-            # 다양한 오디오 형식 지원
+            # 임시 파일로 저장
             audio_file = tempfile.NamedTemporaryFile(delete=False, suffix=".webm")
             audio_file.write(audio_data)
             audio_file.close()
             
             print(f"STT 처리: 오디오 파일 크기 {len(audio_data)} bytes")
             
+            # 1단계: whisper-1로 기본 인식
+            print("🎤 1단계: whisper-1 기본 인식")
             with open(audio_file.name, "rb") as f:
                 transcript = self.openai_client.audio.transcriptions.create(
                     model="whisper-1",
                     file=f,
-                    language="ko"  # 한국어 설정
+                    language="ko"
                 )
             
-            os.unlink(audio_file.name)
-            print(f"STT 성공: '{transcript.text}'")
-            return transcript.text
+            initial_text = transcript.text
+            print(f"초기 인식 결과: '{initial_text}'")
+            
+            # 2단계: 의미 보정으로 품질 평가
+            normalize_result = self.normalize_user_text(initial_text, confidence=0.8)
+            corrections = normalize_result["corrections"]
+            needs_clarification = normalize_result["needs_clarification"]
+            
+            print(f"교정 횟수: {len(corrections)}")
+            print(f"재확인 필요: {needs_clarification}")
+            
+            # 3단계: 품질이 낮으면 gpt-4o-transcribe로 재인식
+            should_reprocess = (
+                len(corrections) >= 2 or  # 교정이 2개 이상
+                needs_clarification or   # 재확인 필요
+                len(initial_text) < 3     # 너무 짧은 텍스트
+            )
+            
+            if should_reprocess:
+                print("🔄 2단계: gpt-4o-transcribe 재인식 (품질 개선)")
+                with open(audio_file.name, "rb") as f:
+                    enhanced_transcript = self.openai_client.audio.transcriptions.create(
+                        model="gpt-4o-transcribe",
+                        file=f,
+                        language="ko"
+                    )
+                
+                enhanced_text = enhanced_transcript.text
+                print(f"개선된 인식 결과: '{enhanced_text}'")
+                
+                # 개선된 결과로 다시 정규화
+                final_normalize = self.normalize_user_text(enhanced_text, confidence=0.9)
+                final_text = final_normalize["normalized"]
+                
+                print(f"최종 정규화: '{final_text}'")
+                os.unlink(audio_file.name)
+                return final_text
+            else:
+                print("✅ whisper-1 결과 사용 (품질 양호)")
+                os.unlink(audio_file.name)
+                return normalize_result["normalized"]
             
         except Exception as e:
             print(f"STT 오류: {e}")
@@ -577,25 +611,23 @@ class RAGSimulationService:
             
         try:
             print(f"TTS 시작: '{text[:50]}...'")
-            
-            # 페르소나에 따른 음성 특성 설정
-            voice_characteristics = self._get_voice_characteristics(persona)
-            print(f"TTS 음성 특성: {voice_characteristics}")
-            
-            # OpenAI TTS API 사용
+
+            # 페르소나 기반 파라미터 산출
+            params = get_voice_params(persona)
+            print(f"TTS 파라미터: {params}")
+
+            # OpenAI TTS API 호출 (gpt-4o-mini-tts 모델 사용, 기본 파라미터만)
             response = self.openai_client.audio.speech.create(
-                model="tts-1",
-                voice=voice_characteristics.get("voice", "alloy"),
-                speed=voice_characteristics.get("speed", 1.0),
-                input=text
+                model="gpt-4o-mini-tts",
+                voice=params["voice"],
+                speed=params["rate"],  # speed 파라미터 사용
+                input=text  # SSML 대신 일반 텍스트 사용
             )
-            
-            # 음성 파일을 base64로 인코딩하여 반환
+
             audio_data = response.content
             audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-            
-            print(f"TTS 성공: 오디오 크기 {len(audio_data)} bytes, Base64 길이 {len(audio_base64)}")
-            
+            print(f"TTS 성공: {len(audio_data)} bytes")
+
             return f"data:audio/mpeg;base64,{audio_base64}"
             
         except Exception as e:
