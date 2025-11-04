@@ -938,7 +938,6 @@ class RAGSimulationService:
         # 실제로는 대화 기록을 기반으로 점수를 계산해야 함
         return 75.0
     
-<<<<<<< HEAD
     def generate_comprehensive_feedback(self, conversation_history: List[Dict], 
                                       persona: Dict, situation: Dict) -> Dict:
         """
