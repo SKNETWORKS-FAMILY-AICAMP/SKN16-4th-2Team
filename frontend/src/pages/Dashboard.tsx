@@ -620,12 +620,12 @@ function MenteeDashboard({ data, currentTime, recordings }: any) {
       </motion.div>
 
       {/* Mentor Info */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-md p-6"
-        >
-          <h2 className="text-xl font-bold text-gray-900 mb-4">담당 멘토</h2>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-xl shadow-md p-6"
+      >
+        <h2 className="text-xl font-bold text-gray-900 mb-4">담당 멘토</h2>
         {data?.mentor_info ? (
           <div className="flex items-start space-x-4">
             {data.mentor_info.photo_url ? (
@@ -666,11 +666,11 @@ function MenteeDashboard({ data, currentTime, recordings }: any) {
       </motion.div>
 
       {/* Recent Feedbacks */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-md p-6"
-        >
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-xl shadow-md p-6"
+      >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
             <img src="/assets/bear.png" alt="하경곰" className="w-8 h-8 mr-3 rounded-full" />
@@ -758,12 +758,12 @@ function MenteeDashboard({ data, currentTime, recordings }: any) {
       </motion.div>
 
       {/* Recent Chats */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-md p-6"
-        >
-          <h2 className="text-xl font-bold text-gray-900 mb-4">최근 대화</h2>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-xl shadow-md p-6"
+      >
+        <h2 className="text-xl font-bold text-gray-900 mb-4">최근 대화</h2>
         {data?.recent_chats && data.recent_chats.length > 0 ? (
           <div className="space-y-4">
             {data.recent_chats.slice(0, 5).map((chat: any, idx: number) => {
@@ -784,22 +784,21 @@ function MenteeDashboard({ data, currentTime, recordings }: any) {
                       >
                         {isExpanded ? '접기' : '더보기'}
                       </button>
-              </div>
+                    </div>
                   )}
-          </div>
+                </div>
               )
-            }
-          )}
-        </div>
+            })}
+          </div>
         ) : (
           <div className="text-center py-8">
             <ChatBubbleBottomCenterTextIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500 text-lg mb-2">아직 대화 기록이 없습니다</p>
-            <p className="text-gray-400 text-sm">챗봇과 대화를 나누면 여기에 표시됩니다</p>
+            <p className="text-gray-400 text-sm">챗봇과 대화를 시작해보세요</p>
           </div>
         )}
       </motion.div>
-        </>
+      </>
       )}
 
       {/* 시뮬레이션 탭 */}
@@ -1011,158 +1010,6 @@ function MenteeDashboard({ data, currentTime, recordings }: any) {
       </motion.div>
         </>
       )}
-
-      {/* Mentor Info */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-md p-6"
-        >
-          <h2 className="text-xl font-bold text-gray-900 mb-4">담당 멘토</h2>
-        {data?.mentor_info ? (
-          <div className="flex items-start space-x-4">
-            {data.mentor_info.photo_url ? (
-              <img
-                src={data.mentor_info.photo_url}
-                alt={data.mentor_info.name}
-                className="w-16 h-16 rounded-full"
-              />
-            ) : (
-              <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center">
-                <UserIcon className="w-8 h-8 text-primary-600" />
-              </div>
-            )}
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900">{data.mentor_info.name}</h3>
-              <p className="text-gray-600 text-sm">
-                {data.mentor_info.team} • MBTI: {data.mentor_info.mbti}
-              </p>
-              {data.mentor_info.interests && (
-                <p className="text-gray-600 text-sm mt-1">관심사: {data.mentor_info.interests}</p>
-              )}
-              {data.mentor_info.encouragement_message && (
-                <div className="mt-3 p-4 bg-gradient-to-r from-primary-50 to-amber-50 rounded-xl border border-primary-200">
-                  <p className="text-primary-800 text-sm italic">
-                    "{data.mentor_info.encouragement_message}"
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <UserIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg mb-2">아직 담당 멘토가 배정되지 않았습니다</p>
-            <p className="text-gray-400 text-sm">관리자에게 멘토 배정을 요청해보세요</p>
-          </div>
-        )}
-      </motion.div>
-
-      {/* Recent Feedbacks */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-md p-6"
-        >
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
-            <img src="/assets/bear.png" alt="하경곰" className="w-8 h-8 mr-3 rounded-full" />
-            <h2 className="text-2xl font-bold text-bank-800">멘토 피드백</h2>
-          </div>
-          {data?.recent_feedbacks && data.recent_feedbacks.length > 0 && (
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-500">총 {data.recent_feedbacks.length}개</span>
-              {(() => {
-                const recentCount = data.recent_feedbacks.filter((f: any) => {
-                  const feedbackDate = new Date(f.created_at)
-                  const diffInHours = (currentTime.getTime() - feedbackDate.getTime()) / (1000 * 60 * 60)
-                  return diffInHours <= 24 && !f.is_read
-                }).length
-                
-                if (recentCount > 0) {
-                  return (
-                    <span className="px-2 py-1 bg-accent-100 text-accent-800 text-xs rounded-full animate-pulse">
-                      최신 피드백 {recentCount}개
-                    </span>
-                  )
-                } else if (data.recent_feedbacks.filter((f: any) => !f.is_read).length > 0) {
-                  return (
-                    <span className="px-2 py-1 bg-primary-100 text-primary-800 text-xs rounded-full">
-                      새 피드백 {data.recent_feedbacks.filter((f: any) => !f.is_read).length}개
-                    </span>
-                  )
-                }
-                return null
-              })()}
-            </div>
-          )}
-        </div>
-        
-        {data?.recent_feedbacks && data.recent_feedbacks.length > 0 ? (
-          <div className="space-y-3">
-            {data.recent_feedbacks.slice(0, 3).map((feedback: any, idx: number) => (
-              <FeedbackCard key={idx} feedback={feedback} index={idx} currentTime={currentTime} />
-            ))}
-            
-            {/* 더 많은 피드백이 있을 때 */}
-            {data.recent_feedbacks.length > 3 && (
-              <FeedbackAccordion 
-                additionalFeedbacks={data.recent_feedbacks.slice(3)} 
-                totalCount={data.recent_feedbacks.length}
-                currentTime={currentTime}
-              />
-            )}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <ChatBubbleLeftRightIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg mb-2">아직 받은 피드백이 없습니다</p>
-            <p className="text-gray-400 text-sm">멘토가 피드백을 보내면 여기에 표시됩니다</p>
-          </div>
-        )}
-      </motion.div>
-
-      {/* Recent Chats */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-md p-6"
-        >
-          <h2 className="text-xl font-bold text-gray-900 mb-4">최근 대화</h2>
-        {data?.recent_chats && data.recent_chats.length > 0 ? (
-          <div className="space-y-4">
-            {data.recent_chats.slice(0, 5).map((chat: any, idx: number) => {
-              const isExpanded = !!expandedChats[idx]
-              const needsToggle = (chat?.bot_response?.length || 0) > 120
-              return (
-                <div key={idx} className="p-4 bg-gradient-to-r from-primary-50 to-amber-50 rounded-xl border border-primary-100">
-                  <p className="font-medium text-bank-800 mb-1">{chat.user_message}</p>
-                  <p className={isExpanded ? "text-sm text-primary-700 whitespace-prewrap" : "text-sm text-primary-700 line-clamp-2"}>
-                    {chat.bot_response}
-                  </p>
-                  {needsToggle && (
-                    <div className="mt-2 text-right">
-                      <button
-                        type="button"
-                        onClick={() => toggleChatExpand(idx)}
-                        className="text-amber-700 hover:text-amber-800 text-xs font-medium"
-                      >
-                        {isExpanded ? '접기' : '더보기'}
-                      </button>
-              </div>
-                  )}
-          </div>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <ChatBubbleBottomCenterTextIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg mb-2">아직 대화 기록이 없습니다</p>
-            <p className="text-gray-400 text-sm">챗봇과 대화를 시작해보세요</p>
-          </div>
-        )}
-      </motion.div>
     </div>
   )
 }
