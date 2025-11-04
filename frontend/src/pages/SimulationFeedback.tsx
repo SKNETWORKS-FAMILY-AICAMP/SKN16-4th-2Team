@@ -452,7 +452,7 @@ const SimulationFeedback: React.FC = () => {
               새로운 시뮬레이션 시작
             </button>
             <button
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/dashboard', { state: { activeTab: 'simulation' } })}
               className="px-8 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium"
             >
               대시보드로 이동
