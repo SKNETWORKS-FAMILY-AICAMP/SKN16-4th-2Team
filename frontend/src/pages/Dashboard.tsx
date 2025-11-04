@@ -428,6 +428,7 @@ export default function Dashboard() {
 
 function MenteeDashboard({ data, currentTime, recordings }: any) {
   const navigate = useNavigate()
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'simulation'>('dashboard')
   const [feedbackHistory, setFeedbackHistory] = useState<any[]>([])
   const [loadingFeedback, setLoadingFeedback] = useState(false)
   
@@ -487,7 +488,36 @@ function MenteeDashboard({ data, currentTime, recordings }: any) {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-gray-900">내 대시보드</h1>
 
-      {/* Stats Cards */}
+      {/* 탭 네비게이션 */}
+      <div className="bg-white rounded-xl shadow-md p-2">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all ${
+              activeTab === 'dashboard'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            📊 학습 현황
+          </button>
+          <button
+            onClick={() => setActiveTab('simulation')}
+            className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all ${
+              activeTab === 'simulation'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            🎯 시뮬레이션
+          </button>
+        </div>
+      </div>
+
+      {/* 대시보드 탭 */}
+      {activeTab === 'dashboard' && (
+        <>
+          {/* Stats Cards */}
       <div className="grid md:grid-cols-3 gap-6">
         <StatCard
           icon={ChatBubbleBottomCenterTextIcon}
@@ -589,6 +619,192 @@ function MenteeDashboard({ data, currentTime, recordings }: any) {
         )}
       </motion.div>
 
+      {/* Mentor Info */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-xl shadow-md p-6"
+        >
+          <h2 className="text-xl font-bold text-gray-900 mb-4">담당 멘토</h2>
+        {data?.mentor_info ? (
+          <div className="flex items-start space-x-4">
+            {data.mentor_info.photo_url ? (
+              <img
+                src={data.mentor_info.photo_url}
+                alt={data.mentor_info.name}
+                className="w-16 h-16 rounded-full"
+              />
+            ) : (
+              <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center">
+                <UserIcon className="w-8 h-8 text-primary-600" />
+              </div>
+            )}
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-gray-900">{data.mentor_info.name}</h3>
+              <p className="text-gray-600 text-sm">
+                {data.mentor_info.team} • MBTI: {data.mentor_info.mbti}
+              </p>
+              {data.mentor_info.interests && (
+                <p className="text-gray-600 text-sm mt-1">관심사: {data.mentor_info.interests}</p>
+              )}
+              {data.mentor_info.encouragement_message && (
+                <div className="mt-3 p-4 bg-gradient-to-r from-primary-50 to-amber-50 rounded-xl border border-primary-200">
+                  <p className="text-primary-800 text-sm italic">
+                    "{data.mentor_info.encouragement_message}"
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <UserIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500 text-lg mb-2">아직 담당 멘토가 배정되지 않았습니다</p>
+            <p className="text-gray-400 text-sm">관리자에게 멘토 배정을 요청해보세요</p>
+          </div>
+        )}
+      </motion.div>
+
+      {/* Recent Feedbacks */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-xl shadow-md p-6"
+        >
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <img src="/assets/bear.png" alt="하경곰" className="w-8 h-8 mr-3 rounded-full" />
+            <h2 className="text-2xl font-bold text-bank-800">멘토 피드백</h2>
+          </div>
+          {data?.recent_feedbacks && data.recent_feedbacks.length > 0 && (
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-500">총 {data.recent_feedbacks.length}개</span>
+              {(() => {
+                const recentCount = data.recent_feedbacks.filter((f: any) => {
+                  const feedbackDate = new Date(f.created_at)
+                  const diffInHours = (currentTime.getTime() - feedbackDate.getTime()) / (1000 * 60 * 60)
+                  return diffInHours <= 24 && !f.is_read
+                }).length
+                
+                if (recentCount > 0) {
+                  return (
+                    <span className="px-2 py-1 bg-accent-100 text-accent-800 text-xs rounded-full animate-pulse">
+                      최신 피드백 {recentCount}개
+                    </span>
+                  )
+                } else if (data.recent_feedbacks.filter((f: any) => !f.is_read).length > 0) {
+                  return (
+                    <span className="px-2 py-1 bg-primary-100 text-primary-800 text-xs rounded-full">
+                      새 피드백 {data.recent_feedbacks.filter((f: any) => !f.is_read).length}개
+                    </span>
+                  )
+                }
+                return null
+              })()}
+            </div>
+          )}
+        </div>
+        {data?.recent_feedbacks && data.recent_feedbacks.length > 0 ? (
+          <div className="space-y-4">
+            {data.recent_feedbacks.slice(0, 5).map((feedback: any, idx: number) => {
+              const feedbackDate = new Date(feedback.created_at)
+              const diffInHours = (currentTime.getTime() - feedbackDate.getTime()) / (1000 * 60 * 60)
+              const isNew = diffInHours <= 24
+              
+              return (
+                <div 
+                  key={idx} 
+                  className={`p-4 rounded-xl border transition-all ${
+                    !feedback.is_read 
+                      ? 'bg-gradient-to-r from-accent-50 to-accent-100 border-accent-300' 
+                      : 'bg-gradient-to-r from-primary-50 to-amber-50 border-primary-100'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs text-gray-500">
+                      {feedbackDate.toLocaleString('ko-KR', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                    {isNew && !feedback.is_read && (
+                      <span className="px-2 py-1 bg-accent-600 text-white text-xs rounded-full animate-pulse">
+                        New
+                      </span>
+                    )}
+                    {!isNew && !feedback.is_read && (
+                      <span className="px-2 py-1 bg-primary-600 text-white text-xs rounded-full">
+                        New
+                      </span>
+                    )}
+                  </div>
+                  <p className={`text-sm ${!feedback.is_read ? 'text-primary-900 font-semibold' : 'text-primary-700'}`}>
+                    {feedback.feedback}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <ChatBubbleLeftRightIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500 text-lg mb-2">아직 받은 피드백이 없습니다</p>
+            <p className="text-gray-400 text-sm">멘토가 피드백을 보내면 여기에 표시됩니다</p>
+          </div>
+        )}
+      </motion.div>
+
+      {/* Recent Chats */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-xl shadow-md p-6"
+        >
+          <h2 className="text-xl font-bold text-gray-900 mb-4">최근 대화</h2>
+        {data?.recent_chats && data.recent_chats.length > 0 ? (
+          <div className="space-y-4">
+            {data.recent_chats.slice(0, 5).map((chat: any, idx: number) => {
+              const isExpanded = !!expandedChats[idx]
+              const needsToggle = (chat?.bot_response?.length || 0) > 120
+              return (
+                <div key={idx} className="p-4 bg-gradient-to-r from-primary-50 to-amber-50 rounded-xl border border-primary-100">
+                  <p className="font-medium text-bank-800 mb-1">{chat.user_message}</p>
+                  <p className={isExpanded ? "text-sm text-primary-700 whitespace-prewrap" : "text-sm text-primary-700 line-clamp-2"}>
+                    {chat.bot_response}
+                  </p>
+                  {needsToggle && (
+                    <div className="mt-2 text-right">
+                      <button
+                        type="button"
+                        onClick={() => toggleChatExpand(idx)}
+                        className="text-amber-700 hover:text-amber-800 text-xs font-medium"
+                      >
+                        {isExpanded ? '접기' : '더보기'}
+                      </button>
+              </div>
+                  )}
+          </div>
+              )
+            }
+          )}
+        </div>
+        ) : (
+          <div className="text-center py-8">
+            <ChatBubbleBottomCenterTextIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500 text-lg mb-2">아직 대화 기록이 없습니다</p>
+            <p className="text-gray-400 text-sm">챗봇과 대화를 나누면 여기에 표시됩니다</p>
+          </div>
+        )}
+      </motion.div>
+        </>
+      )}
+
+      {/* 시뮬레이션 탭 */}
+      {activeTab === 'simulation' && (
+        <>
       {/* 시뮬레이션 피드백 히스토리 */}
       {feedbackHistory.length > 0 && (
         <>
@@ -835,6 +1051,50 @@ function MenteeDashboard({ data, currentTime, recordings }: any) {
               </div>
             )}
           </motion.div>
+
+      {/* 시뮬레이션 녹화 목록 */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-xl shadow-md p-6"
+      >
+        <h2 className="text-xl font-bold text-gray-900 mb-4">시뮬레이션 녹화</h2>
+        {recordings && recordings.length > 0 ? (
+          <div className="space-y-4">
+            {recordings.slice(0, 5).map((recording: any) => (
+              <div key={recording.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">
+                      {new Date(recording.created_at).toLocaleString('ko-KR')}
+                    </p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      파일 크기: {(recording.file_size / (1024 * 1024)).toFixed(2)} MB
+                      {recording.duration && ` • 재생 시간: ${recording.duration}초`}
+                    </p>
+                  </div>
+                </div>
+                <video
+                  controls
+                  className="w-full rounded-lg mt-3"
+                  style={{ maxHeight: '400px' }}
+                >
+                  <source src={`${import.meta.env.VITE_API_URL || '/api'}${recording.video_url}`} type="video/webm" />
+                  브라우저가 비디오 태그를 지원하지 않습니다.
+                </video>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            <p className="text-gray-500 text-lg mb-2">아직 녹화된 시뮬레이션이 없습니다</p>
+            <p className="text-gray-400 text-sm">시뮬레이션을 진행하면 녹화가 자동으로 저장됩니다</p>
+          </div>
+        )}
+      </motion.div>
         </>
       )}
 
@@ -944,50 +1204,6 @@ function MenteeDashboard({ data, currentTime, recordings }: any) {
             <ChatBubbleLeftRightIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500 text-lg mb-2">아직 받은 피드백이 없습니다</p>
             <p className="text-gray-400 text-sm">멘토가 피드백을 보내면 여기에 표시됩니다</p>
-          </div>
-        )}
-      </motion.div>
-
-      {/* 시뮬레이션 녹화 목록 */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-xl shadow-md p-6"
-      >
-        <h2 className="text-xl font-bold text-gray-900 mb-4">시뮬레이션 녹화</h2>
-        {recordings && recordings.length > 0 ? (
-          <div className="space-y-4">
-            {recordings.slice(0, 5).map((recording: any) => (
-              <div key={recording.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">
-                      {new Date(recording.created_at).toLocaleString('ko-KR')}
-                    </p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      파일 크기: {(recording.file_size / (1024 * 1024)).toFixed(2)} MB
-                      {recording.duration && ` • 재생 시간: ${recording.duration}초`}
-                    </p>
-                  </div>
-                </div>
-                                                 <video
-                  controls
-                  className="w-full rounded-lg mt-3"
-                  style={{ maxHeight: '400px' }}
-                >
-                  <source src={`${import.meta.env.VITE_API_URL || '/api'}${recording.video_url}`} type="video/webm" />
-                  브라우저가 비디오 태그를 지원하지 않습니다.
-                </video>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
-            <p className="text-gray-500 text-lg mb-2">아직 녹화된 시뮬레이션이 없습니다</p>
-            <p className="text-gray-400 text-sm">시뮬레이션을 진행하면 녹화가 자동으로 저장됩니다</p>
           </div>
         )}
       </motion.div>
