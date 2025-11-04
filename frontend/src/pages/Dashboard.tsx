@@ -28,8 +28,8 @@ import {
   InformationCircleIcon,
   XMarkIcon,
   CalendarIcon,
-  TrendingUpIcon,
-  ArrowUpIcon
+  ArrowUpIcon,
+  ArrowTrendingUpIcon
 } from '@heroicons/react/24/outline'
 import { 
   RadarChart, 
@@ -664,7 +664,7 @@ function MenteeDashboard({ data, currentTime, recordings }: any) {
                     ? 'bg-green-100'
                     : 'bg-gray-100'
                 } rounded-lg`}>
-                  <TrendingUpIcon className={`w-6 h-6 ${
+                  <ArrowTrendingUpIcon className={`w-6 h-6 ${
                     feedbackHistory.length >= 2 && feedbackHistory[0].overall_score >= feedbackHistory[feedbackHistory.length - 1].overall_score
                       ? 'text-green-600'
                       : 'text-gray-400'
