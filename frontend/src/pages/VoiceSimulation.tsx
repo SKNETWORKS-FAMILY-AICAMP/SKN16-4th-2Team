@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { usePersonaStore } from '../store/usePersonaStore'
 import api from '../utils/api'
@@ -36,6 +37,7 @@ interface ChatMessage {
 const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBack }) => {
   const { user } = useAuthStore()
   const { setPersona, setAudio } = usePersonaStore()
+  const navigate = useNavigate()
   const [isRecording, setIsRecording] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [userMessage, setUserMessage] = useState('')
@@ -277,12 +279,45 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
     console.log('🔄 시뮬레이션 재시작 준비 완료')
   }
   
-  // 평가 페이지로 이동 (평가 페이지가 준비되면 라우팅 추가)
-  const handleGoToEvaluation = () => {
-    // TODO: 평가 페이지 라우팅
-    // 예: navigate('/evaluation', { state: { simulationData, chatHistory, checkedGoals } })
-    console.log('📝 평가 페이지로 이동 준비')
-    alert('평가 페이지가 준비 중입니다. 곧 업데이트될 예정입니다.')
+  // 평가 페이지로 이동
+  const handleGoToEvaluation = async () => {
+    try {
+      setLoading(true)
+      
+      // 대화 기록이 충분한지 확인
+      if (chatHistory.length < 2) {
+        alert('시뮬레이션을 더 진행해주세요. (최소 2턴 이상 대화 필요)')
+        setLoading(false)
+        return
+      }
+
+      // 대화 히스토리를 API 형식으로 변환
+      const conversationHistory = chatHistory.map((msg) => ({
+        role: msg.role === 'user' ? 'employee' : 'customer',
+        text: msg.text,
+        timestamp: msg.timestamp.toISOString()
+      }))
+
+      // 피드백 생성 API 호출
+      const response = await api.post('/rag-simulation/generate-feedback', {
+        conversation_history: conversationHistory,
+        persona: simulationData?.persona || {},
+        situation: simulationData?.situation || {}
+      })
+
+      const feedbackData = response.data.feedback
+
+      // 피드백 페이지로 이동 (state를 통해 데이터 전달)
+      navigate('/simulation-feedback', {
+        state: { feedbackData }
+      })
+
+    } catch (error) {
+      console.error('피드백 생성 실패:', error)
+      alert('피드백 생성에 실패했습니다. 다시 시도해주세요.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   // 목표 달성 분석 함수

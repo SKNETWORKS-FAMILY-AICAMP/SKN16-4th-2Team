@@ -71,27 +71,16 @@ export default function Home() {
       >
         
         <div className="relative z-10">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center">
-              <img src="/assets/bear.png" alt="하경곰" className="w-20 h-20 mr-6 rounded-full shadow-lg" />
-              <div>
-                <h1 className="text-4xl font-bold mb-2">
-                  안녕하세요, {user?.name}님! 🐻
-                </h1>
-                <p className="text-white/90 text-xl font-medium">
-                  하경은행 스마트 온보딩 플랫폼에 오신 것을 환영합니다
-                </p>
-              </div>
+          <div className="flex items-center mb-6">
+            <img src="/assets/bear.png" alt="하경곰" className="w-20 h-20 mr-6 rounded-full shadow-lg" />
+            <div>
+              <h1 className="text-4xl font-bold mb-2">
+                안녕하세요, {user?.name}님! 🐻
+              </h1>
+              <p className="text-white/90 text-xl font-medium">
+                하경은행 스마트 온보딩 플랫폼에 오신 것을 환영합니다
+              </p>
             </div>
-            {/* 개발용 테스트 버튼 */}
-            {import.meta.env.DEV && (
-              <button
-                onClick={() => navigate('/simulation-feedback')}
-                className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-              >
-                📊 피드백 미리보기
-              </button>
-            )}
           </div>
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
             <p className="text-white/90 text-lg">
