@@ -806,10 +806,21 @@ function MenteeDashboard({ data, currentTime, recordings }: any) {
       {activeTab === 'simulation' && (
         <>
       {/* 시뮬레이션 피드백 히스토리 */}
-      {feedbackHistory.length > 0 && (
-        <>
-          {/* 주요 통계 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-xl shadow-md p-8"
+      >
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">시뮬레이션 피드백 히스토리</h2>
+        {loadingFeedback ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="text-gray-600 mt-4">로딩 중...</p>
+          </div>
+        ) : feedbackHistory.length > 0 ? (
+          <>
+          {/* 주요 통계 카드 */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -890,98 +901,9 @@ function MenteeDashboard({ data, currentTime, recordings }: any) {
             </motion.div>
           </div>
 
-          {/* 점수 추이 차트 */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-xl shadow-md p-8"
-          >
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">최근 시뮬레이션 점수 추이</h2>
-            <div className="w-full h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={feedbackHistory.slice().reverse().map(fb => ({
-                  date: new Date(fb.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }),
-                  점수: fb.overall_score
-                }))}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis 
-                    dataKey="date" 
-                    tick={{ fill: "#6b7280", fontSize: 12 }}
-                  />
-                  <YAxis 
-                    domain={[0, 100]}
-                    tick={{ fill: "#6b7280" }}
-                  />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                  />
-                  <Legend />
-                  <Line 
-                    type="monotone" 
-                    dataKey="점수" 
-                    stroke="#3b82f6" 
-                    strokeWidth={3}
-                    dot={{ fill: '#3b82f6', r: 5 }}
-                    activeDot={{ r: 7 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </motion.div>
-
-          {/* 역량별 평균 점수 */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-xl shadow-md p-8"
-          >
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">역량별 평균 점수</h2>
-            <div className="w-full h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={[
-                  { name: "지식", 평균: Math.round(feedbackHistory.reduce((sum, fb) => sum + (fb.competencies?.find((c: any) => c.name === '지식')?.score || 0), 0) / feedbackHistory.length) },
-                  { name: "기술", 평균: Math.round(feedbackHistory.reduce((sum, fb) => sum + (fb.competencies?.find((c: any) => c.name === '기술')?.score || 0), 0) / feedbackHistory.length) },
-                  { name: "공감도", 평균: Math.round(feedbackHistory.reduce((sum, fb) => sum + (fb.competencies?.find((c: any) => c.name === '공감도')?.score || 0), 0) / feedbackHistory.length) },
-                  { name: "명확성", 평균: Math.round(feedbackHistory.reduce((sum, fb) => sum + (fb.competencies?.find((c: any) => c.name === '명확성')?.score || 0), 0) / feedbackHistory.length) },
-                  { name: "친절도", 평균: Math.round(feedbackHistory.reduce((sum, fb) => sum + (fb.competencies?.find((c: any) => c.name === '친절도')?.score || 0), 0) / feedbackHistory.length) },
-                  { name: "자신감", 평균: Math.round(feedbackHistory.reduce((sum, fb) => sum + (fb.competencies?.find((c: any) => c.name === '자신감')?.score || 0), 0) / feedbackHistory.length) }
-                ]}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis 
-                    dataKey="name" 
-                    tick={{ fill: "#6b7280", fontSize: 12 }}
-                  />
-                  <YAxis 
-                    domain={[0, 100]}
-                    tick={{ fill: "#6b7280" }}
-                  />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                  />
-                  <Bar 
-                    dataKey="평균" 
-                    fill="#3b82f6"
-                    radius={[8, 8, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </motion.div>
-
           {/* 피드백 히스토리 테이블 */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-xl shadow-md p-8"
-          >
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">시뮬레이션 피드백 히스토리</h2>
-            {loadingFeedback ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="text-gray-600 mt-4">로딩 중...</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
+          <div className="mt-6">
+            <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200">
@@ -1032,27 +954,17 @@ function MenteeDashboard({ data, currentTime, recordings }: any) {
                     })}
                   </tbody>
                 </table>
-              </div>
-            )}
-            
-            {/* 하단 안내 */}
-            {feedbackHistory.length > 0 && (
-              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold text-blue-900">이번 주 종합 평가</h3>
-                  <p className="text-blue-700 text-sm">
-                    {feedbackHistory.length}회의 시뮬레이션을 완료하셨습니다. 
-                    {feedbackHistory.length >= 2 && feedbackHistory[0].overall_score > feedbackHistory[feedbackHistory.length - 1].overall_score && 
-                      ' 점수가 상승하는 긍정적인 추세를 보이고 있습니다. 계속해서 발전하고 있습니다!'}
-                    {feedbackHistory.length >= 2 && feedbackHistory[0].overall_score <= feedbackHistory[feedbackHistory.length - 1].overall_score && 
-                      ' 안정적인 성과를 유지하고 있습니다. 지속적인 연습으로 더욱 발전할 수 있습니다.'}
-                  </p>
-                </div>
-              </div>
-            )}
-          </motion.div>
-        </>
-      )}
+            </div>
+          </div>
+          </>
+        ) : (
+          <div className="text-center py-12">
+            <TrophyIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500 text-lg mb-2">아직 시뮬레이션 피드백이 없습니다</p>
+            <p className="text-gray-400 text-sm">시뮬레이션을 완료하면 피드백이 여기에 표시됩니다</p>
+          </div>
+        )}
+      </motion.div>
 
       {/* 시뮬레이션 녹화 목록 */}
       <motion.div
