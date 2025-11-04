@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { useAuthStore } from '../store/authStore'
 import { usePersonaStore } from '../store/usePersonaStore'
 import api from '../utils/api'
+import { ragSimulationAPI } from '../utils/api'
 import { playFromAnyAudioPayload } from '../utils/audio'
 import { AudioVisualizer } from '../components/AudioVisualizer'
 import CustomerAvatar from '../components/CustomerAvatar'
@@ -12,7 +13,10 @@ import {
   SpeakerWaveIcon,
   ArrowPathIcon,
   ArrowLeftIcon,
-  VideoCameraIcon
+  VideoCameraIcon,
+  ChevronUpIcon,
+  ChevronDownIcon,
+  CheckIcon
 } from '@heroicons/react/24/outline'
 
 interface VoiceSimulationProps {
@@ -43,6 +47,10 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
   const [videoStream, setVideoStream] = useState<MediaStream | null>(null) // 비디오 스트림
   const [isInitializing, setIsInitializing] = useState(true) // 초기화 상태
   const [isStarted, setIsStarted] = useState(false) // 시뮬레이션 시작 여부
+  const [isCustomerInfoOpen, setIsCustomerInfoOpen] = useState(false) // 고객 정보 접기/펼치기 (기본값: 접힘)
+  const [isSituationInfoOpen, setIsSituationInfoOpen] = useState(false) // 상황 정보 접기/펼치기 (기본값: 접힘)
+  const [checkedGoals, setCheckedGoals] = useState<Set<number>>(new Set()) // 달성된 목표 인덱스
+  const [isSimulationCompleted, setIsSimulationCompleted] = useState(false) // 시뮬레이션 완료 상태
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
@@ -158,6 +166,184 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatHistory])
+
+  // 대화 종료 표현 감지
+  const checkConversationEnd = (message: string): boolean => {
+    const endKeywords = [
+      '감사합니다',
+      '수고하셨습니다',
+      '감사해요',
+      '고마워요',
+      '고맙습니다',
+      '끝',
+      '종료',
+      '마무리',
+      '그럼 이만',
+      '안녕히가세요',
+      '수고하세요'
+    ]
+    
+    const lowerMessage = message.toLowerCase().trim()
+    return endKeywords.some(keyword => lowerMessage.includes(keyword.toLowerCase()))
+  }
+
+  // 시뮬레이션 종료 처리
+  const handleEndSimulation = async () => {
+    console.log('🔚 시뮬레이션 종료 처리 시작...')
+    
+    try {
+      // 화면 녹화 중지 및 업로드
+      if (videoRecorderRef.current && videoRecorderRef.current.state !== 'inactive') {
+        console.log('📹 화면 녹화 중지 및 업로드 중...')
+        videoRecorderRef.current.stop()
+        
+        videoRecorderRef.current.onstop = async () => {
+          // 녹화 데이터를 Blob으로 변환
+          const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' })
+          console.log('✅ 녹화 완료, 파일 크기:', videoBlob.size, 'bytes')
+          
+          // 녹화 파일 업로드
+          if (videoBlob.size > 0) {
+            await uploadRecording(videoBlob)
+          }
+          
+          // 녹화 데이터 초기화
+          videoChunksRef.current = []
+          
+          // 완료 상태로 변경
+          setIsSimulationCompleted(true)
+        }
+      } else {
+        // 녹화가 없으면 바로 완료 상태로 변경
+        setIsSimulationCompleted(true)
+      }
+
+      // 오디오 녹화 중지
+      if (isRecording && mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        console.log('🎤 오디오 녹화 중지 중...')
+        mediaRecorderRef.current.stop()
+        setIsRecording(false)
+      }
+
+      // 카메라 스트림 정리
+      if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop())
+        setVideoStream(null)
+      }
+
+      // 오디오 스트림 정리
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop())
+        setStream(null)
+      }
+
+      console.log('✅ 시뮬레이션 종료 처리 완료')
+    } catch (error) {
+      console.error('❌ 시뮬레이션 종료 처리 실패:', error)
+      // 오류가 발생해도 완료 페이지 표시
+      setIsSimulationCompleted(true)
+    }
+  }
+  
+  // 다시 시뮬레이션 시작
+  const handleRestartSimulation = () => {
+    // 모든 상태 초기화
+    setIsSimulationCompleted(false)
+    setChatHistory([])
+    setCheckedGoals(new Set())
+    setIsStarted(false)
+    setIsInitializing(true)
+    setUserMessage('')
+    setError('')
+    setIsPlaying(false)
+    setIsRecording(false)
+    
+    // 녹화 관련 초기화
+    videoChunksRef.current = []
+    audioChunksRef.current = []
+    mediaRecorderRef.current = null
+    videoRecorderRef.current = null
+    
+    // 스트림 정리
+    if (videoStream) {
+      videoStream.getTracks().forEach(track => track.stop())
+      setVideoStream(null)
+    }
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop())
+      setStream(null)
+    }
+    
+    console.log('🔄 시뮬레이션 재시작 준비 완료')
+  }
+  
+  // 평가 페이지로 이동 (평가 페이지가 준비되면 라우팅 추가)
+  const handleGoToEvaluation = () => {
+    // TODO: 평가 페이지 라우팅
+    // 예: navigate('/evaluation', { state: { simulationData, chatHistory, checkedGoals } })
+    console.log('📝 평가 페이지로 이동 준비')
+    alert('평가 페이지가 준비 중입니다. 곧 업데이트될 예정입니다.')
+  }
+
+  // 목표 달성 분석 함수
+  const analyzeGoalAchievement = async (history: ChatMessage[]) => {
+    const goals = simulationData?.situation?.goals
+    if (!goals || goals.length === 0) {
+      return
+    }
+
+    // 사용자 메시지가 있는지 확인
+    const hasUserMessages = history.some(msg => msg.role === 'user')
+    if (!hasUserMessages) {
+      return
+    }
+
+    try {
+      console.log('🎯 목표 달성 분석 시작...')
+      
+      // 대화 히스토리를 API 형식으로 변환
+      const conversationHistory = history.map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'customer',
+        text: msg.text
+      }))
+
+      const result = await ragSimulationAPI.analyzeGoalAchievement(conversationHistory, goals)
+      
+      console.log('✅ 목표 달성 분석 결과:', result)
+      
+      // 달성된 목표 인덱스를 Set으로 변환
+      const achievedIndicesArray = (result.achieved_goal_indices || []) as number[]
+      const achievedIndices = new Set<number>(achievedIndicesArray)
+      setCheckedGoals(achievedIndices)
+      
+    } catch (error) {
+      console.error('❌ 목표 달성 분석 실패:', error)
+    }
+  }
+
+  // 대화 히스토리가 변경될 때마다 목표 달성 분석 (고객 응답 후 분석)
+  useEffect(() => {
+    if (!isStarted || isInitializing) {
+      return
+    }
+
+    const userMessages = chatHistory.filter(msg => msg.role === 'user')
+    if (userMessages.length === 0) {
+      return
+    }
+
+    // 마지막 메시지 확인
+    const lastMessage = chatHistory[chatHistory.length - 1]
+    if (lastMessage) {
+      // 고객 응답이 온 후 약간의 지연을 두고 분석
+      const delay = lastMessage.role === 'customer' ? 1000 : 3000
+      const timer = setTimeout(() => {
+        analyzeGoalAchievement(chatHistory)
+      }, delay)
+
+      return () => clearTimeout(timer)
+    }
+  }, [chatHistory, isStarted, isInitializing, simulationData])
 
   // 녹화 파일 업로드
   const uploadRecording = async (videoBlob: Blob) => {
@@ -328,7 +514,8 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
           role: msg.role === 'user' ? 'employee' : 'customer',
           text: msg.text,
           timestamp: msg.timestamp.toISOString()
-        }))
+        })),
+        achieved_goals: Array.from(checkedGoals) // 달성된 목표 포함
       }
 
       const formData = new FormData()
@@ -345,6 +532,15 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
 
       console.log('✅ 응답 원본:', response.data);
       const { transcribed_text, customer_response, customer_audio } = response.data
+      
+      // 대화 종료 표현 확인
+      let isEndMessage = false
+      if (transcribed_text) {
+        isEndMessage = checkConversationEnd(transcribed_text)
+        if (isEndMessage) {
+          console.log('🔚 종료 표현 감지:', transcribed_text)
+        }
+      }
       
       // 오디오 페이로드 디버깅
       console.log('오디오 페이로드 타입:', typeof customer_audio);
@@ -392,12 +588,38 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
           await playFromAnyAudioPayload(customer_audio, 'audio/mpeg');
           setIsPlaying(true);
           setError('');
+          
+          // 종료 플래그가 설정되어 있으면 오디오 재생 후 시뮬레이션 종료
+          if (isEndMessage) {
+            const responseLength = customer_response?.length || 0
+            const estimatedAudioDuration = Math.max(3000, Math.min(responseLength * 100, 8000))
+            setTimeout(() => {
+              console.log('🔚 대화 종료: 고객 응답 재생 완료 후 종료')
+              handleEndSimulation()
+            }, estimatedAudioDuration)
+          }
         } catch (audioError) {
           console.error('오디오 재생 실패:', audioError);
           setError('오디오 재생에 실패했습니다.');
+          
+          // 오디오 재생 실패 시에도 종료 플래그가 설정되어 있으면 종료
+          if (isEndMessage) {
+            setTimeout(() => {
+              console.log('🔚 대화 종료: 오디오 재생 실패로 인한 종료')
+              handleEndSimulation()
+            }, 2000)
+          }
         }
       } else {
         console.log('오디오 데이터가 없습니다. 텍스트만 표시됩니다.')
+        
+        // 오디오가 없을 때도 종료 플래그가 설정되어 있으면 종료
+        if (isEndMessage) {
+          setTimeout(() => {
+            console.log('🔚 대화 종료: 오디오 없음으로 인한 종료')
+            handleEndSimulation()
+          }, 3000)
+        }
       }
 
       setSubtitle('')
@@ -415,6 +637,12 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
   const handleTextSubmit = async () => {
     if (!userMessage.trim()) return
 
+    // 대화 종료 표현 확인
+    const isEndMessage = checkConversationEnd(userMessage)
+    if (isEndMessage) {
+      console.log('🔚 종료 표현 감지:', userMessage)
+    }
+
     console.groupCollapsed('💬 텍스트 인터랙션 요청');
 
     try {
@@ -425,14 +653,15 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
       console.log('세션 데이터:', simulationData);
       console.log('세션 데이터 키:', Object.keys(simulationData || {}));
 
-      // 세션 데이터에 대화 히스토리 포함
+      // 세션 데이터에 대화 히스토리 및 달성된 목표 포함
       const sessionDataWithHistory = {
         ...simulationData,
         conversation_history: chatHistory.map(msg => ({
           role: msg.role === 'user' ? 'employee' : 'customer',
           text: msg.text,
           timestamp: msg.timestamp.toISOString()
-        }))
+        })),
+        achieved_goals: Array.from(checkedGoals) // 달성된 목표 포함
       }
 
       // JSON으로 전송
@@ -500,12 +729,39 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
           await playFromAnyAudioPayload(customer_audio, 'audio/mpeg');
           setIsPlaying(true);
           setError('');
+          
+          // 종료 플래그가 설정되어 있으면 오디오 재생 후 시뮬레이션 종료 (고객 응답을 듣는 시간 제공)
+          if (isEndMessage) {
+            // 고객 응답 길이를 고려하여 대기 시간 설정 (평균적으로 3-5초 정도)
+            const responseLength = customer_response?.length || 0
+            const estimatedAudioDuration = Math.max(3000, Math.min(responseLength * 100, 8000)) // 최소 3초, 최대 8초
+            setTimeout(() => {
+              console.log('🔚 대화 종료: 고객 응답 재생 완료 후 종료')
+              handleEndSimulation()
+            }, estimatedAudioDuration)
+          }
         } catch (audioError) {
           console.error('오디오 재생 실패:', audioError);
           setError('오디오 재생에 실패했습니다.');
+          
+          // 오디오 재생 실패 시에도 종료 플래그가 설정되어 있으면 종료
+          if (isEndMessage) {
+            setTimeout(() => {
+              console.log('🔚 대화 종료: 오디오 재생 실패로 인한 종료')
+              handleEndSimulation()
+            }, 2000)
+          }
         }
       } else {
         console.log('오디오 데이터가 없습니다. 텍스트만 표시됩니다.');
+        
+        // 오디오가 없을 때도 종료 플래그가 설정되어 있으면 종료
+        if (isEndMessage) {
+          setTimeout(() => {
+            console.log('🔚 대화 종료: 오디오 없음으로 인한 종료')
+            handleEndSimulation()
+          }, 3000) // 고객 응답 텍스트를 읽을 시간 제공
+        }
       }
 
     } catch (error: any) {
@@ -536,6 +792,91 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
     }
   }, [])
 
+  // 시뮬레이션 완료 페이지
+  if (isSimulationCompleted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-6 relative">
+        {/* 배경 블러 오버레이 */}
+        <div className="absolute inset-0 bg-black bg-opacity-10 backdrop-blur-sm"></div>
+        
+        {/* 완료 카드 */}
+        <div className="relative bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full animate-fade-in z-10">
+          <style>{`
+            @keyframes fade-in {
+              from {
+                opacity: 0;
+                transform: translateY(-20px);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0);
+              }
+            }
+            .animate-fade-in {
+              animation: fade-in 0.3s ease-out;
+            }
+          `}</style>
+          
+          {/* 체크 아이콘 */}
+          <div className="flex justify-center mb-6">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
+              <CheckIcon className="w-12 h-12 text-green-600" />
+            </div>
+          </div>
+          
+          {/* 완료 메시지 */}
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-3">
+              시뮬레이션이 완료되었습니다
+            </h2>
+            <p className="text-gray-600 text-lg">
+              고객과의 대화가 종료되었습니다.
+            </p>
+            <p className="text-gray-600 text-lg mt-2">
+              이제 신입사원 응대에 대한 평가를 진행해 주세요.
+            </p>
+          </div>
+          
+          {/* 통계 (선택사항) */}
+          <div className="mb-8 grid grid-cols-2 gap-4">
+            <div className="bg-gray-50 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-blue-600">{chatHistory.length}</div>
+              <div className="text-sm text-gray-600 mt-1">대화 턴</div>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-green-600">{checkedGoals.size}</div>
+              <div className="text-sm text-gray-600 mt-1">달성 목표</div>
+            </div>
+          </div>
+          
+          {/* 버튼 그룹 */}
+          <div className="space-y-4">
+            <button
+              onClick={handleGoToEvaluation}
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold py-4 px-6 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+            >
+              📝 평가 페이지로 이동
+            </button>
+            
+            <button
+              onClick={handleRestartSimulation}
+              className="w-full bg-gray-100 text-gray-700 font-semibold py-4 px-6 rounded-lg hover:bg-gray-200 transition-all duration-200 border border-gray-300"
+            >
+              🔁 다시 시뮬레이션하기
+            </button>
+            
+            <button
+              onClick={onBack}
+              className="w-full text-gray-500 hover:text-gray-700 font-medium py-2 px-4 transition-colors"
+            >
+              뒤로가기
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 flex">
       {/* 왼쪽: 시뮬레이션 정보 패널 */}
@@ -553,62 +894,107 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
 
         {/* 고객 정보 */}
         <div className="mb-6">
-          <h3 className="font-semibold text-gray-700 mb-3">고객 정보</h3>
-          <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-            <div className="flex justify-between">
-              <span className="text-gray-600">성별:</span>
-              <span className="font-medium text-gray-900">
-                {simulationData?.persona?.gender || '미설정'}
-              </span>
+          <button
+            onClick={() => setIsCustomerInfoOpen(!isCustomerInfoOpen)}
+            className="w-full flex items-center justify-between font-semibold text-gray-700 mb-3 hover:text-gray-900 transition-colors"
+          >
+            <span>고객 정보</span>
+            {isCustomerInfoOpen ? (
+              <ChevronUpIcon className="w-5 h-5" />
+            ) : (
+              <ChevronDownIcon className="w-5 h-5" />
+            )}
+          </button>
+          {isCustomerInfoOpen && (
+            <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-600">성별:</span>
+                <span className="font-medium text-gray-900">
+                  {simulationData?.persona?.gender || '미설정'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">연령대:</span>
+                <span className="font-medium text-gray-900">
+                  {simulationData?.persona?.age_group || '미설정'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">직업:</span>
+                <span className="font-medium text-gray-900">
+                  {simulationData?.persona?.occupation || '미설정'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">고객 타입:</span>
+                <span className="font-medium text-gray-900">
+                  {simulationData?.persona?.type || '미설정'}
+                </span>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">연령대:</span>
-              <span className="font-medium text-gray-900">
-                {simulationData?.persona?.age_group || '미설정'}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">직업:</span>
-              <span className="font-medium text-gray-900">
-                {simulationData?.persona?.occupation || '미설정'}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">고객 타입:</span>
-              <span className="font-medium text-gray-900">
-                {simulationData?.persona?.type || '미설정'}
-              </span>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* 상황 정보 */}
         <div>
-          <h3 className="font-semibold text-gray-700 mb-3">상황 정보</h3>
-          <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-            <div className="flex justify-between">
-              <span className="text-gray-600">업무 카테고리:</span>
-              <span className="font-medium text-gray-900">
-                {simulationData?.situation?.category || '미설정'}
-              </span>
-            </div>
-            <div>
-              <span className="text-gray-600">상황 제목:</span>
-              <div className="font-medium text-gray-900 mt-1">
-                {simulationData?.situation?.title || '미설정'}
-              </div>
-            </div>
-            {simulationData?.situation?.goals && simulationData.situation.goals.length > 0 && (
-              <div className="mt-3">
-                <span className="text-gray-600 text-sm block mb-1">목표:</span>
-                <ul className="space-y-1">
-                  {simulationData.situation.goals.map((goal: string, index: number) => (
-                    <li key={index} className="text-sm text-gray-700">• {goal}</li>
-                  ))}
-                </ul>
-              </div>
+          <button
+            onClick={() => setIsSituationInfoOpen(!isSituationInfoOpen)}
+            className="w-full flex items-center justify-between font-semibold text-gray-700 mb-3 hover:text-gray-900 transition-colors"
+          >
+            <span>상황 정보</span>
+            {isSituationInfoOpen ? (
+              <ChevronUpIcon className="w-5 h-5" />
+            ) : (
+              <ChevronDownIcon className="w-5 h-5" />
             )}
-          </div>
+          </button>
+          {isSituationInfoOpen && (
+            <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-600">업무 카테고리:</span>
+                <span className="font-medium text-gray-900">
+                  {simulationData?.situation?.category || '미설정'}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-600">상황 제목:</span>
+                <div className="font-medium text-gray-900 mt-1">
+                  {simulationData?.situation?.title || '미설정'}
+                </div>
+              </div>
+              {simulationData?.situation?.goals && simulationData.situation.goals.length > 0 && (
+                <div className="mt-3">
+                  <span className="text-gray-600 text-sm block mb-1">목표:</span>
+                  <ul className="space-y-2">
+                    {simulationData.situation.goals.map((goal: string, index: number) => {
+                      const isChecked = checkedGoals.has(index)
+                      return (
+                        <li
+                          key={index}
+                          className={`flex items-start gap-2 text-sm text-gray-700 rounded p-2 -ml-2 transition-colors ${
+                            isChecked ? 'bg-green-50' : ''
+                          }`}
+                        >
+                          <div className={`flex-shrink-0 mt-0.5 ${
+                            isChecked ? 'text-green-600' : 'text-gray-400'
+                          }`}>
+                            {isChecked ? (
+                              <CheckIcon className="w-5 h-5" />
+                            ) : (
+                              <div className="w-5 h-5 border-2 border-gray-300 rounded" />
+                            )}
+                          </div>
+                          <span className={isChecked ? 'text-green-700 line-through' : ''}>
+                            {goal}
+                          </span>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -709,7 +1095,7 @@ const VoiceSimulation: React.FC<VoiceSimulationProps> = ({ simulationData, onBac
                   </div>
                 ) : chatHistory.length === 0 ? (
                   <div className="text-center text-gray-500 py-8">
-                    대화를 시작하세요. 녹음 버튼을 누르거나 텍스트를 입력하세요.
+                    대화를 시작하세요. 녹음 버튼을 눌러거나 텍스트를 입력하세요.
                   </div>
                 ) : (
                   chatHistory.map((message) => (

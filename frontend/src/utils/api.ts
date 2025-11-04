@@ -512,5 +512,17 @@ export const adminAPI = {
   },
 }
 
+// RAG Simulation API
+export const ragSimulationAPI = {
+  // 목표 달성 분석
+  analyzeGoalAchievement: async (conversationHistory: any[], goals: string[]) => {
+    const response = await api.post('/rag-simulation/analyze-goal-achievement', {
+      conversation_history: conversationHistory,
+      goals: goals
+    })
+    return response.data
+  },
+}
+
 export default api
 
