@@ -3,6 +3,7 @@
  * 멘티/멘토별 맞춤 대시보드
  */
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { dashboardAPI, adminAPI } from '../utils/api'
 import { 
@@ -25,7 +26,10 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   InformationCircleIcon,
-  XMarkIcon
+  XMarkIcon,
+  CalendarIcon,
+  TrendingUpIcon,
+  ArrowUpIcon
 } from '@heroicons/react/24/outline'
 import { 
   RadarChart, 
@@ -34,9 +38,18 @@ import {
   PolarRadiusAxis, 
   Radar, 
   ResponsiveContainer,
-  Tooltip
+  Tooltip,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Legend
 } from 'recharts'
 import { motion } from 'framer-motion'
+import api from '../utils/api'
 
 // 피드백 페이지네이션 컴포넌트
 const FeedbackPagination = ({ feedback }: { feedback: string }) => {
@@ -414,6 +427,9 @@ export default function Dashboard() {
 }
 
 function MenteeDashboard({ data, currentTime, recordings }: any) {
+  const navigate = useNavigate()
+  const [feedbackHistory, setFeedbackHistory] = useState<any[]>([])
+  const [loadingFeedback, setLoadingFeedback] = useState(false)
   
   // 6가지 지표 성적표 데이터
   const performanceData = [
@@ -429,6 +445,42 @@ function MenteeDashboard({ data, currentTime, recordings }: any) {
   const [expandedChats, setExpandedChats] = useState<Record<number, boolean>>({})
   const toggleChatExpand = (idx: number) => {
     setExpandedChats(prev => ({ ...prev, [idx]: !prev[idx] }))
+  }
+  
+  // 피드백 히스토리 로드
+  useEffect(() => {
+    loadFeedbackHistory()
+  }, [])
+  
+  const loadFeedbackHistory = async () => {
+    try {
+      setLoadingFeedback(true)
+      const response = await api.get('/rag-simulation/feedback-history?limit=7')
+      setFeedbackHistory(response.data.history || [])
+    } catch (error) {
+      console.error('피드백 히스토리 로드 실패:', error)
+    } finally {
+      setLoadingFeedback(false)
+    }
+  }
+  
+  const viewFeedbackDetail = async (feedbackId: number) => {
+    try {
+      const response = await api.get(`/rag-simulation/feedback/${feedbackId}`)
+      navigate('/simulation-feedback', {
+        state: { feedbackData: response.data.feedback }
+      })
+    } catch (error) {
+      console.error('피드백 상세 조회 실패:', error)
+      alert('피드백을 불러올 수 없습니다.')
+    }
+  }
+  
+  const getGrade = (score: number) => {
+    if (score >= 90) return { grade: "A", color: "text-green-600", bg: "bg-green-50" }
+    if (score >= 80) return { grade: "B", color: "text-blue-600", bg: "bg-blue-50" }
+    if (score >= 70) return { grade: "C", color: "text-yellow-600", bg: "bg-yellow-50" }
+    return { grade: "D", color: "text-red-600", bg: "bg-red-50" }
   }
 
   return (
@@ -536,6 +588,255 @@ function MenteeDashboard({ data, currentTime, recordings }: any) {
           <FeedbackPagination feedback={data.exam_scores[0].feedback} />
         )}
       </motion.div>
+
+      {/* 시뮬레이션 피드백 히스토리 */}
+      {feedbackHistory.length > 0 && (
+        <>
+          {/* 주요 통계 */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-xl shadow-md p-6"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-gray-600 mb-2">주별 평균 점수</p>
+                  <div className="flex items-end gap-2">
+                    <span className="text-4xl font-bold text-blue-600">
+                      {Math.round(feedbackHistory.reduce((sum, fb) => sum + fb.overall_score, 0) / feedbackHistory.length)}
+                    </span>
+                    <span className="text-gray-500 mb-1">점</span>
+                  </div>
+                </div>
+                <div className="p-3 bg-blue-100 rounded-lg">
+                  <TrophyIcon className="w-6 h-6 text-blue-600" />
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-xl shadow-md p-6"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-gray-600 mb-2">총 시뮬레이션 수</p>
+                  <div className="flex items-end gap-2">
+                    <span className="text-4xl font-bold text-purple-600">{feedbackHistory.length}</span>
+                    <span className="text-gray-500 mb-1">회</span>
+                  </div>
+                </div>
+                <div className="p-3 bg-purple-100 rounded-lg">
+                  <CalendarIcon className="w-6 h-6 text-purple-600" />
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-xl shadow-md p-6"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-gray-600 mb-2">주간 개선률</p>
+                  <div className="flex items-end gap-2">
+                    {feedbackHistory.length >= 2 && (
+                      <>
+                        <span className={`text-4xl font-bold ${
+                          feedbackHistory[0].overall_score >= feedbackHistory[feedbackHistory.length - 1].overall_score
+                            ? 'text-green-600'
+                            : 'text-red-600'
+                        }`}>
+                          {feedbackHistory[0].overall_score >= feedbackHistory[feedbackHistory.length - 1].overall_score ? '+' : ''}
+                          {Math.round(((feedbackHistory[0].overall_score - feedbackHistory[feedbackHistory.length - 1].overall_score) / feedbackHistory[feedbackHistory.length - 1].overall_score) * 100)}
+                        </span>
+                        <span className="text-gray-500 mb-1">%</span>
+                      </>
+                    )}
+                    {feedbackHistory.length < 2 && <span className="text-2xl text-gray-400">N/A</span>}
+                  </div>
+                </div>
+                <div className={`p-3 ${
+                  feedbackHistory.length >= 2 && feedbackHistory[0].overall_score >= feedbackHistory[feedbackHistory.length - 1].overall_score
+                    ? 'bg-green-100'
+                    : 'bg-gray-100'
+                } rounded-lg`}>
+                  <TrendingUpIcon className={`w-6 h-6 ${
+                    feedbackHistory.length >= 2 && feedbackHistory[0].overall_score >= feedbackHistory[feedbackHistory.length - 1].overall_score
+                      ? 'text-green-600'
+                      : 'text-gray-400'
+                  }`} />
+                </div>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* 점수 추이 차트 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-xl shadow-md p-8"
+          >
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">최근 시뮬레이션 점수 추이</h2>
+            <div className="w-full h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={feedbackHistory.slice().reverse().map(fb => ({
+                  date: new Date(fb.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }),
+                  점수: fb.overall_score
+                }))}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis 
+                    dataKey="date" 
+                    tick={{ fill: "#6b7280", fontSize: 12 }}
+                  />
+                  <YAxis 
+                    domain={[0, 100]}
+                    tick={{ fill: "#6b7280" }}
+                  />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                  />
+                  <Legend />
+                  <Line 
+                    type="monotone" 
+                    dataKey="점수" 
+                    stroke="#3b82f6" 
+                    strokeWidth={3}
+                    dot={{ fill: '#3b82f6', r: 5 }}
+                    activeDot={{ r: 7 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </motion.div>
+
+          {/* 역량별 평균 점수 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-xl shadow-md p-8"
+          >
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">역량별 평균 점수</h2>
+            <div className="w-full h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={[
+                  { name: "지식", 평균: Math.round(feedbackHistory.reduce((sum, fb) => sum + (fb.competencies?.find((c: any) => c.name === '지식')?.score || 0), 0) / feedbackHistory.length) },
+                  { name: "기술", 평균: Math.round(feedbackHistory.reduce((sum, fb) => sum + (fb.competencies?.find((c: any) => c.name === '기술')?.score || 0), 0) / feedbackHistory.length) },
+                  { name: "공감도", 평균: Math.round(feedbackHistory.reduce((sum, fb) => sum + (fb.competencies?.find((c: any) => c.name === '공감도')?.score || 0), 0) / feedbackHistory.length) },
+                  { name: "명확성", 평균: Math.round(feedbackHistory.reduce((sum, fb) => sum + (fb.competencies?.find((c: any) => c.name === '명확성')?.score || 0), 0) / feedbackHistory.length) },
+                  { name: "친절도", 평균: Math.round(feedbackHistory.reduce((sum, fb) => sum + (fb.competencies?.find((c: any) => c.name === '친절도')?.score || 0), 0) / feedbackHistory.length) },
+                  { name: "자신감", 평균: Math.round(feedbackHistory.reduce((sum, fb) => sum + (fb.competencies?.find((c: any) => c.name === '자신감')?.score || 0), 0) / feedbackHistory.length) }
+                ]}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis 
+                    dataKey="name" 
+                    tick={{ fill: "#6b7280", fontSize: 12 }}
+                  />
+                  <YAxis 
+                    domain={[0, 100]}
+                    tick={{ fill: "#6b7280" }}
+                  />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                  />
+                  <Bar 
+                    dataKey="평균" 
+                    fill="#3b82f6"
+                    radius={[8, 8, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </motion.div>
+
+          {/* 피드백 히스토리 테이블 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-xl shadow-md p-8"
+          >
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">시뮬레이션 피드백 히스토리</h2>
+            {loadingFeedback ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="text-gray-600 mt-4">로딩 중...</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700">날짜</th>
+                      <th className="text-center py-3 px-4 font-semibold text-gray-700">종합 점수</th>
+                      <th className="text-center py-3 px-4 font-semibold text-gray-700">등급</th>
+                      <th className="text-center py-3 px-4 font-semibold text-gray-700">대화 턴</th>
+                      <th className="text-right py-3 px-4 font-semibold text-gray-700">상세보기</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {feedbackHistory.map((fb) => {
+                      const gradeInfo = getGrade(fb.overall_score)
+                      const date = new Date(fb.created_at)
+                      const dayOfWeek = ['일', '월', '화', '수', '목', '금', '토'][date.getDay()]
+                      
+                      return (
+                        <tr key={fb.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                          <td className="py-4 px-4">
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {date.toLocaleDateString('ko-KR')}
+                              </div>
+                              <div className="text-xs text-gray-500">{dayOfWeek}요일</div>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <span className="text-lg font-bold text-blue-600">{fb.overall_score}점</span>
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${gradeInfo.bg} ${gradeInfo.color}`}>
+                              {gradeInfo.grade}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <span className="text-sm text-gray-600">{fb.total_turns || 0}턴</span>
+                          </td>
+                          <td className="py-4 px-4 text-right">
+                            <button
+                              onClick={() => viewFeedbackDetail(fb.id)}
+                              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                              상세보기
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            
+            {/* 하단 안내 */}
+            {feedbackHistory.length > 0 && (
+              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold text-blue-900">이번 주 종합 평가</h3>
+                  <p className="text-blue-700 text-sm">
+                    {feedbackHistory.length}회의 시뮬레이션을 완료하셨습니다. 
+                    {feedbackHistory.length >= 2 && feedbackHistory[0].overall_score > feedbackHistory[feedbackHistory.length - 1].overall_score && 
+                      ' 점수가 상승하는 긍정적인 추세를 보이고 있습니다. 계속해서 발전하고 있습니다!'}
+                    {feedbackHistory.length >= 2 && feedbackHistory[0].overall_score <= feedbackHistory[feedbackHistory.length - 1].overall_score && 
+                      ' 안정적인 성과를 유지하고 있습니다. 지속적인 연습으로 더욱 발전할 수 있습니다.'}
+                  </p>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        </>
+      )}
 
       {/* Mentor Info */}
         <motion.div
