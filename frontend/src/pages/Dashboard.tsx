@@ -3,7 +3,7 @@
  * 멘티/멘토별 맞춤 대시보드
  */
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { dashboardAPI, adminAPI } from '../utils/api'
 import { 
@@ -428,7 +428,11 @@ export default function Dashboard() {
 
 function MenteeDashboard({ data, currentTime, recordings }: any) {
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'simulation'>('dashboard')
+  const location = useLocation()
+  // location.state에서 activeTab 정보를 받아서 초기값 설정
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'simulation'>(
+    location.state?.activeTab || 'dashboard'
+  )
   const [feedbackHistory, setFeedbackHistory] = useState<any[]>([])
   const [loadingFeedback, setLoadingFeedback] = useState(false)
   

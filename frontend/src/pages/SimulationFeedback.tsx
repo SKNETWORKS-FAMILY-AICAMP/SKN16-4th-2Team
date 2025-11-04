@@ -197,7 +197,7 @@ const SimulationFeedback: React.FC = () => {
         {fromHistory && (
           <div className="mb-6">
             <button
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/dashboard', { state: { activeTab: 'simulation' } })}
               className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
             >
               <ArrowLeftIcon className="w-5 h-5" />
