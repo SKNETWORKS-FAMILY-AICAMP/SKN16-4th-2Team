@@ -876,31 +876,61 @@ function MenteeDashboard({ data, currentTime, recordings }: any) {
                 <div>
                   <p className="text-gray-600 mb-2">주간 개선률</p>
                   <div className="flex items-end gap-2">
-                    {feedbackHistory.length >= 2 && (
-                      <>
-                        <span className={`text-4xl font-bold ${
-                          feedbackHistory[0].overall_score >= feedbackHistory[feedbackHistory.length - 1].overall_score
-                            ? 'text-green-600'
-                            : 'text-red-600'
-                        }`}>
-                          {feedbackHistory[0].overall_score >= feedbackHistory[feedbackHistory.length - 1].overall_score ? '+' : ''}
-                          {Math.round(((feedbackHistory[0].overall_score - feedbackHistory[feedbackHistory.length - 1].overall_score) / feedbackHistory[feedbackHistory.length - 1].overall_score) * 100)}
-                        </span>
-                        <span className="text-gray-500 mb-1">%</span>
-                      </>
-                    )}
-                    {feedbackHistory.length < 2 && <span className="text-2xl text-gray-400">N/A</span>}
+                    {(() => {
+                      // 최근 7일 이내의 피드백만 필터링
+                      const sevenDaysAgo = new Date()
+                      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+                      
+                      const weeklyFeedback = feedbackHistory.filter(fb => 
+                        new Date(fb.created_at) >= sevenDaysAgo
+                      )
+                      
+                      // 주간 데이터가 2개 이상이고, 가장 오래된 점수가 0이 아닌 경우에만 계산
+                      if (weeklyFeedback.length >= 2 && weeklyFeedback[weeklyFeedback.length - 1].overall_score > 0) {
+                        const latestScore = weeklyFeedback[0].overall_score
+                        const oldestScore = weeklyFeedback[weeklyFeedback.length - 1].overall_score
+                        const improvement = ((latestScore - oldestScore) / oldestScore) * 100
+                        const isPositive = improvement >= 0
+                        
+                        return (
+                          <>
+                            <span className={`text-4xl font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                              {isPositive ? '+' : ''}{Math.round(improvement)}
+                            </span>
+                            <span className="text-gray-500 mb-1">%</span>
+                          </>
+                        )
+                      }
+                      
+                      return <span className="text-2xl text-gray-400">N/A</span>
+                    })()}
                   </div>
                 </div>
                 <div className={`p-3 ${
-                  feedbackHistory.length >= 2 && feedbackHistory[0].overall_score >= feedbackHistory[feedbackHistory.length - 1].overall_score
-                    ? 'bg-green-100'
-                    : 'bg-gray-100'
+                  (() => {
+                    const sevenDaysAgo = new Date()
+                    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+                    const weeklyFeedback = feedbackHistory.filter(fb => new Date(fb.created_at) >= sevenDaysAgo)
+                    
+                    if (weeklyFeedback.length >= 2 && weeklyFeedback[weeklyFeedback.length - 1].overall_score > 0) {
+                      const improvement = ((weeklyFeedback[0].overall_score - weeklyFeedback[weeklyFeedback.length - 1].overall_score) / weeklyFeedback[weeklyFeedback.length - 1].overall_score) * 100
+                      return improvement >= 0 ? 'bg-green-100' : 'bg-red-100'
+                    }
+                    return 'bg-gray-100'
+                  })()
                 } rounded-lg`}>
                   <ArrowTrendingUpIcon className={`w-6 h-6 ${
-                    feedbackHistory.length >= 2 && feedbackHistory[0].overall_score >= feedbackHistory[feedbackHistory.length - 1].overall_score
-                      ? 'text-green-600'
-                      : 'text-gray-400'
+                    (() => {
+                      const sevenDaysAgo = new Date()
+                      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+                      const weeklyFeedback = feedbackHistory.filter(fb => new Date(fb.created_at) >= sevenDaysAgo)
+                      
+                      if (weeklyFeedback.length >= 2 && weeklyFeedback[weeklyFeedback.length - 1].overall_score > 0) {
+                        const improvement = ((weeklyFeedback[0].overall_score - weeklyFeedback[weeklyFeedback.length - 1].overall_score) / weeklyFeedback[weeklyFeedback.length - 1].overall_score) * 100
+                        return improvement >= 0 ? 'text-green-600' : 'text-red-600'
+                      }
+                      return 'text-gray-400'
+                    })()
                   }`} />
                 </div>
               </div>
