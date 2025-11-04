@@ -52,6 +52,17 @@ class VoiceInteractionResponse(BaseModel):
     session_score: float
 
 
+class AnalyzeGoalAchievementRequest(BaseModel):
+    """목표 달성 분석 요청"""
+    conversation_history: List[Dict]
+    goals: List[str]
+
+
+class AnalyzeGoalAchievementResponse(BaseModel):
+    """목표 달성 분석 응답"""
+    achieved_goal_indices: List[int]
+
+
 @router.get("/personas")
 async def get_rag_personas(
     age_group: Optional[str] = None,
@@ -437,4 +448,34 @@ async def generate_simulation_feedback(
         raise HTTPException(
             status_code=500,
             detail=f"피드백 생성 중 오류가 발생했습니다: {str(e)}"
+        )
+
+
+@router.post("/analyze-goal-achievement")
+async def analyze_goal_achievement(
+    request: AnalyzeGoalAchievementRequest,
+    session: Session = Depends(get_session)
+):
+    """목표 달성 여부 자동 분석"""
+    try:
+        service = RAGSimulationService(session)
+        
+        # 목표 달성 분석
+        achieved_indices = service.analyze_goal_achievement(
+            conversation_history=request.conversation_history,
+            goals=request.goals
+        )
+        
+        return {
+            "achieved_goal_indices": achieved_indices,
+            "total_goals": len(request.goals),
+            "achieved_count": len(achieved_indices)
+        }
+    
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"목표 달성 분석 중 오류가 발생했습니다: {str(e)}"
         )

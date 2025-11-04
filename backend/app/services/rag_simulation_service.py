@@ -459,19 +459,40 @@ class RAGSimulationService:
             for i, msg in enumerate(conversation_history[-4:]):
                 print(f"  {i+1}. {msg.get('role', 'unknown')}: {msg.get('text', '')[:50]}...")
             
+            # 달성된 목표 정보 추출 (세션 데이터에서)
+            achieved_goals = session_data.get("achieved_goals", [])  # 프론트엔드에서 분석한 결과
+            
+            # 고객 감정형 추출 (페르소나 또는 세션 데이터에서)
+            customer_emotion = response_persona.get("type", "긍정형") if response_persona else "긍정형"
+            if "customer_emotion" in session_data:
+                customer_emotion = session_data["customer_emotion"]
+            
+            # 최근 직원 질문 추출 (히스토리에서)
+            last_employee_questions = []
+            for msg in conversation_history[-5:]:  # 최근 5턴 확인
+                if msg.get("role") == "employee":
+                    text = msg.get("text", "")
+                    if "?" in text or "?" in text or "어떻게" in text or "무엇" in text:
+                        last_employee_questions.append(text)
+            
             # 프롬프트 오케스트레이터로 메시지 구성
             messages = compose_llm_messages(
                 persona=response_persona,
                 situation=final_situation,
                 user_text=normalized_text,  # 정규화된 텍스트 사용
                 rag_hits=[],  # TODO: RAG 검색 결과 추가
-                history=conversation_history[-4:],  # 최근 4턴만 전달
+                history=conversation_history[-10:],  # 최근 10턴까지 전달 (더 많은 맥락)
                 extras={
                     "userText_raw": transcribed_text,  # 원본 텍스트
                     "corrections": corrections,  # 교정 정보
                     "catalogHits": catalog_hits,  # 카탈로그 매칭 결과
                     "needs_clarification": needs_clarification,  # 재확인 필요 여부
-                    "expanded_queries": expanded_queries  # 확장된 검색 쿼리
+                    "expanded_queries": expanded_queries,  # 확장된 검색 쿼리
+                    "achieved_goals": achieved_goals,  # 달성된 목표 인덱스 리스트
+                    "customer_emotion": customer_emotion,  # 고객 감정형
+                    "last_employee_questions": last_employee_questions,  # 최근 직원 질문 목록
+                    "stuck_counter": session_data.get("stuck_counter", 0),  # 반복 카운터
+                    "should_close": session_data.get("should_close", False)  # 마무리 신호
                 }
             )
             
@@ -651,7 +672,7 @@ class RAGSimulationService:
         tone_map = {
             "실용형": "direct",
             "보수형": "calm",
-            "불만형": "tense", 
+            "불만형": "tense",
             "긍정형": "cheerful",
             "급함형": "urgent"
         }
@@ -917,6 +938,7 @@ class RAGSimulationService:
         # 실제로는 대화 기록을 기반으로 점수를 계산해야 함
         return 75.0
     
+<<<<<<< HEAD
     def generate_comprehensive_feedback(self, conversation_history: List[Dict], 
                                       persona: Dict, situation: Dict) -> Dict:
         """
@@ -1099,3 +1121,110 @@ class RAGSimulationService:
             },
             "improvements": "지속적인 연습을 통해 역량을 향상시켜보세요."
         }
+    
+    def analyze_goal_achievement(
+        self,
+        conversation_history: List[Dict],
+        goals: List[str]
+    ) -> List[int]:
+        """
+        대화 내용을 분석하여 달성된 목표 인덱스 리스트 반환
+        
+        Args:
+            conversation_history: 대화 히스토리 (예: [{"role": "user", "text": "..."}, ...])
+            goals: 목표 목록 (예: ["고객의 요구사항 파악", "적절한 상품 추천", ...])
+        
+        Returns:
+            달성된 목표의 인덱스 리스트 (예: [0, 2])
+        """
+        if not self.openai_client:
+            print("⚠️ OpenAI 클라이언트가 초기화되지 않았습니다.")
+            return []
+        
+        if not goals or not conversation_history:
+            return []
+        
+        # 전체 대화 내용 추출 (고객과 직원 모두 포함)
+        conversation_parts = []
+        for msg in conversation_history:
+            role = msg.get("role", "")
+            text = msg.get("text", "")
+            if role == "user":
+                conversation_parts.append(f"직원: {text}")
+            elif role == "customer":
+                conversation_parts.append(f"고객: {text}")
+        
+        if not conversation_parts:
+            return []
+        
+        # 대화 내용 요약 (전체 맥락 포함)
+        conversation_text = "\n".join(conversation_parts)
+        
+        # 목표 목록 문자열 생성
+        goals_text = "\n".join([
+            f"{i}. {goal}"
+            for i, goal in enumerate(goals)
+        ])
+        
+        # LLM 프롬프트 구성
+        prompt = f"""당신은 은행 직원의 고객 상담 대화를 평가하는 전문가입니다.
+
+다음은 은행 직원과 고객의 전체 대화 내용입니다:
+---
+{conversation_text}
+---
+
+다음은 이 상담에서 달성해야 하는 목표 목록입니다:
+---
+{goals_text}
+---
+
+위 대화 내용을 자세히 분석하여, 각 목표가 달성되었는지 판단해주세요.
+
+**판단 기준:**
+- 목표의 핵심 내용이 대화에서 언급되거나 실행되었는지 확인
+- 예를 들어, "고객 불만 경청 및 공감" 목표는 직원이 고객의 불만을 듣고 공감 표현(예: "불편을 드려 죄송합니다", "이해하겠습니다")을 했는지 확인
+- "문제 요약 및 해결 절차 안내" 목표는 직원이 문제를 정리하고 해결 방법을 안내했는지 확인
+- 부분적으로만 달성된 경우도 달성으로 간주 (완벽하지 않아도 됨)
+
+출력 형식:
+달성된 목표 번호만 쉼표로 구분하여 출력하세요. 예를 들어, 0번과 2번 목표가 달성되었다면:
+0,2
+
+달성된 목표가 하나도 없다면:
+없음
+
+달성된 목표 번호만 출력하세요. 추가 설명이나 다른 텍스트는 포함하지 마세요."""
+        
+        try:
+            response = self.openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=100,
+                temperature=0.3  # 일관된 평가를 위해 낮은 temperature 사용
+            )
+            
+            result_text = response.choices[0].message.content.strip()
+            
+            # 결과 파싱
+            if result_text.lower() in ["없음", "none", "없습니다", ""]:
+                return []
+            
+            # 쉼표로 구분된 숫자들 추출
+            achieved_indices = []
+            for part in result_text.split(","):
+                part = part.strip()
+                try:
+                    index = int(part)
+                    if 0 <= index < len(goals):
+                        achieved_indices.append(index)
+                except ValueError:
+                    continue
+            
+            return achieved_indices
+            
+        except Exception as e:
+            print(f"목표 달성 분석 오류: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
