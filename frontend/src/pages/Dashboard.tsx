@@ -1051,6 +1051,8 @@ function MenteeDashboard({ data, currentTime, recordings }: any) {
               </div>
             )}
           </motion.div>
+        </>
+      )}
 
       {/* 시뮬레이션 녹화 목록 */}
       <motion.div
