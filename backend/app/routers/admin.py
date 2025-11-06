@@ -435,6 +435,8 @@ async def test_chatbot_performance(
     chunk_overlap: int = Query(200, description="청크 오버랩"),
     top_k: int = Query(5, description="검색할 청크 수"),
     chunking_method: str = Query("fixed", description="청킹 방식: fixed, sentence, semantic"),
+    embedding_model: str = Query("text-embedding-ada-002", description="임베딩 모델"),
+    temperature: float = Query(0.7, description="Temperature (0.0-2.0)"),
     current_user: User = Depends(require_admin),
     session: Session = Depends(get_session)
 ):
@@ -474,6 +476,8 @@ async def test_chatbot_performance(
             "chunk_overlap": chunk_overlap,
             "top_k": top_k,
             "chunking_method": chunking_method,
+            "embedding_model": embedding_model,
+            "temperature": temperature,
             "total_chunks_found": len(search_results)
         }
         

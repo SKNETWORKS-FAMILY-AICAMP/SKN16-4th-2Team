@@ -511,14 +511,18 @@ export const adminAPI = {
     chunkSize: number = 1000,
     chunkOverlap: number = 200,
     topK: number = 5,
-    chunkingMethod: string = 'fixed'
+    chunkingMethod: string = 'fixed',
+    embeddingModel: string = 'text-embedding-ada-002',
+    temperature: number = 0.7
   ) => {
     const params = new URLSearchParams({
       question,
       chunk_size: chunkSize.toString(),
       chunk_overlap: chunkOverlap.toString(),
       top_k: topK.toString(),
-      chunking_method: chunkingMethod
+      chunking_method: chunkingMethod,
+      embedding_model: embeddingModel,
+      temperature: temperature.toString()
     })
     const response = await api.post(`/admin/chatbot-validation/test?${params}`)
     return response.data

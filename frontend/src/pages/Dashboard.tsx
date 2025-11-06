@@ -2626,6 +2626,8 @@ function ChatbotValidationTab() {
   const [chunkOverlap, setChunkOverlap] = useState(200)
   const [topK, setTopK] = useState(5)
   const [chunkingMethod, setChunkingMethod] = useState('fixed')
+  const [embeddingModel, setEmbeddingModel] = useState('text-embedding-ada-002')
+  const [temperature, setTemperature] = useState(0.7)
   const [showAdvanced, setShowAdvanced] = useState(false)
 
   useEffect(() => {
@@ -2657,7 +2659,9 @@ function ChatbotValidationTab() {
         chunkSize,
         chunkOverlap,
         topK,
-        chunkingMethod
+        chunkingMethod,
+        embeddingModel,
+        temperature
       )
       setTestResult(response)
       
@@ -2775,6 +2779,22 @@ function ChatbotValidationTab() {
                   <option value="semantic">의미 단위 (Semantic)</option>
                 </select>
               </div>
+
+              {/* 임베딩 모델 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  임베딩 모델
+                </label>
+                <select
+                  value={embeddingModel}
+                  onChange={(e) => setEmbeddingModel(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="text-embedding-ada-002">Ada-002 (1536D)</option>
+                  <option value="text-embedding-3-small">3-Small (1536D)</option>
+                  <option value="text-embedding-3-large">3-Large (3072D)</option>
+                </select>
+              </div>
               
               {/* 검색할 청크 수 */}
               <div>
@@ -2793,6 +2813,27 @@ function ChatbotValidationTab() {
                   <span>1</span>
                   <span>10</span>
                   <span>20</span>
+                </div>
+              </div>
+
+              {/* Temperature */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Temperature: <span className="text-primary-600 font-bold">{temperature.toFixed(1)}</span>
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="2"
+                  step="0.1"
+                  value={temperature}
+                  onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>0.0 (정확)</span>
+                  <span>1.0 (균형)</span>
+                  <span>2.0 (창의적)</span>
                 </div>
               </div>
               
@@ -2847,6 +2888,8 @@ function ChatbotValidationTab() {
                   setChunkOverlap(200)
                   setTopK(5)
                   setChunkingMethod('fixed')
+                  setEmbeddingModel('text-embedding-ada-002')
+                  setTemperature(0.7)
                 }}
                 className="px-3 py-1 text-xs bg-white border border-blue-300 text-blue-700 rounded-md hover:bg-blue-50"
               >
@@ -2858,6 +2901,8 @@ function ChatbotValidationTab() {
                   setChunkOverlap(100)
                   setTopK(10)
                   setChunkingMethod('sentence')
+                  setEmbeddingModel('text-embedding-3-small')
+                  setTemperature(0.3)
                 }}
                 className="px-3 py-1 text-xs bg-white border border-green-300 text-green-700 rounded-md hover:bg-green-50"
               >
@@ -2869,6 +2914,8 @@ function ChatbotValidationTab() {
                   setChunkOverlap(300)
                   setTopK(3)
                   setChunkingMethod('semantic')
+                  setEmbeddingModel('text-embedding-3-large')
+                  setTemperature(1.0)
                 }}
                 className="px-3 py-1 text-xs bg-white border border-purple-300 text-purple-700 rounded-md hover:bg-purple-50"
               >
@@ -2934,12 +2981,19 @@ function ChatbotValidationTab() {
                   </svg>
                   <span className="text-sm font-semibold text-blue-900">청킹 & RAG 설정</span>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
                   <div className="bg-white rounded px-2 py-1">
                     <span className="text-gray-500">방식:</span>
                     <span className="ml-1 font-semibold text-gray-900">
                       {testResult.chunking_config.chunking_method === 'fixed' ? '고정' :
                        testResult.chunking_config.chunking_method === 'sentence' ? '문장' : '의미'}
+                    </span>
+                  </div>
+                  <div className="bg-white rounded px-2 py-1">
+                    <span className="text-gray-500">임베딩:</span>
+                    <span className="ml-1 font-semibold text-gray-900">
+                      {testResult.chunking_config.embedding_model?.includes('ada') ? 'Ada-002' :
+                       testResult.chunking_config.embedding_model?.includes('small') ? '3-Small' : '3-Large'}
                     </span>
                   </div>
                   <div className="bg-white rounded px-2 py-1">
@@ -2955,6 +3009,10 @@ function ChatbotValidationTab() {
                     <span className="ml-1 font-semibold text-gray-900">{testResult.chunking_config.top_k}</span>
                   </div>
                   <div className="bg-white rounded px-2 py-1">
+                    <span className="text-gray-500">Temp:</span>
+                    <span className="ml-1 font-semibold text-gray-900">{testResult.chunking_config.temperature}</span>
+                  </div>
+                  <div className="bg-white rounded px-2 py-1 md:col-span-2">
                     <span className="text-gray-500">검색됨:</span>
                     <span className="ml-1 font-semibold text-green-600">{testResult.chunking_config.total_chunks_found}개</span>
                   </div>
